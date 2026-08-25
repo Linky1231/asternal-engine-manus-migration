@@ -1,6 +1,6 @@
 import type { Profile } from "@/lib/social/api";
 import { isPlusActive } from "@/lib/social/api";
-import { Star } from "lucide-react";
+import { BadgeCheck, Star } from "lucide-react";
 
 /**
  * Renders a user's display name with their Plus effect (if any and Plus is active).
@@ -32,6 +32,11 @@ export function UserName({
       >
         {name}
       </span>
+      {p?.is_verified && (
+        <span className="inline-flex items-center text-sky-500 shrink-0" title="Cuenta verificada" aria-label="Cuenta verificada">
+          <BadgeCheck size={size === "lg" ? 17 : size === "md" ? 15 : 13} fill="currentColor" className="text-white" />
+        </span>
+      )}
       {showBadge && badge && (
         <span
           className="inline-flex items-center px-1 py-0.5 rounded text-white text-[9px] font-display shrink-0"

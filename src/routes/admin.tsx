@@ -3,7 +3,7 @@ import { Avatar } from "@/components/social/Avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
+  isMod, isAdmin, isVerificationAdmin, listManagedUsers, setUserModerator, setUserVerified, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,
   getTrustPoints, deductTrustPoints, restoreTrustPoints, DEFAULT_TRUST_POINTS,
 } from "@/lib/social/api";
@@ -13,7 +13,7 @@ import {
   getForumPosts, type ForumThread, type ForumCategory,
 } from "@/lib/social/forum-storage";
 import {
-  ArrowLeft, Shield, ShieldCheck, Loader2, Search, Ban, Trash2, Plus,
+  ArrowLeft, Shield, ShieldCheck, BadgeCheck, Loader2, Search, Ban, Trash2, Plus,
   MessageSquare, Hash, Globe, Edit3, X, Check, Trophy,
 } from "lucide-react";
 import {
@@ -35,6 +35,7 @@ function AdminPage() {
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [admin, setAdmin] = useState(false);
+  const [verificationAdmin, setVerificationAdmin] = useState(false);
   const [tab, setTab] = useState<Tab>("mods");
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [bans, setBans] = useState<BannedEmail[]>([]);
@@ -94,7 +95,9 @@ function AdminPage() {
       if (!session) { navigate({ to: "/auth" }); return; }
       const isA = await isAdmin();
       const isM = await isMod();
+      const canVerify = isA && await isVerificationAdmin();
       setAdmin(isA);
+      setVerificationAdmin(canVerify);
       setAllowed(isA || isM);
       if (isA || isM) await load();
     })();
@@ -106,6 +109,14 @@ function AdminPage() {
   const toggleMod = async (u: ManagedUser) => {
     setBusy(u.id);
     try { await setUserModerator(u.id, !u.is_mod); await load(q); }
+    finally { setBusy(null); }
+  };
+
+  const toggleVerified = async (u: ManagedUser) => {
+    if (!verificationAdmin) return;
+    setBusy(`verified:${u.id}`);
+    try { await setUserVerified(u.id, !u.is_verified); await load(q); }
+    catch (e) { alert((e as Error).message); }
     finally { setBusy(null); }
   };
 
@@ -245,6 +256,14 @@ Razón: ${reason}`)) return;
                   className={`text-[10px] font-display tracking-widest px-3 py-1.5 rounded-lg border flex items-center gap-1.5 active:scale-95 transition disabled:opacity-60 shrink-0 ${u.is_mod ? "bg-primary/15 border-primary/40 text-primary-glow" : "border-border text-muted-foreground"}`}>
                   {busy === u.id ? <Loader2 size={12} className="animate-spin"/> : <Shield size={12}/>}
                   {u.is_mod ? "MOD" : "HACER MOD"}
+                </button>
+              )}
+              {verificationAdmin && (
+                <button onClick={() => toggleVerified(u)} disabled={busy === `verified:${u.id}`}
+                  className={`text-[10px] font-display tracking-widest px-3 py-1.5 rounded-lg border flex items-center gap-1.5 active:scale-95 transition disabled:opacity-60 shrink-0 ${u.is_verified ? "bg-sky-500/15 border-sky-400/50 text-sky-600" : "border-border text-muted-foreground"}`}
+                  title={u.is_verified ? "Retirar verificación" : "Asignar verificación"}>
+                  {busy === `verified:${u.id}` ? <Loader2 size={12} className="animate-spin"/> : <BadgeCheck size={12}/>} 
+                  {u.is_verified ? "VERIFICADA" : "VERIFICAR"}
                 </button>
               )}
               {/* Trust Points */}

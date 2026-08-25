@@ -1,6 +1,8 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
 import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
 import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-frame";
+import { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator } from "./verification";
+export { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator };
 
 export type SocialLinks = {
   youtube?: string;
@@ -57,6 +59,8 @@ export type Profile = {
   creator_card_style?: CreatorCardStyle | null;
   // Trust
   trust_points?: number | null;
+  // Verification badge managed by the designated administrator.
+  is_verified?: boolean;
   // QR customization
   qr_style?: QRStyle | null;
 };
@@ -221,7 +225,7 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
     posts.map(p => p.author_id).concat(posts.filter(p => p.seller_id).map(p => p.seller_id!)),
   ));
 
-  const [profiles, reactions, comments, reposts, tagsJoin, purchases] = await Promise.all([
+  const [profiles, reactions, comments, reposts, tagsJoin, purchases, verifiedRoles] = await Promise.all([
     supabase.from("profiles").select("*").in("id", authorIds),
     supabase.from("reactions").select("post_id,user_id,type").in("post_id", ids),
     supabase.from("comments").select("post_id").in("post_id", ids).is("deleted_at", null),
@@ -230,10 +234,17 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
     me
       ? supabase.from("game_purchases").select("post_id").eq("user_id", me).in("post_id", ids)
       : Promise.resolve({ data: [] as { post_id: string }[] }),
+    authorIds.length
+      ? supabase.from("user_roles").select("user_id").eq("role", "verified").in("user_id", authorIds)
+      : Promise.resolve({ data: [] as { user_id: string }[] }),
   ]);
 
+  const verifiedIds = new Set((verifiedRoles.data ?? []).map(row => row.user_id));
   const hydratedProfiles = await Promise.all(
-    (profiles.data ?? []).map(profile => hydrateProfileMedia(profile as Profile)),
+    (profiles.data ?? []).map(profile => hydrateProfileMedia({
+      ...(profile as Profile),
+      is_verified: verifiedIds.has((profile as Profile).id),
+    })),
   );
   const pmap = new Map(hydratedProfiles.filter((profile): profile is Profile => !!profile).map(profile => [profile.id, profile]));
   const ownedIds = new Set((purchases.data ?? []).map(x => x.post_id));
@@ -1108,7 +1119,7 @@ export async function cloudDeleteProject(id: string): Promise<void> {
 }
 
 // ---------- Admin ----------
-export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; trust_points: number | null };
+export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; is_verified: boolean; trust_points: number | null };
 
 export async function isAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1133,7 +1144,7 @@ export async function listManagedUsers(search?: string): Promise<ManagedUser[]> 
   });
   return (profs ?? []).map(p => {
     const rs = rmap.get(p.id) ?? [];
-    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin") };
+    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin"), is_verified: rs.includes("verified") };
   });
 }
 
@@ -1142,6 +1153,24 @@ export async function setUserModerator(userId: string, on: boolean): Promise<voi
     await supabase.from("user_roles").insert({ user_id: userId, role: "moderator" });
   } else {
     await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "moderator");
+  }
+}
+
+export async function isVerificationAdmin(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return isVerificationAdministrator(user?.email);
+}
+
+export async function setUserVerified(userId: string, on: boolean): Promise<void> {
+  if (!(await isVerificationAdmin())) throw new Error("Solo el administrador autorizado puede gestionar verificaciones.");
+  if (on) {
+    const { data: existing } = await supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle();
+    if (existing) return;
+    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "verified" });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "verified");
+    if (error) throw error;
   }
 }
 
@@ -1236,8 +1265,11 @@ async function hydrateProfileMedia(profile: Profile | null): Promise<Profile | n
 }
 
 export async function fetchProfileById(userId: string): Promise<Profile | null> {
-  const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  return hydrateProfileMedia((data as Profile) ?? null);
+  const [{ data }, { data: verifiedRole }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle(),
+  ]);
+  return hydrateProfileMedia(data ? { ...(data as Profile), is_verified: !!verifiedRole } : null);
 }
 
 export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> {

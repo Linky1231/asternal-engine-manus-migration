@@ -1433,3 +1433,17 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Redactar documentos completos en formato Markdown dentro de `docs/`.
 - [x] Verificar los documentos contra el código y ejecutar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Badge verificado administrable
+
+- [x] Auditar el modelo actual de perfiles, permisos de Moderación y componentes de identidad.
+- [x] Añadir un campo persistente de verificación para cuentas.
+- [x] Permitir asignar o retirar verificado a cualquier cuenta desde Moderación.
+- [x] Restringir servidor e interfaz exclusivamente a `linkyteam989@gmail.com`.
+- [x] Mostrar el badge junto al nombre y perfil de cuentas verificadas.
+- [x] Añadir pruebas de autorización, asignación, retirada y renderizado.
+- [x] Ejecutar compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.
