@@ -1337,6 +1337,6 @@ Las filas del menú se compactaron a 40 px, los grupos redujeron su separación 
 - [x] Preservar la experiencia actual del chat asistente.
 - [x] Verificar compilación y pruebas.
 - [x] Revisar el diff y confirmar que solo cambian integraciones de IA autorizadas.
-- [ ] Guardar checkpoint final del proyecto transferido.
+- [x] Guardar checkpoint final del proyecto transferido.
 
 Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de las integraciones de IA autorizadas.
