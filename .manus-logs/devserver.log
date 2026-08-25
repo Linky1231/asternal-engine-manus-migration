@@ -2289,3 +2289,11 @@
 [2026-08-25T22:13:03.512Z] 10:13:03 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/PostComposer.tsx, /src/components/engine/PublishGameDialog.tsx
 [2026-08-25T22:13:07.901Z] 10:13:07 PM [vite] (client) hmr update /src/routes/feed.tsx, /src/styles.css
 [2026-08-25T22:17:55.199Z] 10:17:55 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/PostComposer.tsx, /src/components/engine/PublishGameDialog.tsx, /src/routes/feed.tsx
+[2026-08-25T22:25:31.369Z] 10:25:31 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/PostComposer.tsx, /src/components/engine/PublishGameDialog.tsx, /src/routes/feed.tsx
+[2026-08-25T22:26:03.345Z] [ELIFECYCLE] Command failed.
+[2026-08-25T22:26:03.353Z] Dev server exited with code -1
+[2026-08-25T22:26:04.438Z] Starting dev server with command: pnpm run dev
+[2026-08-25T22:26:04.703Z] $ vite --host
+[2026-08-25T22:26:04.921Z] VITE v7.3.6  ready in 192 ms
+[2026-08-25T22:26:04.921Z] ➜  Local:   http://localhost:5173/
+[2026-08-25T22:26:04.921Z] ➜  Network: http://169.254.0.21:5173/

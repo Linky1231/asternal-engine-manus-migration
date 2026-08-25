@@ -6,7 +6,7 @@ import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, r
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use(express.json({ limit: "96kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 app.post("/api/orion/chat", async (req, res) => {
   try {
@@ -49,6 +49,13 @@ app.post("/api/orion/rank-feed", async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error && typeof error === "object" && "type" in error && error.type === "entity.too.large") {
+    return res.status(413).json({ error: "La publicación es demasiado grande para que Orión la revise. Reduce los adjuntos o el contenido e inténtalo de nuevo." });
+  }
+  return next(error);
+});
 
 // El bundle del servidor queda en `dist/index.js` y Vite genera el cliente en
 // `dist/public`, que también es el directorio exigido por el publicador.

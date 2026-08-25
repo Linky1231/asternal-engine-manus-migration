@@ -1366,3 +1366,15 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir o ajustar pruebas para publicaciones, juegos, reglas y errores de revisión.
 - [x] Ejecutar compilación y pruebas completas disponibles.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Fallo persistente: Orión no completa la revisión
+
+- [x] Capturar la causa real del error de revisión en cliente, servidor y respuesta de Manus.
+- [x] Corregir el bloqueo que impide publicar contenido aprobable.
+- [x] Mantener el rechazo válido con un motivo claro y permitir aprobaciones válidas.
+- [x] Añadir o ajustar pruebas para la respuesta de revisión y los errores de transporte.
+- [x] Ejecutar compilación y pruebas disponibles.
+- [x] Revisar el diff y guardar checkpoint.

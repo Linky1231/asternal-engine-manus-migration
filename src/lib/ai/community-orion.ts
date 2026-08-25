@@ -111,8 +111,12 @@ async function callCommunityOrion<T>(path: string, body: unknown, options: Commu
     options.timeoutMs ?? RANKING_TIMEOUT_MS,
     options.timeoutMessage ?? "Orión tardó demasiado en responder. Inténtalo de nuevo.",
   );
-  const payload = await response.json().catch(() => ({})) as T & { error?: string };
-  if (!response.ok) throw new Error(payload.error || "Orión no pudo completar esta revisión.");
+  const raw = await response.text();
+  let payload: T & { error?: string } = {} as T & { error?: string };
+  try { payload = raw ? JSON.parse(raw) as T & { error?: string } : payload; } catch { /* el servidor puede responder texto plano */ }
+  if (!response.ok) {
+    throw new Error(payload.error || raw.trim() || `Orión no pudo completar esta revisión (${response.status}).`);
+  }
   return payload;
 }
 
