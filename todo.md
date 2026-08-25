@@ -1340,3 +1340,16 @@ Las filas del menú se compactaron a 40 px, los grupos redujeron su separación 
 - [x] Guardar checkpoint final del proyecto transferido.
 
 Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de las integraciones de IA autorizadas.
+
+
+---
+
+# Reordenamiento creativo en cada actualización del feed
+
+- [x] Auditar cuándo se cargan y actualizan las publicaciones visibles.
+- [x] Solicitar a la IA de Manus una jerarquía creativa en cada actualización del feed.
+- [x] Aplicar el orden devuelto elevando las publicaciones más creativas y conservando todas las publicaciones.
+- [x] Mantener intactos publicación, interacción, chat y demás comportamientos.
+- [x] Añadir o ajustar pruebas del reordenamiento.
+- [x] Verificar compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.

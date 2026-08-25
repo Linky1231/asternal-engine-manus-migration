@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { PostComposer } from "@/components/social/PostComposer";
+import { rankFeedWithOrion } from "@/lib/ai/community-orion";
 import { PostCard } from "@/components/social/PostCard";
 import { GamePageSection } from "@/components/social/GamePageSection";
 import { NotificationBell } from "@/components/social/NotificationBell";
@@ -47,7 +48,7 @@ function FeedPage() {
         category: category === "all" ? undefined : category,
         includeGames: category === "game",
       });
-      setPosts(data);
+      setPosts(await rankFeedWithOrion(data));
     } finally { if (showLoading) setLoading(false); }
   }, [search, tag, category]);
 

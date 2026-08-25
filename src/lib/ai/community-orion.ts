@@ -281,12 +281,6 @@ export function preserveAllRankedPosts(posts: PostWithMeta[], orderedIds: string
  */
 export async function rankFeedWithOrion(posts: PostWithMeta[], followingAuthorIds: string[] = []): Promise<PostWithMeta[]> {
   if (posts.length < 2) return posts;
-  const key = rankingCacheKey(posts, followingAuthorIds);
-  try {
-    const cached = sessionStorage.getItem(key);
-    if (cached) return preserveAllRankedPosts(posts, JSON.parse(cached) as string[]);
-  } catch { /* el cache es solo una optimización */ }
-
   try {
     const following = new Set(followingAuthorIds);
     const response = await callCommunityOrion<RankResponse>("/api/orion/rank-feed", {
@@ -297,7 +291,6 @@ export async function rankFeedWithOrion(posts: PostWithMeta[], followingAuthorId
     });
     const orderedIds = Array.isArray(response.orderedIds) ? response.orderedIds : [];
     if (orderedIds.length) {
-      try { sessionStorage.setItem(key, JSON.stringify(orderedIds)); } catch { /* ignore */ }
       return preserveAllRankedPosts(posts, orderedIds);
     }
   } catch { /* el orden cronológico es el respaldo fiable */ }
