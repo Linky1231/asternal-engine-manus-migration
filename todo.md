@@ -1353,3 +1353,16 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir o ajustar pruebas del reordenamiento.
 - [x] Verificar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Corrección crítica de revisión previa de Orión
+
+- [x] Auditar por qué Orión bloquea o no completa la revisión de publicaciones y juegos.
+- [x] Verificar la lectura de reglas desde la base de «Acerca de nosotros».
+- [x] Corregir autenticación, endpoint y respuesta de revisión sin cambiar los flujos de publicación.
+- [x] Asegurar que contenido aprobado continúe hasta la publicación y contenido rechazado se detenga con motivo claro.
+- [x] Añadir o ajustar pruebas para publicaciones, juegos, reglas y errores de revisión.
+- [x] Ejecutar compilación y pruebas completas disponibles.
+- [x] Revisar el diff y guardar checkpoint.

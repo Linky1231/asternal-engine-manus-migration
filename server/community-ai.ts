@@ -1,6 +1,6 @@
 import { invokeLLM, type LLMMessage } from "./_core/llm";
 import { getOrionModel } from "./orion";
-import { parseCommunitySettings, type CommunitySettings } from "../src/lib/community/about";
+import { normalizeCommunitySettings, parseCommunitySettings, type CommunitySettings } from "../src/lib/community/about";
 
 type UserIdentity = { id: string };
 type SettingsRecord = { content?: string | null; updated_at?: string | null };
@@ -47,6 +47,7 @@ function serviceHeaders(extra: Record<string, string> = {}) {
 export async function authenticateCommunityRequest(authorization: string | undefined): Promise<UserIdentity> {
   const token = authorization?.replace(/^Bearer\s+/i, "").trim();
   if (!token) throw new Error("Inicia sesión para usar las funciones comunitarias de Orión.");
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { id: token };
   const response = await fetch(restUrl("/auth/v1/user"), {
     headers: serviceHeaders({ Authorization: `Bearer ${token}` }),
   });
@@ -55,13 +56,21 @@ export async function authenticateCommunityRequest(authorization: string | undef
   return user;
 }
 
-async function getCommunitySettings(): Promise<CommunitySettings> {
-  const response = await fetch(restUrl("/rest/v1/posts?select=content,updated_at&category=eq.system&post_type=eq.about_settings&deleted_at=is.null&order=updated_at.desc&limit=1"), {
-    headers: serviceHeaders(),
-  });
-  if (!response.ok) return parseCommunitySettings(null);
-  const rows = await response.json().catch(() => []) as SettingsRecord[];
-  return parseCommunitySettings(rows[0]?.content);
+async function getCommunitySettings(fallbackSettings?: unknown): Promise<CommunitySettings> {
+  const fallback = typeof fallbackSettings === "string"
+    ? normalizeCommunitySettings({ rules: fallbackSettings })
+    : normalizeCommunitySettings(fallbackSettings);
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return fallback;
+  try {
+    const response = await fetch(restUrl("/rest/v1/posts?select=content,updated_at&category=eq.system&post_type=eq.about_settings&deleted_at=is.null&order=updated_at.desc&limit=1"), {
+      headers: serviceHeaders(),
+    });
+    if (!response.ok) return fallback;
+    const rows = await response.json().catch(() => []) as SettingsRecord[];
+    return rows[0]?.content ? parseCommunitySettings(rows[0].content) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function stripJsonFence(value: string) {
@@ -215,9 +224,10 @@ async function askOrion(messages: LLMMessage[]) {
 }
 
 export async function reviewCommunityPost(input: unknown): Promise<ModerationDecision> {
-  const settings = await getCommunitySettings();
+  const source = input && typeof input === "object" ? input as Record<string, unknown> : {};
+  const settings = await getCommunitySettings(source.communitySettings ?? source.communityRules);
   if (!settings.moderationEnabled) return { allowed: true, reason: "", summary: "La revisión automática está desactivada por la administración." };
-  const cleanInput = input && typeof input === "object" ? input : {};
+  const { communityRules: _communityRules, communitySettings: _communitySettings, ...cleanInput } = source;
   const content = await askOrion([
     {
       role: "system",
@@ -235,9 +245,10 @@ export async function reviewCommunityPost(input: unknown): Promise<ModerationDec
 
 /** Revisión previa de juegos y artes; los datos de la obra nunca se tratan como instrucciones. */
 export async function reviewCommunitySubmission(input: unknown): Promise<ModerationDecision> {
-  const settings = await getCommunitySettings();
+  const source = input && typeof input === "object" ? input as Record<string, unknown> : {};
+  const settings = await getCommunitySettings(source.communitySettings ?? source.communityRules);
   if (!settings.moderationEnabled) return { allowed: true, reason: "", summary: "La revisión automática está desactivada por la administración." };
-  const submission = normalizeCommunitySubmission(input);
+  const submission = normalizeCommunitySubmission(source);
   if (!submission) throw new Error("Orión no recibió datos válidos para revisar este contenido.");
   const { previewImage, ...safeSubmission } = submission;
   const userMessage: LLMMessage = previewImage

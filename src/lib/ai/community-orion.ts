@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchCommunitySettings } from "@/lib/community/settings";
 import type { PostWithMeta } from "@/lib/social/api";
 
 export type PostReviewInput = {
@@ -117,12 +118,14 @@ async function callCommunityOrion<T>(path: string, body: unknown, options: Commu
 
 /** Revisión obligatoria antes de subir texto y metadatos de una publicación. */
 export async function reviewPostWithOrion(input: PostReviewInput): Promise<ReviewResponse> {
-  return callCommunityOrion<ReviewResponse>("/api/orion/review-post", input);
+  const communitySettings = await fetchCommunitySettings();
+  return callCommunityOrion<ReviewResponse>("/api/orion/review-post", { ...input, communitySettings });
 }
 
 /** Revisión obligatoria antes de publicar o actualizar un juego. */
 export async function reviewGameWithOrion(input: GameReviewInput): Promise<ReviewResponse> {
-  return callCommunityOrion<ReviewResponse>("/api/orion/review-submission", input, {
+  const communitySettings = await fetchCommunitySettings();
+  return callCommunityOrion<ReviewResponse>("/api/orion/review-submission", { ...input, communitySettings }, {
     timeoutMs: 12_000,
     timeoutMessage: "Orión tardó demasiado en revisar el juego. Inténtalo de nuevo.",
   });
@@ -130,7 +133,8 @@ export async function reviewGameWithOrion(input: GameReviewInput): Promise<Revie
 
 /** Revisión obligatoria antes de publicar una obra desde la galería. */
 export async function reviewArtworkWithOrion(input: ArtworkReviewInput): Promise<ReviewResponse> {
-  return callCommunityOrion<ReviewResponse>("/api/orion/review-submission", input, {
+  const communitySettings = await fetchCommunitySettings();
+  return callCommunityOrion<ReviewResponse>("/api/orion/review-submission", { ...input, communitySettings }, {
     timeoutMs: 12_000,
     timeoutMessage: "Orión tardó demasiado en revisar la obra. Inténtalo de nuevo.",
   });

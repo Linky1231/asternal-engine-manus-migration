@@ -2288,3 +2288,4 @@
 [2026-08-25T22:05:12.989Z] ➜  Network: http://169.254.0.21:5173/
 [2026-08-25T22:13:03.512Z] 10:13:03 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/PostComposer.tsx, /src/components/engine/PublishGameDialog.tsx
 [2026-08-25T22:13:07.901Z] 10:13:07 PM [vite] (client) hmr update /src/routes/feed.tsx, /src/styles.css
+[2026-08-25T22:17:55.199Z] 10:17:55 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/PostComposer.tsx, /src/components/engine/PublishGameDialog.tsx, /src/routes/feed.tsx
