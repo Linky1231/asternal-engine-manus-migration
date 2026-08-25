@@ -1418,3 +1418,18 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir o ajustar pruebas para evitar datos inventados o hardcodeados.
 - [x] Ejecutar pruebas y compilación.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Documentación completa de Asternal Engine
+
+- [x] Inventariar rutas, componentes, módulos, servicios, dependencias y puntos de entrada.
+- [x] Documentar qué es Asternal Engine y qué es exactamente el editor.
+- [x] Documentar el modelo de proyecto, escenas, entidades, scripts, UI, almacenamiento y ejecución.
+- [x] Documentar publicación, comunidad, feed, galería, tienda, Orbes, chat, perfiles, eventos y administración.
+- [x] Documentar autenticación, Supabase, persistencia local, endpoints e integraciones de IA.
+- [x] Documentar los límites y reglas para futuras ediciones.
+- [x] Redactar documentos completos en formato Markdown dentro de `docs/`.
+- [x] Verificar los documentos contra el código y ejecutar compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.
