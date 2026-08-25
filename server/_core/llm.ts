@@ -8,10 +8,20 @@ export type LLMMessage = {
   content: string | Array<LLMTextContent | LLMImageContent>;
 };
 
+export type LLMResponseFormat = {
+  type: "json_schema";
+  json_schema: {
+    name: string;
+    strict: true;
+    schema: Record<string, unknown>;
+  };
+};
+
 export type LLMRequest = {
   model?: string;
   messages: LLMMessage[];
   temperature?: number;
+  response_format?: LLMResponseFormat;
 };
 
 /** Invoca Orión desde el servidor mediante la IA integrada de Manus. */

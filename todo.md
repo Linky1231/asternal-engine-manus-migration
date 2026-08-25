@@ -1378,3 +1378,15 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir o ajustar pruebas para la respuesta de revisión y los errores de transporte.
 - [x] Ejecutar compilación y pruebas disponibles.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Sustitución directa de revisión por Manus LLM Models
+
+- [x] Revisar la integración oficial Manus LLM Models y el adaptador actual de Orión.
+- [x] Conectar las revisiones de publicaciones y juegos directamente a Manus LLM Models.
+- [x] Mantener las reglas de «Acerca de nosotros» y los contratos de aprobación/rechazo.
+- [x] Validar publicación aprobada, rechazo válido y errores de invocación.
+- [x] Ejecutar pruebas y compilación.
+- [x] Revisar el diff y guardar checkpoint.
