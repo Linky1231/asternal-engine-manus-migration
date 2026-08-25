@@ -1,66 +1,61 @@
-import "dotenv/config";
 import express from "express";
-import { createServer } from "http";
-import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerStorageProxy } from "./storageProxy";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { completeOrionChat } from "../orion";
+import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
 
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+app.use(express.json({ limit: "96kb" }));
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
+app.post("/api/orion/chat", async (req, res) => {
+  try {
+    const result = await completeOrionChat(req.body?.history, req.body?.options);
+    res.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo consultar a Orión.";
+    res.status(400).json({ error: message });
   }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
+});
 
-async function startServer() {
-  const app = express();
-  const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerStorageProxy(app);
-  registerOAuthRoutes(app);
-  // tRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
-  // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+app.post("/api/orion/review-post", async (req, res) => {
+  try {
+    await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await reviewCommunityPost(req.body));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Orión no pudo revisar la publicación.";
+    res.status(400).json({ error: message });
   }
+});
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+app.post("/api/orion/review-submission", async (req, res) => {
+  try {
+    await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await reviewCommunitySubmission(req.body));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Orión no pudo revisar este contenido.";
+    res.status(400).json({ error: message });
   }
+});
 
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
-}
+app.post("/api/orion/rank-feed", async (req, res) => {
+  try {
+    await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await rankCommunityFeed(req.body));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Orión no pudo ordenar el feed.";
+    res.status(400).json({ error: message });
+  }
+});
 
-startServer().catch(console.error);
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// El bundle del servidor queda en `dist/index.js` y Vite genera el cliente en
+// `dist/public`, que también es el directorio exigido por el publicador.
+const publicDirectory = path.join(dirname, "public");
+app.use(express.static(publicDirectory));
+app.use((_req, res) => res.sendFile(path.join(publicDirectory, "index.html")));
+
+const port = Number(process.env.PORT);
+if (!Number.isFinite(port) || port <= 0) throw new Error("El entorno debe proporcionar un puerto para iniciar el servidor.");
+app.listen(port, () => console.log(`Asternal disponible en el puerto ${port}`));

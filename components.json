@@ -4,7 +4,8 @@
   "rsc": false,
   "tsx": true,
   "tailwind": {
-    "css": "client/src/index.css",
+    "config": "",
+    "css": "src/index.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
@@ -15,5 +16,6 @@
     "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
-  }
+  },
+  "iconLibrary": "lucide"
 }

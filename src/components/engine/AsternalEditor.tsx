@@ -1,0 +1,2165 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
+import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "@tanstack/react-router";
+import { PublishGameDialog } from "./PublishGameDialog";
+import type { EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
+import { newScene, uid, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
+import { loadProject, loadProjectById, saveProject, saveProjectById, getCurrentProjectId, setCurrentProjectId } from "@/lib/engine/storage";
+import { useFormFactor } from "@/hooks/use-mobile";
+import { fileToDataURL } from "@/lib/engine/images";
+import { SceneEditor } from "./SceneEditor";
+import { GameRuntime } from "./GameRuntime";
+import { AnimationEditor } from "./AnimationEditor";
+import { PaintEditor } from "./PaintEditor";
+import { UIEditor } from "./UIEditor";
+import { ProjectManager } from "./ProjectManager";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import { ScriptEditor } from "./ScriptEditor";
+import { useT, setLang } from "@/lib/i18n";
+
+
+
+type Tool = EntityKind | "select" | "erase";
+type Tab = "build" | "inspect" | "ui" | "scenes" | "assets" | "settings";
+
+const TOOL_LIST: { id: Tool; tKey: string; icon: ReactNode }[] = [
+  { id: "select", tKey: "tool.select", icon: <MousePointer2 size={15} strokeWidth={1.9} /> },
+  { id: "platform", tKey: "tool.platform", icon: <Square size={15} strokeWidth={1.9} /> },
+  { id: "decor", tKey: "tool.decor", icon: <Flower2 size={15} strokeWidth={1.9} /> },
+  { id: "coin", tKey: "tool.coin", icon: <CircleDollarSign size={15} strokeWidth={1.9} /> },
+  { id: "enemy", tKey: "tool.enemy", icon: <Triangle size={15} strokeWidth={1.9} /> },
+  { id: "goal", tKey: "tool.goal", icon: <Target size={15} strokeWidth={1.9} /> },
+  { id: "player", tKey: "tool.player", icon: <PersonStanding size={15} strokeWidth={1.9} /> },
+  { id: "erase", tKey: "tool.erase", icon: <Eraser size={15} strokeWidth={1.9} /> },
+];
+
+// ---- Asset library (saved presets) ----
+type LibraryItem = { id: string; name: string; preset: Omit<Entity, "id" | "x" | "y"> };
+const LIBRARY_KEY = "asternal:library";
+function loadLibrary(): LibraryItem[] {
+  try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]") as LibraryItem[]; } catch { return []; }
+}
+function saveLibrary(items: LibraryItem[]) {
+  try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+}
+
+export function AsternalEditor() {
+  const t = useT();
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectId, setProjectId] = useState<string>("");
+  const [tool, setTool] = useState<Tool>("select");
+  const [tab, setTab] = useState<Tab>("build");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [showManager, setShowManager] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [library, setLibrary] = useState<LibraryItem[]>(() => loadLibrary());
+  const updateLibrary = (items: LibraryItem[]) => {
+    setLibrary(items);
+    saveLibrary(items);
+    // Respaldo en la nube (debounced) para que la biblioteca aparezca en
+    // cualquier otro dispositivo con la misma cuenta.
+    scheduleAssetLibraryPush(items);
+  };
+
+  const formFactor = useFormFactor();
+  const isTablet = formFactor === "tablet" || formFactor === "desktop";
+
+  useEffect(() => {
+    setLang("es");
+    const id = getCurrentProjectId();
+    setProjectId(id);
+    const loaded = loadProjectById(id) ?? loadProject();
+    if (loaded) {
+      // migrate: ensure every scene has at least one layer
+      loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
+    }
+    setProject(loaded);
+  }, []);
+
+  // Biblioteca de assets en la nube: al abrir el editor con una cuenta real se
+  // sincroniza en ambos sentidos — importa la de la nube si este dispositivo no
+  // tiene nada (o fusiona lo que falte) y respalda la local si aún no está
+  // guardada. Así las imágenes/prefabs aparecen en cualquier dispositivo.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || cancelled) return;
+        const cloud = await pullAssetLibraryFromCloud();
+        if (cancelled) return;
+        const local = loadLibrary();
+        if (cloud && cloud.length > 0) {
+          if (local.length === 0) {
+            // Este dispositivo aún no tenía nada: adopta la biblioteca de la cuenta.
+            updateLibrary(cloud as LibraryItem[]);
+          } else {
+            // Fusiona sin pisar: conserva lo local y añade lo de la nube que falte.
+            const ids = new Set(local.map(i => i.id));
+            const merged = [...local, ...cloud.filter(c => !ids.has(c.id))];
+            if (merged.length !== local.length) updateLibrary(merged as LibraryItem[]);
+            else scheduleAssetLibraryPush(local);
+          }
+        } else if (local.length > 0) {
+          // La cuenta no tenía biblioteca: respalda la local por primera vez.
+          scheduleAssetLibraryPush(local);
+        }
+        // Dispositivo nuevo: si el proyecto actual es el "Untitled Game" vacío
+        // que crea storage, activa el proyecto de la nube más reciente para que
+        // el editor abra el juego real (con sus imágenes) en lugar de uno vacío.
+        const activatedId = await activateCloudProjectIfBlank();
+        if (cancelled) return;
+        if (activatedId) {
+          const p = loadProjectById(activatedId);
+          if (p) {
+            p.scenes = p.scenes.map(s => ensureSceneLayers(s));
+            setProjectId(activatedId);
+            setProject(p);
+            setSelectedId(null);
+          }
+        }
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const openProject = (id: string) => {
+    setCurrentProjectId(id);
+    const p = loadProjectById(id);
+    if (!p) return;
+    setProjectId(id);
+    setProject(p);
+    setSelectedId(null);
+    setTab("build");
+    setShowManager(false);
+  };
+
+  const exitToManager = () => {
+    if (project && projectId) {
+      saveProjectById(projectId, project);
+      setSavedAt(Date.now());
+    }
+    setShowManager(true);
+  };
+
+  useEffect(() => {
+    if (project && projectId) {
+      const persist = () => {
+        saveProjectById(projectId, project);
+        setSavedAt(Date.now());
+        schedulePushToCloud(projectId, project);
+      };
+      let idleId: number | null = null;
+      const timer = window.setTimeout(() => {
+        const win = window as typeof window & {
+          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+          cancelIdleCallback?: (id: number) => void;
+        };
+        if (win.requestIdleCallback) idleId = win.requestIdleCallback(persist, { timeout: 1200 });
+        else persist();
+      }, 350);
+      return () => {
+        window.clearTimeout(timer);
+        if (idleId !== null) (window as typeof window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(idleId);
+      };
+    }
+  }, [project, projectId]);
+
+  // Listen for goal-reached events from the runtime to support scene transitions
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ nextSceneId: string | null; endsGame: boolean }>).detail;
+      if (!detail) return;
+      if (detail.nextSceneId && project?.scenes.some(s => s.id === detail.nextSceneId)) {
+        setProject(p => p ? { ...p, activeSceneId: detail.nextSceneId! } : p);
+        // brief delay so React swaps the scene prop, then restart runtime
+        setTimeout(() => window.dispatchEvent(new Event("asternal:restart")), 60);
+      }
+    };
+    window.addEventListener("asternal:goal", handler);
+    return () => window.removeEventListener("asternal:goal", handler);
+  }, [project]);
+
+  const activeScene = useMemo(
+    () => project?.scenes.find(s => s.id === project.activeSceneId),
+    [project]
+  );
+
+  if (showManager) {
+    return <ProjectManager onOpen={openProject} onClose={project ? () => setShowManager(false) : undefined} />;
+  }
+
+  if (!project || !activeScene) {
+    return (
+      <div className="flex h-screen items-center justify-center gap-2 text-sm text-ink-2">
+        <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        Cargando el motor…
+      </div>
+    );
+  }
+
+  const updateScene = (s: typeof activeScene) =>
+    setProject({ ...project, scenes: project.scenes.map(x => x.id === s.id ? s : x) });
+
+  const selected = activeScene.entities.find(e => e.id === selectedId) ?? null;
+  const playProject = project.settings.fpsCap === 60
+    ? project
+    : { ...project, settings: { ...project.settings, fpsCap: 60 as const } };
+
+  if (playing) {
+    return (
+      <div className="h-screen w-full">
+        <GameRuntime
+          scene={activeScene}
+          fpsCap={60}
+          showHUD={playProject.settings.showHUD}
+          showFPS={playProject.settings.showFPS ?? true}
+          volume={playProject.settings.volume ?? 0.8}
+          muted={playProject.settings.muted ?? false}
+          music={playProject.settings.music ?? false}
+          musicUrl={playProject.settings.musicUrl ?? null}
+          touchControls={playProject.settings.touchControls ?? true}
+          autoPause={playProject.settings.autoPause ?? true}
+          showHitboxes={playProject.settings.showHitboxes ?? false}
+          onExit={() => setPlaying(false)}
+        />
+      </div>
+    );
+  }
+
+
+  const TABS: [Tab, string, ReactNode][] = [
+    ["build", t("tab.build"), <Boxes size={18} strokeWidth={1.75} key="build" />],
+    ["inspect", t("tab.inspect"), <SlidersHorizontal size={18} strokeWidth={1.75} key="inspect" />],
+    ["ui", t("tab.ui"), <PanelsTopLeft size={18} strokeWidth={1.75} key="ui" />],
+    ["assets", t("tab.assets"), <ImageIcon size={18} strokeWidth={1.75} key="assets" />],
+    ["scenes", t("tab.scenes"), <Layers3 size={18} strokeWidth={1.75} key="scenes" />],
+    ["settings", t("tab.settings"), <Settings size={18} strokeWidth={1.75} key="settings" />],
+  ];
+
+  return (
+    <div className={`flex h-screen w-full overflow-hidden ${isTablet ? "flex-row" : "flex-col"}`}>
+      {/* Left rail (tablet/desktop) */}
+      {isTablet && (
+        <nav className="w-[88px] border-r border-border/70 bg-card flex flex-col items-stretch py-3 gap-1 px-2 shrink-0">
+          <div className="grid place-items-center pb-2.5 mb-1.5 border-b border-border/50">
+            <Logo />
+          </div>
+          {TABS.map(([id, label, icon]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              title={label}
+              className={`relative flex flex-col items-center gap-1.5 py-3 rounded-lg transition-colors duration-150 active:scale-[0.96] ${
+                tab === id
+                  ? "text-foreground bg-card border border-border/70 shadow-sm"
+                  : "text-ink-3 hover:bg-muted/60 hover:text-foreground"
+              }`}
+            >
+              <span className="leading-none">{icon}</span>
+              <span className="text-[9px] font-display tracking-wide">{label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
+
+    <div className="flex h-full flex-1 flex-col overflow-hidden min-w-0">
+      {/* Top bar */}
+      <header className="flex items-center justify-between px-3 py-2 border-b border-border/70 bg-card/80">
+        <div className="flex items-center gap-2.5">
+          {!isTablet && <Logo />}
+          <div>
+            <div className="font-display text-sm font-semibold text-foreground leading-none tracking-wide">ASTERNAL</div>
+            <div className="text-[10px] font-mono text-ink-3 mt-0.5">
+              {savedAt ? `guardado ${timeAgo(savedAt)}` : "ENGINE · v2"}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <Link
+            to="/"
+            aria-label="Ir al inicio"
+            title="Inicio"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition"
+          ><Home size={16} /></Link>
+          <button
+            onClick={exitToManager}
+            aria-label="Salir al gestor de proyectos"
+            title="Proyectos"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition"
+          ><FolderOpen size={16} /></button>
+          <button
+            onClick={() => setHelpOpen(true)}
+            aria-label="Ayuda"
+            title="Ayuda"
+            className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition font-display"
+          >?</button>
+          <button
+            onClick={() => setPublishOpen(true)}
+            aria-label="Publicar juego"
+            title="Publicar"
+            className="hidden sm:flex items-center gap-1.5 font-display text-[11px] font-semibold tracking-widest h-9 px-3.5 rounded-lg btn-grad text-primary-foreground active:scale-95 transition"
+          ><Upload size={14} /> PUBLICAR</button>
+          <button
+            onClick={() => setPublishOpen(true)}
+            aria-label="Publicar juego"
+            title="Publicar"
+            className="sm:hidden w-9 h-9 rounded-lg btn-grad text-primary-foreground grid place-items-center active:scale-95 transition"
+          ><Upload size={15} /></button>
+          <button
+            onClick={() => {
+              if (project.settings.fpsCap !== 60) {
+                const next = { ...project, settings: { ...project.settings, fpsCap: 60 as const } };
+                saveProjectById(projectId, next);
+                setProject(next);
+              }
+              setPlaying(true);
+            }}
+            className="flex items-center gap-1.5 font-display text-[13px] font-semibold h-9 px-4 rounded-lg btn-grad active:scale-95"
+          >
+            <Play size={14} fill="currentColor" /> PLAY
+          </button>
+        </div>
+      </header>
+      {publishOpen && (
+        <PublishGameDialog
+          open={publishOpen}
+          onOpenChange={setPublishOpen}
+          project={project}
+          defaultTitle={project.name || "Mi juego"}
+        />
+      )}
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+
+      {/* Main */}
+      <main key={tab} className="relative flex-1 min-h-0 view-fade">
+        {tab === "build" && (
+          <>
+            <SceneEditor
+              scene={activeScene}
+              tool={tool}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onChange={updateScene}
+            />
+            {/* Floating action buttons */}
+            <div className="pointer-events-none absolute right-3 bottom-3 flex flex-col gap-2 z-20">
+              {selected && (
+                <button
+                  onClick={() => {
+                    if (!selected || selected.kind === "player") return;
+                    const copy: Entity = { ...selected, id: uid(), x: selected.x + 24, y: selected.y + 24 };
+                    updateScene({ ...activeScene, entities: [...activeScene.entities, copy] });
+                    setSelectedId(copy.id);
+                  }}
+                  className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition grid place-items-center"
+                  title="Duplicar asset (Ctrl+D)"
+                  aria-label="Duplicar"
+                ><Copy size={18} /></button>
+              )}
+              <button
+                onClick={() => setLayersOpen(o => !o)}
+                className={`pointer-events-auto w-11 h-11 rounded-xl grid place-items-center active:scale-90 transition shadow-md ${
+                  layersOpen
+                    ? "bg-primary text-primary-foreground border border-primary"
+                    : "bg-card border border-line-strong text-ink-2 hover:text-primary hover:border-primary/40"
+                }`}
+                title="Capas de la escena"
+                aria-label="Capas"
+              ><Layers size={18} /></button>
+              <button
+                onClick={() => setLibraryOpen(true)}
+                className="pointer-events-auto w-11 h-11 rounded-xl bg-card border border-line-strong shadow-md text-ink-2 hover:text-primary hover:border-primary/40 active:scale-90 transition grid place-items-center"
+                title={t("library.title")}
+                aria-label="Librería de assets"
+              ><LibraryBig size={18} /></button>
+            </div>
+            {layersOpen && (
+              <div className="pointer-events-auto absolute right-3 bottom-3 z-30 w-[300px] max-h-[70vh] overflow-auto rounded-xl surface shadow-lg view-slide-right">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+                  <span className="font-display text-[10px] font-semibold tracking-[0.15em] text-ink-2">CAPAS DE LA ESCENA</span>
+                  <button onClick={() => setLayersOpen(false)} className="text-muted-foreground hover:text-foreground grid place-items-center w-7 h-7 rounded-lg hover:bg-muted/60 transition"><X size={14} /></button>
+                </div>
+                <div className="p-2">
+                  <SceneLayersPanel scene={activeScene} onChangeScene={updateScene} />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === "inspect" && (
+          <InspectorPanel
+            scene={activeScene}
+            entityId={selectedId}
+            onChangeScene={updateScene}
+            onSelect={setSelectedId}
+            project={project}
+          />
+        )}
+
+        {tab === "ui" && (
+          <UIEditor scene={activeScene} onChange={updateScene} />
+        )}
+
+        {tab === "scenes" && (
+          <ScenesPanel
+            project={project}
+            onChange={setProject}
+            onOpen={(id) => { setProject({ ...project, activeSceneId: id }); setTab("build"); }}
+          />
+        )}
+
+        {tab === "assets" && (
+          <AssetsPanel
+            project={project}
+            onChange={setProject}
+            selectedEntity={selected}
+            onAssignTexture={(dataUrl: string) => {
+              if (!selected) return;
+              const s = activeScene;
+              updateScene({ ...s, entities: s.entities.map(e => e.id === selected.id ? { ...e, texture: dataUrl } : e) });
+            }}
+            onAssignAnimation={(sprite: SpriteAsset) => {
+              if (!selected) return;
+              const s = activeScene;
+              const clip = {
+                id: uid(),
+                name: "idle",
+                fps: sprite.fps,
+                loop: sprite.loop,
+                frames: sprite.frames.map((f) => f.composite),
+              };
+              const animations = [
+                ...(selected.animations ?? []).filter(c => c.name !== "idle"),
+                clip,
+              ];
+              updateScene({ ...s, entities: s.entities.map(e => e.id === selected.id ? { ...e, animations, texture: sprite.frames[0]?.composite ?? e.texture } : e) });
+            }}
+            onPlaceOnScene={(sprite: SpriteAsset) => {
+              const s = activeScene;
+              const maxDim = 96;
+              const k = Math.min(1, maxDim / Math.max(sprite.width, sprite.height));
+              const w = Math.max(16, Math.round(sprite.width * k));
+              const h = Math.max(16, Math.round(sprite.height * k));
+              const ent: Entity = {
+                id: uid(),
+                kind: "platform",
+                x: Math.round(s.width / 2 - w / 2),
+                y: Math.round(s.height / 2 - h / 2),
+                w, h, vx: 0, vy: 0,
+                color: "#1e3a8a",
+                solid: false, gravity: false, controllable: false,
+                collectible: false, hazard: false, goal: false,
+                visible: true, opacity: 1,
+                texture: sprite.frames[0]?.composite ?? null,
+              };
+              updateScene({ ...s, entities: [...s.entities, ent] });
+              setSelectedId(ent.id);
+              setTab("inspect");
+            }}
+          />
+        )}
+
+        {tab === "settings" && (
+          <SettingsPanel project={project} onChange={setProject} />
+        )}
+      </main>
+
+      {/* Tool strip — only on build */}
+      {tab === "build" && (
+        <div className="px-2 py-2 border-t border-border/70 bg-card">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
+            {TOOL_LIST.map(toolItem => (
+              <button
+                key={toolItem.id}
+                onClick={() => setTool(toolItem.id)}
+                title={t(toolItem.tKey)}
+                className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[10px] font-display font-medium transition-colors duration-150 active:scale-95 ${
+                  tool === toolItem.id
+                    ? "btn-grad border-transparent text-primary-foreground"
+                    : "border-transparent text-ink-2 hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                {toolItem.icon}
+                <span className="truncate">{t(toolItem.tKey).toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom tabs (mobile only) */}
+      {!isTablet && (
+      <nav className="grid grid-cols-6 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
+        {TABS.map(([id, label, icon]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`min-w-0 flex flex-col items-center gap-1 py-2.5 px-0.5 transition-colors duration-150 active:scale-95 ${
+              tab === id ? "relative text-foreground after:absolute after:bottom-0.5 after:left-1/2 after:h-0.5 after:w-5 after:-translate-x-1/2 after:rounded-full after:bg-primary" : "text-ink-3 hover:text-foreground"
+            }`}
+          >
+            <span className="leading-none">{icon}</span>
+            <span className="w-full text-center text-[8px] font-display tracking-wide truncate">{label}</span>
+          </button>
+        ))}
+      </nav>
+      )}
+
+
+      {libraryOpen && (
+        <LibrarySheet
+          library={library}
+          selected={selected}
+          onClose={() => setLibraryOpen(false)}
+          onSave={(name) => {
+            if (!selected) return;
+            const { id: _id, x: _x, y: _y, ...preset } = selected;
+            void _id; void _x; void _y;
+            updateLibrary([...library, { id: uid(), name: name || selected.kind, preset }]);
+          }}
+          onRemove={(id) => updateLibrary(library.filter(i => i.id !== id))}
+          onPlace={(item) => {
+            const s = activeScene;
+            const ent: Entity = {
+              ...item.preset,
+              id: uid(),
+              x: Math.round(s.width / 2 - item.preset.w / 2),
+              y: Math.round(s.height / 2 - item.preset.h / 2),
+            };
+            updateScene({ ...s, entities: [...s.entities, ent] });
+            setSelectedId(ent.id);
+            setLibraryOpen(false);
+          }}
+        />
+      )}
+    </div>
+    </div>
+  );
+}
+
+function LibrarySheet({
+  library, selected, onClose, onSave, onRemove, onPlace,
+}: {
+  library: LibraryItem[];
+  selected: Entity | null;
+  onClose: () => void;
+  onSave: (name: string) => void;
+  onRemove: (id: string) => void;
+  onPlace: (item: LibraryItem) => void;
+}) {
+  const t = useT();
+  const [name, setName] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div
+        className="w-full max-w-xl panel rounded-t-2xl border border-border/60 p-4 space-y-3 max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="section-label">{t("library.title")}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 active:scale-95 transition"><X size={14} /></button>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">Guarda cualquier entidad seleccionada para reutilizarla en otras escenas. Toca un item para colocarlo en el centro.</p>
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={selected ? `Guardar: ${selected.kind}` : "Selecciona una entidad primero"}
+            disabled={!selected}
+            className="flex-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-xs font-mono disabled:opacity-50 focus:border-primary/50 focus:ring-2 focus:ring-ring/30 outline-none transition"
+          />
+          <button
+            disabled={!selected}
+            onClick={() => { onSave(name); setName(""); }}
+            className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-[10px] tracking-widest disabled:opacity-40 hover:bg-primary/15 active:scale-95 transition"
+          >{t("library.save")}</button>
+        </div>
+        {library.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6">{t("library.empty")}</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {library.map(item => (
+              <div key={item.id} className="panel rounded-md p-2 flex flex-col items-center gap-1.5 border border-border/40 hover:border-primary/60 transition">
+                <button
+                  onClick={() => onPlace(item)}
+                  className="w-full aspect-square rounded grid place-items-center active:scale-95 transition"
+                  style={{ background: item.preset.color + "33", border: `1px solid ${item.preset.color}` }}
+                >
+                  {item.preset.texture ? (
+                    <img src={item.preset.texture} alt={item.name} className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <span className="text-xs font-display text-primary-glow">{item.preset.kind.slice(0,3).toUpperCase()}</span>
+                  )}
+                </button>
+                <span className="text-[10px] font-mono text-foreground truncate w-full text-center">{item.name}</span>
+                <button onClick={() => onRemove(item.id)} className="text-[9px] text-destructive">✕ borrar</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Logo() {
+  return (
+    <a href="/" title="Volver al menú principal" className="relative w-9 h-9 rounded-lg grad-brand grid place-items-center shadow-sm ring-1 ring-white/25 ring-inset active:scale-95 transition">
+      <span className="font-display text-lg text-primary-foreground">A</span>
+    </a>
+  );
+}
+
+function InspectorPanel({
+  scene,
+  entityId,
+  onChangeScene,
+  onSelect,
+  project,
+}: {
+  scene: import("@/lib/engine/core").Scene;
+  entityId: string | null;
+  onChangeScene: (s: import("@/lib/engine/core").Scene) => void;
+  onSelect: (id: string | null) => void;
+  project?: Project;
+}) {
+  const t = useT();
+  const ent = scene.entities.find(e => e.id === entityId);
+
+  if (!ent) {
+    return (
+      <div className="h-full overflow-auto p-4 space-y-3">
+        <SectionTitle>{t("scene.props")}</SectionTitle>
+        <Field label={t("settings.gameName")} value={scene.name} onChange={v => onChangeScene({ ...scene, name: v })} />
+        <Slider label={t("scene.gravity")} value={scene.gravity} min={0} max={3000} step={50}
+          onChange={v => onChangeScene({ ...scene, gravity: v })} />
+        <Slider label={t("scene.width")} value={scene.width} min={400} max={8000} step={100}
+          onChange={v => onChangeScene({ ...scene, width: v })} />
+        <Slider label={t("scene.height")} value={scene.height} min={400} max={4000} step={100}
+          onChange={v => onChangeScene({ ...scene, height: v })} />
+
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("scene.bgColor")}</label>
+          <input
+            type="color"
+            value={scene.bg}
+            onChange={e => onChangeScene({ ...scene, bg: e.target.value })}
+            className="w-full h-10 rounded-md bg-transparent border border-border mt-1"
+          />
+        </div>
+
+        <SceneBgImage scene={scene} onChange={onChangeScene} />
+
+
+
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("scene.scaleAll")}</label>
+          <div className="grid grid-cols-4 gap-1.5 mt-1">
+            {[0.5, 0.75, 1.5, 2].map(k => (
+              <button key={k}
+                onClick={() => onChangeScene(scaleScene(scene, k))}
+                className="py-2 rounded-lg border border-line-strong bg-card text-xs font-display font-semibold tracking-widest text-ink-2 hover:border-primary/40 hover:text-primary active:scale-95 transition"
+              >×{k}</button>
+            ))}
+          </div>
+        </div>
+
+        <Slider label={t("scene.timeLimit")} value={scene.timeLimit ?? 0} min={0} max={300} step={5}
+          onChange={v => onChangeScene({ ...scene, timeLimit: v })} />
+        <Slider label={t("scene.startLives")} value={scene.startLives ?? 1} min={1} max={9} step={1}
+          onChange={v => onChangeScene({ ...scene, startLives: v })} />
+
+        <SceneLayersPanel scene={scene} onChangeScene={onChangeScene} />
+
+        <div className="pt-4">
+          <SectionTitle>ENTIDADES · {scene.entities.length}</SectionTitle>
+          <LayersPanel scene={scene} onChangeScene={onChangeScene} selectedId={null} onSelect={onSelect} />
+        </div>
+      </div>
+    );
+  }
+
+  const update = (patch: Partial<typeof ent>) => {
+    onChangeScene({
+      ...scene,
+      entities: scene.entities.map(e => e.id === ent.id ? { ...e, ...patch } : e),
+    });
+  };
+
+  return (
+    <div className="h-full overflow-auto p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <SectionTitle>{ent.kind.toUpperCase()}</SectionTitle>
+        <button onClick={() => onSelect(null)} className="text-xs text-muted-foreground">{t("common.back")}</button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Slider label="X" value={ent.x} min={0} max={scene.width} step={10} onChange={v => update({ x: v })} />
+        <Slider label="Y" value={ent.y} min={0} max={scene.height} step={10} onChange={v => update({ y: v })} />
+        <Slider label="Ancho" value={ent.w} min={8} max={400} step={4} onChange={v => update({ w: v })} />
+        <Slider label="Alto" value={ent.h} min={8} max={400} step={4} onChange={v => update({ h: v })} />
+      </div>
+      <div>
+        <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.color")}</label>
+        <input
+          type="color"
+          value={ent.color}
+          onChange={e => update({ color: e.target.value })}
+          className="w-full h-10 rounded-md bg-transparent border border-border mt-1"
+        />
+      </div>
+
+      <TexturePicker
+        texture={ent.texture ?? null}
+        fit={ent.textureFit ?? "stretch"}
+        onPick={(dataUrl) => update({ texture: dataUrl })}
+        onClear={() => update({ texture: null })}
+        onFit={(f) => update({ textureFit: f })}
+      />
+
+      <AnimationsButton entity={ent} onUpdate={update} />
+      <ScriptsButton entity={ent} onUpdate={update} />
+      <DialogEditor entity={ent} onUpdate={update} />
+      <HitboxEditor entity={ent} onUpdate={update} />
+
+      <div className="grid grid-cols-2 gap-2">
+        <Slider label={t("inspector.depth")} value={ent.z ?? 0} min={-20} max={20} step={1}
+          onChange={v => update({ z: v })} />
+        <Toggle label={t("inspector.flipX")} on={!!ent.flipX} onChange={v => update({ flipX: v })} />
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">ROTACIÓN</label>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => update({ rotation: 0 })}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 hover:bg-muted/70 font-mono">0°</button>
+            <button type="button" onClick={() => update({ rotation: (((ent.rotation ?? 0) + 90) % 360) })}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 hover:bg-primary/40 text-primary-glow font-mono">+90°</button>
+            <span className="text-[10px] font-mono tabular-nums w-10 text-right">{Math.round(ent.rotation ?? 0)}°</span>
+          </div>
+        </div>
+        <input type="range" min={0} max={360} step={1}
+          value={ent.rotation ?? 0}
+          onChange={e => update({ rotation: Number(e.target.value) })}
+          className="w-full accent-primary" />
+      </div>
+
+      {(scene.layers && scene.layers.length > 0) && (
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.layer")}</label>
+          <select
+            value={ent.layerId ?? DEFAULT_LAYER_ID}
+            onChange={e => update({ layerId: e.target.value })}
+            className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono"
+          >
+            {[...(scene.layers ?? [])].sort((a, b) => b.z - a.z).map(l => (
+              <option key={l.id} value={l.id}>{l.name} · z={l.z}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <Toggle label={t("inspector.solid")} on={ent.solid} onChange={v => update({ solid: v })} />
+        <Toggle label={t("inspector.gravity")} on={ent.gravity} onChange={v => update({ gravity: v })} />
+        <Toggle label={t("inspector.hazard")} on={ent.hazard} onChange={v => update({ hazard: v })} />
+        <Toggle label={t("inspector.collectible")} on={ent.collectible} onChange={v => update({ collectible: v })} />
+        <Toggle label={t("inspector.slippery")} on={!!ent.slippery} onChange={v => update({ slippery: v })} />
+        <Toggle label={t("inspector.checkpoint")} on={!!ent.checkpoint} onChange={v => update({ checkpoint: v })} />
+      </div>
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <Toggle label={t("inspector.visible")} on={ent.visible ?? true} onChange={v => update({ visible: v })} />
+        <Slider label={t("inspector.opacity")} value={Math.round((ent.opacity ?? 1) * 100)} min={0} max={100} step={5}
+          onChange={v => update({ opacity: v / 100 })} />
+      </div>
+      <BehaviorsPanel ent={ent} onUpdate={update} />
+      <ParticlesButton entity={ent} onUpdate={update} />
+
+      {ent.goal && (
+        <div className="panel rounded-md p-2 space-y-2 border border-primary/30">
+          <div className="text-[10px] font-display tracking-widest text-primary-glow">{t("goal.onReach") || "AL ALCANZAR"}</div>
+          <Toggle
+            label={t("goal.endsGame") || "GANAR PARTIDA"}
+            on={!!ent.endsGame}
+            onChange={v => update({ endsGame: v })}
+          />
+          <div>
+            <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("goal.nextScene") || "IR A ESCENA"}</label>
+            <select
+              value={ent.nextSceneId ?? ""}
+              onChange={e => update({ nextSceneId: e.target.value || null })}
+              className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono"
+            >
+              <option value="">— {t("goal.none") || "Ninguna (solo ganar nivel)"} —</option>
+              {(project?.scenes ?? []).filter(s => s.id !== scene.id).map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => update({ x: scene.width / 2 - ent.w / 2, y: scene.height / 2 - ent.h / 2 })}          className="w-full py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
+        >{t("inspector.center")}</button>
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        <button
+          onClick={() => {
+            const idx = scene.entities.findIndex(e => e.id === ent.id);
+            if (idx <= 0) return;
+            const next = [...scene.entities];
+            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+            onChangeScene({ ...scene, entities: next });
+          }}
+          className="py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
+        >{t("inspector.back")}</button>
+        <button
+          onClick={() => {
+            const idx = scene.entities.findIndex(e => e.id === ent.id);
+            if (idx < 0 || idx === scene.entities.length - 1) return;
+            const next = [...scene.entities];
+            [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+            onChangeScene({ ...scene, entities: next });
+          }}
+          className="py-2 rounded-lg border border-line-strong bg-card text-ink-2 font-display text-[10px] tracking-widest hover:border-primary/30 hover:text-primary active:scale-[0.98] transition"
+        >{t("inspector.front")}</button>
+        <button
+          onClick={() => {
+            const copy = { ...ent, id: uid(), x: ent.x + 20, y: ent.y + 20 };
+            onChangeScene({ ...scene, entities: [...scene.entities, copy] });
+            onSelect(copy.id);
+          }}
+          className="py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display text-[10px] tracking-widest hover:bg-primary/15 active:scale-[0.98] transition"
+        >{t("inspector.clone")}</button>
+      </div>
+
+      {ent.kind !== "player" && (
+        <button
+          onClick={() => {
+            onChangeScene({ ...scene, entities: scene.entities.filter(e => e.id !== ent.id) });
+            onSelect(null);
+          }}
+          className="w-full mt-2 py-2 rounded-lg bg-destructive/10 border border-destructive/40 text-destructive font-display font-semibold text-xs tracking-widest hover:bg-destructive/15 active:scale-[0.98] transition"
+        >
+          {t("inspector.delete")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ScenesPanel({
+  project,
+  onChange,
+  onOpen,
+}: {
+  project: Project;
+  onChange: (p: Project) => void;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <div className="h-full overflow-auto p-4 space-y-3">
+      <SectionTitle>ESCENAS</SectionTitle>
+      <div className="space-y-2">
+        {project.scenes.map(s => (
+          <div key={s.id} className="surface rounded-xl p-3 flex items-center gap-3 transition-colors hover:border-primary/35">
+            <div
+              className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"
+              title={`${s.entities.length} elementos`}
+            >
+              <Layers size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <input
+                value={s.name}
+                onChange={e => onChange({ ...project, scenes: project.scenes.map(x => x.id === s.id ? { ...x, name: e.target.value } : x) })}
+                className="w-full bg-transparent font-display text-sm focus:outline-none focus:bg-input/40 rounded px-1"
+              />
+              <div className="text-[10px] font-mono text-muted-foreground px-1">{s.width}×{s.height} · g{s.gravity}</div>
+            </div>
+            <button
+              onClick={() => onOpen(s.id)}
+              className="text-[10px] font-display font-semibold px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/15 active:scale-[0.96] transition"
+            >ABRIR</button>
+            <button
+              onClick={() => {
+                const copy: Scene = JSON.parse(JSON.stringify(s));
+                copy.id = uid();
+                copy.name = s.name + " copia";
+                copy.entities = copy.entities.map(e => ({ ...e, id: uid() }));
+                onChange({ ...project, scenes: [...project.scenes, copy], activeSceneId: copy.id });
+              }}
+              className="text-[10px] font-display px-2 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-primary hover:border-primary/30 active:scale-[0.96] transition"
+              title="Duplicar"
+            >⧉</button>
+            <button
+              onClick={() => {
+                if (!confirm(`¿Vaciar todas las entidades de "${s.name}"?`)) return;
+                onChange({ ...project, scenes: project.scenes.map(x => x.id === s.id ? { ...x, entities: [] } : x) });
+              }}
+              className="text-[10px] font-display px-2 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-destructive hover:border-destructive/40 active:scale-[0.96] transition"
+              title="Vaciar entidades"
+            >⌫</button>
+            {project.scenes.length > 1 && (
+              <button
+                onClick={() => {
+                  if (!confirm(`¿Borrar "${s.name}"?`)) return;
+                  const remaining = project.scenes.filter(x => x.id !== s.id);
+                  onChange({
+                    ...project,
+                    scenes: remaining,
+                    activeSceneId: project.activeSceneId === s.id ? remaining[0].id : project.activeSceneId,
+                  });
+                }}
+                className="text-ink-3 hover:text-destructive text-lg px-1.5 active:scale-90 transition"
+              >✕</button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => {
+          const s = newScene(`Escena ${project.scenes.length + 1}`);
+          s.id = uid();
+          onChange({ ...project, scenes: [...project.scenes, s], activeSceneId: s.id });
+        }}
+        className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary font-display font-semibold tracking-widest text-sm hover:bg-primary/5 active:scale-[0.98] transition"
+      >
+        + NUEVA ESCENA
+      </button>
+    </div>
+  );
+}
+
+
+function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: Project) => void }) {
+  useT();
+  const set = (patch: Partial<Project["settings"]>) =>
+    onChange({ ...project, settings: { ...project.settings, ...patch } });
+
+
+  return (
+    <div className="h-full overflow-auto p-4 space-y-4">
+      <SectionTitle>PROYECTO</SectionTitle>
+      <Field label="Nombre del juego" value={project.name} onChange={v => onChange({ ...project, name: v })} />
+
+
+
+      <SectionTitle>EJECUCIÓN</SectionTitle>
+      <div>
+        <label className="text-[10px] font-display tracking-widest text-muted-foreground">TOPE DE FPS</label>
+        <div className="flex gap-2 mt-1">
+          {[30, 60].map(f => (
+            <button key={f}
+              onClick={() => set({ fpsCap: f as 30 | 60 })}
+              className={`flex-1 py-2 rounded-lg font-display font-semibold border transition active:scale-[0.96] ${
+                project.settings.fpsCap === f
+                  ? "bg-primary/10 border-primary/50 text-primary"
+                  : "border-line-strong bg-card text-ink-2 hover:border-primary/25 hover:text-primary"
+              }`}
+            >{f}</button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Toggle label="Mostrar HUD" on={project.settings.showHUD} onChange={v => set({ showHUD: v })} />
+        <Toggle label="Mostrar FPS" on={project.settings.showFPS ?? true} onChange={v => set({ showFPS: v })} />
+        <Toggle label="Controles táctiles" on={project.settings.touchControls ?? true} onChange={v => set({ touchControls: v })} />
+        <Toggle label="Auto-pausa" on={project.settings.autoPause ?? true} onChange={v => set({ autoPause: v })} />
+        <Toggle label="Mostrar hitbox" on={project.settings.showHitboxes ?? false} onChange={v => set({ showHitboxes: v })} />
+      </div>
+
+
+      <SectionTitle>AUDIO</SectionTitle>
+      <div className="grid grid-cols-2 gap-2">
+        <Toggle label="Silenciar" on={project.settings.muted ?? false} onChange={v => set({ muted: v })} />
+        <Toggle
+          label="Música"
+          on={(project.settings.music ?? false) && !!project.settings.musicUrl}
+          onChange={v => set({ music: v })}
+        />
+      </div>
+      <Slider label="Volumen" value={Math.round((project.settings.volume ?? 0.8) * 100)} min={0} max={100} step={5}
+        onChange={v => set({ volume: v / 100 })} />
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-display tracking-widest text-muted-foreground">ARCHIVO DE MÚSICA</label>
+        {project.settings.musicUrl ? (
+          <div className="flex items-center gap-2 panel rounded-md px-3 py-2">
+            <span className="flex-1 text-xs font-mono text-primary-glow truncate">
+              ♪ {project.settings.musicName || "pista"}
+            </span>
+            <button
+              onClick={() => set({ musicUrl: null, musicName: null, music: false })}
+              className="text-[10px] font-display font-semibold tracking-widest text-ink-2 hover:text-primary px-2 py-1.5 rounded-lg border border-line-strong bg-card active:scale-[0.96] transition"
+            >QUITAR</button>
+          </div>
+        ) : (
+          <label className="block">
+            <input
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={async e => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const url = String(reader.result || "");
+                  if (url) set({ musicUrl: url, musicName: f.name, music: true });
+                };
+                reader.readAsDataURL(f);
+                e.target.value = "";
+              }}
+            />
+            <span className="block text-center py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-xs tracking-widest cursor-pointer hover:bg-primary/15 active:scale-[0.98] transition">
+              ⤒ SUBIR MÚSICA
+            </span>
+          </label>
+        )}
+      </div>
+
+
+
+
+
+      <div className="pt-6 text-center text-[10px] font-mono text-muted-foreground">
+        ASTERNAL ENGINE · HECHO PARA MÓVIL
+      </div>
+
+    </div>
+  );
+}
+
+
+// --- shared bits ---
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="font-display text-[11px] font-semibold tracking-[0.18em] uppercase text-ink-2">{children}</h2>;
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="text-[10px] font-display font-medium tracking-widest text-ink-2">{label.toUpperCase()}</label>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full mt-1 bg-card border border-line-strong rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-ring/30 transition-[border-color,box-shadow]"
+      />
+    </div>
+  );
+}
+
+function Slider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <div className="flex justify-between items-baseline">
+        <label className="text-[10px] font-display font-medium tracking-widest text-ink-2">{label.toUpperCase()}</label>
+        <span className="text-[10px] font-mono text-primary tabular-nums">{Math.round(value)}</span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full accent-primary"
+      />
+    </div>
+  );
+}
+
+function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!on)}
+      className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-colors duration-150 active:scale-[0.98] ${
+        on ? "border-primary/40 bg-primary/10 text-primary" : "border-line-strong bg-card text-ink-2 hover:border-primary/25"
+      }`}
+    >
+      <span className="text-xs font-display font-medium tracking-wide">{label.toUpperCase()}</span>
+      <span className={`w-8 h-4 rounded-full p-0.5 transition ${on ? "bg-primary" : "bg-muted"}`}>
+        <span className={`block w-3 h-3 rounded-full bg-white shadow-sm transition ${on ? "translate-x-4" : ""}`} />
+      </span>
+    </button>
+  );
+}
+
+function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
+  texture: string | null;
+  fit?: "stretch" | "contain" | "cover";
+  onPick: (dataUrl: string) => void;
+  onClear: () => void;
+  onFit?: (f: "stretch" | "contain" | "cover") => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [drawOpen, setDrawOpen] = useState(false);
+  const t = useT();
+  return (
+    <div>
+      <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.texture")}</label>        <div className="mt-1 flex items-center gap-2">
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="relative w-16 h-16 rounded-lg border border-line-strong bg-input/40 grid place-items-center overflow-hidden shadow-xs"
+          style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "12px 12px", backgroundPosition: "0 0,0 6px,6px -6px,-6px 0" }}
+        >
+          {texture ? (
+            <img src={texture} alt="texture" className="absolute inset-0 w-full h-full" style={{ objectFit: fit === "stretch" ? "fill" : fit, imageRendering: "auto" }} />
+          ) : (
+            <span className="text-xl text-muted-foreground">＋</span>
+          )}
+        </button>
+        <div className="flex-1 flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => inputRef.current?.click()}
+              className="text-[10px] font-display font-semibold tracking-widest px-2 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/15 transition"
+            >
+              {t("texture.gallery")}
+            </button>
+            <button
+              onClick={() => setDrawOpen(true)}
+              className="text-[10px] font-display font-semibold tracking-widest px-2 py-2 rounded-lg bg-accent/10 border border-accent/30 text-accent-foreground hover:bg-accent/15 transition"
+            >
+              {t("texture.draw")}
+            </button>
+          </div>
+          {texture && (
+            <button
+              onClick={onClear}
+              className="text-[10px] font-display font-semibold tracking-widest px-3 py-1.5 rounded-lg border border-line-strong bg-card text-ink-2 hover:text-primary hover:border-primary/30 transition"
+            >
+              {t("texture.clear")}
+            </button>
+          )}
+        </div>
+      </div>
+      {drawOpen && (
+        <PaintEditor
+          onClose={() => setDrawOpen(false)}
+          onSave={(asset) => {
+            const url = asset.frames[0]?.composite;
+            if (url) onPick(url);
+            setDrawOpen(false);
+          }}
+        />
+      )}
+      {texture && onFit && (
+        <div className="grid grid-cols-3 gap-1 mt-2">
+          {(["stretch","contain","cover"] as const).map(m => (
+            <button key={m}
+              onClick={() => onFit(m)}
+              className={`py-1 rounded text-[9px] font-display font-semibold tracking-widest border transition ${
+                fit === m ? "bg-primary/10 border-primary/50 text-primary" : "border-line-strong bg-card text-ink-2 hover:border-primary/30 hover:text-primary"
+              }`}
+            >{m.toUpperCase()}</button>
+          ))}
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          try {
+            const url = await fileToDataURL(f);
+            onPick(url);
+          } catch { /* ignore */ }
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+function AnimationsButton({ entity, onUpdate }: { entity: import("@/lib/engine/core").Entity; onUpdate: (patch: Partial<import("@/lib/engine/core").Entity>) => void }) {
+  const [open, setOpen] = useState(false);
+  const count = entity.animations?.length ?? 0;
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full mt-1 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary font-display font-semibold text-xs tracking-widest flex items-center justify-between hover:bg-primary/15 active:scale-[0.99] transition"
+      >
+        <span>◈ ANIMATIONS</span>
+        <span className="font-mono text-[10px] opacity-80">{count} CLIPS</span>
+      </button>
+      {open && (
+        <AnimationEditor
+          entity={entity}
+          onChange={onUpdate}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function AssetsPanel({
+  project, onChange, selectedEntity, onAssignTexture, onAssignAnimation, onPlaceOnScene,
+}: {
+  project: Project;
+  onChange: (p: Project) => void;
+  selectedEntity: Entity | null;
+  onAssignTexture: (dataUrl: string) => void;
+  onAssignAnimation: (sprite: SpriteAsset) => void;
+  onPlaceOnScene: (sprite: SpriteAsset) => void;
+}) {
+  const sprites = project.assets?.sprites ?? [];
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [paintOpen, setPaintOpen] = useState(false);
+
+  const addSprite = (asset: SpriteAsset) => {
+    const next = [...sprites, asset];
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sprites: next } });
+  };
+
+
+  const importFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const list = Array.from(files);
+    const frames = await Promise.all(list.map(async (f) => ({
+      id: uid(),
+      layers: [],
+      composite: await fileToDataURL(f),
+    })));
+    // Probe dimensions from the first frame
+    const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 32, h: 32 });
+      img.src = frames[0].composite;
+    });
+    const asset: SpriteAsset = {
+      id: uid(),
+      name: list[0].name.replace(/\.[^.]+$/, "").slice(0, 24) || "sprite",
+      width: dims.w,
+      height: dims.h,
+      fps: 8,
+      loop: true,
+      frames,
+    };
+    const next = [...sprites, asset];
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sprites: next } });
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removeSprite = (id: string) => {
+    if (!confirm("Delete this sprite?")) return;
+    const list = sprites.filter(s => s.id !== id);
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sprites: list } });
+  };
+
+  return (
+    <div className="h-full overflow-auto p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <SectionTitle>SPRITES · {sprites.length}</SectionTitle>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setPaintOpen(true)}
+            className="text-xs font-display px-3 py-1.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow glow-border"
+          >✎ DRAW</button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="text-xs font-display px-3 py-1.5 rounded-md bg-primary/10 border border-primary/50 text-primary-glow glow-border"
+          >+ IMPORT</button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => importFiles(e.target.files)}
+        />
+      </div>
+      {paintOpen && (
+        <PaintEditor
+          onClose={() => setPaintOpen(false)}
+          onSave={(asset) => { addSprite(asset); setPaintOpen(false); }}
+        />
+      )}
+
+
+
+      {selectedEntity ? (
+        <div className="text-[10px] font-mono text-muted-foreground panel rounded-md px-2 py-1.5 border border-border/50">
+          Tap a sprite to assign to <span className="text-primary-glow">{selectedEntity.kind.toUpperCase()}</span>
+        </div>
+      ) : (
+        <div className="text-[10px] font-mono text-muted-foreground">
+          Select an entity in INSPECT to assign sprites to it.
+        </div>
+      )}
+
+      {sprites.length === 0 && (
+        <div className="text-center text-xs text-muted-foreground py-10">
+          No sprites yet. Tap <span className="text-primary-glow">+ IMPORT</span> to load images from your gallery.
+          <div className="mt-1 text-[10px] opacity-70">Select multiple files to create an animated sprite.</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {sprites.map(sp => (
+          <div key={sp.id} className="panel rounded-lg p-2 border border-border/60 glow-border">
+            <div
+              className="aspect-square rounded-md grid place-items-center overflow-hidden border border-border/30"
+              style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "16px 16px", backgroundPosition: "0 0,0 8px,8px -8px,-8px 0" }}
+            >
+              {sp.frames[0]?.composite && (
+                <img src={sp.frames[0].composite} alt={sp.name}
+                  className="w-full h-full object-contain"
+                  style={{ imageRendering: "auto" }} />
+              )}
+            </div>
+            <div className="mt-1.5">
+              <div className="text-xs font-display truncate text-primary-glow">{sp.name}</div>
+              <div className="text-[9px] font-mono text-muted-foreground">{sp.width}×{sp.height} · {sp.frames.length}f</div>
+            </div>
+            <div className="mt-1.5 grid grid-cols-2 gap-1">
+              <button
+                onClick={() => onPlaceOnScene(sp)}
+                className="text-[10px] py-1.5 rounded bg-primary/10 border border-primary/50 text-primary-glow font-display tracking-widest glow-border"
+              >＋ PLACE</button>
+              <button
+                onClick={() => removeSprite(sp.id)}
+                className="text-[10px] py-1.5 rounded bg-destructive/15 border border-destructive/40 text-destructive font-display tracking-widest"
+              >✕ DELETE</button>
+            </div>
+            {selectedEntity && (
+              <div className="grid grid-cols-2 gap-1 mt-1">
+                <button
+                  onClick={() => onAssignTexture(sp.frames[0]?.composite ?? "")}
+                  className="text-[10px] py-1.5 rounded bg-primary/15 border border-primary/40 text-primary-glow font-display tracking-widest"
+                >TEXTURA</button>
+                <button
+                  onClick={() => onAssignAnimation(sp)}
+                  disabled={sp.frames.length < 1}
+                  className="text-[10px] py-1.5 rounded bg-accent/15 border border-accent/40 text-primary-glow font-display tracking-widest disabled:opacity-40"
+                >ANIM</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function scaleScene(scene: Scene, k: number): Scene {
+  return {
+    ...scene,
+    width: Math.round(scene.width * k),
+    height: Math.round(scene.height * k),
+    entities: scene.entities.map(e => ({
+      ...e,
+      x: Math.round(e.x * k),
+      y: Math.round(e.y * k),
+      w: Math.max(8, Math.round(e.w * k)),
+      h: Math.max(8, Math.round(e.h * k)),
+    })),
+  };
+}
+
+function ScriptsButton({ entity, onUpdate }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+  const [open, setOpen] = useState(false);
+  const count = entity.scripts?.length ?? 0;
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
+      >
+        <span>◉ EVENTS · BLOCKS</span>
+        <span className="font-mono text-[10px] opacity-80">{count} SCRIPTS</span>
+      </button>
+      {open && (
+        <ScriptEditor
+          entity={entity}
+          onChange={onUpdate}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function timeAgo(ts: number) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
+}
+
+function exportProject(project: Project) {
+  const data = JSON.stringify(project, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(project.name || "asternal-project").replace(/\s+/g, "-").toLowerCase()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importProject(): Promise<Project | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.onchange = async () => {
+      const f = input.files?.[0];
+      if (!f) return resolve(null);
+      try {
+        const text = await f.text();
+        const parsed = JSON.parse(text) as Project;
+        if (!parsed.scenes || !Array.isArray(parsed.scenes)) {
+          return reject(new Error("Archivo de proyecto no válido"));
+        }
+        if (!confirm("Replace current project with imported file?")) return resolve(null);
+        resolve(parsed);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    input.click();
+  });
+}
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background p-4" onClick={onClose}>
+      <div className="panel rounded-xl border border-primary/40 glow-border max-w-md w-full p-5 space-y-3" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm text-primary-glow glow-text tracking-[0.25em]">AYUDA RÁPIDA</h2>
+          <button onClick={onClose} className="text-muted-foreground text-xl leading-none">✕</button>
+        </div>
+        <ul className="space-y-2 text-xs font-mono text-muted-foreground">
+          <li><span className="text-primary-glow">CONSTRUIR</span> · toca para colocar la herramienta, pellizca para zoom, desliza para mover.</li>
+          <li><span className="text-primary-glow">SELECCIONAR</span> · toca una entidad y abre INSPECCIÓN para editarla.</li>
+          <li><span className="text-primary-glow">ASSETS</span> · importa varios fotogramas para crear una animación.</li>
+          <li><span className="text-primary-glow">SCRIPTS</span> · añade bloques de eventos (onStart, onCollide) para dar vida a las entidades.</li>
+          <li><span className="text-primary-glow">ESCENAS</span> · renombra en línea, duplica con ⧉, escala ×N desde el inspector.</li>
+          <li><span className="text-primary-glow">DATOS</span> · exporta/importa el proyecto como JSON. Guarda automáticamente.</li>
+        </ul>
+        <button onClick={onClose} className="w-full mt-2 py-2.5 rounded-xl bg-primary/20 border border-primary/50 text-primary-glow font-display text-xs tracking-widest active:scale-[0.98] transition">ENTENDIDO</button>
+      </div>
+    </div>
+  );
+}
+
+function DialogEditor({ entity, onUpdate }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+  const [open, setOpen] = useState(false);
+  const d = entity.dialog ?? null;
+  const lines = d?.lines ?? [];
+  const setDialog = (patch: Partial<NonNullable<Entity["dialog"]>>) => {
+    const base = d ?? { lines: [], trigger: "interact" as const };
+    onUpdate({ dialog: { ...base, ...patch } });
+  };
+  const addLine = () => {
+    const newLine = { id: uid(), text: "", speaker: "" };
+    setDialog({ lines: [...lines, newLine] });
+  };
+  const removeLine = (id: string) => setDialog({ lines: lines.filter(l => l.id !== id) });
+  const updateLine = (id: string, patch: Partial<typeof lines[number]>) =>
+    setDialog({ lines: lines.map(l => l.id === id ? { ...l, ...patch } : l) });
+  const moveLine = (id: string, dir: -1 | 1) => {
+    const idx = lines.findIndex(l => l.id === id);
+    if (idx < 0) return;
+    const j = idx + dir;
+    if (j < 0 || j >= lines.length) return;
+    const next = [...lines];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setDialog({ lines: next });
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => { if (!d) setDialog({ lines: [{ id: uid(), text: "", speaker: "" }] }); setOpen(true); }}
+        className="w-full py-2 rounded-md panel border border-border text-xs font-display tracking-widest text-primary-glow glow-border flex items-center justify-center gap-2"
+      >
+        DIÁLOGO {d ? `· ${lines.length}` : ""}
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[540px] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Diálogo · {entity.kind}</DialogTitle>
+            <DialogDescription>Lo dice el personaje cuando el jugador lo activa.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="col-span-3">
+              <label className="text-[10px] font-display tracking-widest text-muted-foreground">DISPARADOR</label>
+              <select
+                value={d?.trigger ?? "interact"}
+                onChange={e => setDialog({ trigger: e.target.value as "touch" | "interact" | "auto" })}
+                className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono"
+              >
+                <option value="interact">Al pulsar SALTAR sobre él</option>
+                <option value="touch">Al tocarlo</option>
+                <option value="auto">Al empezar la escena</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-xs col-span-3">
+              <input type="checkbox" checked={!!d?.pausesGame} onChange={e => setDialog({ pausesGame: e.target.checked })} />
+              <span>Pausar el juego mientras habla</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs col-span-3">
+              <input type="checkbox" checked={!!d?.once} onChange={e => setDialog({ once: e.target.checked })} />
+              <span>Reproducir solo una vez</span>
+            </label>
+          </div>
+
+          <div className="flex-1 overflow-auto space-y-2 mt-2 pr-1">
+            {lines.map((l, i) => (
+              <div key={l.id} className="panel rounded-md p-2 border border-border space-y-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-mono text-muted-foreground w-6">#{i + 1}</span>
+                  <input
+                    value={l.speaker ?? ""}
+                    onChange={e => updateLine(l.id, { speaker: e.target.value })}
+                    placeholder="Nombre (opcional)"
+                    className="flex-1 bg-input/60 border border-border rounded px-2 py-1 text-xs"
+                  />
+                  <button onClick={() => moveLine(l.id, -1)} className="w-7 h-7 grid place-items-center rounded hover:bg-muted"><ArrowUp size={12} /></button>
+                  <button onClick={() => moveLine(l.id, 1)} className="w-7 h-7 grid place-items-center rounded hover:bg-muted"><ArrowDown size={12} /></button>
+                  <button onClick={() => removeLine(l.id)} className="w-7 h-7 grid place-items-center rounded text-destructive/70 hover:text-destructive"><Trash2 size={12} /></button>
+                </div>
+                <textarea
+                  value={l.text}
+                  onChange={e => updateLine(l.id, { text: e.target.value })}
+                  placeholder="Escribe lo que dice…"
+                  rows={2}
+                  className="w-full bg-input/60 border border-border rounded px-2 py-1.5 text-sm resize-y"
+                />
+              </div>
+            ))}
+            {lines.length === 0 && (
+              <div className="text-xs text-muted-foreground text-center py-6">Sin líneas de diálogo aún.</div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-border">
+            <button onClick={addLine} className="flex-1 py-2 rounded-md bg-primary/15 border border-primary/40 text-primary-glow font-display text-[10px] tracking-widest flex items-center justify-center gap-1">
+              <Plus size={12} /> AÑADIR LÍNEA
+            </button>
+            {d && (
+              <button
+                onClick={() => { onUpdate({ dialog: null }); setOpen(false); }}
+                className="py-2 px-3 rounded-md bg-destructive/15 border border-destructive/40 text-destructive font-display text-[10px] tracking-widest"
+              >
+                QUITAR
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function HitboxEditor({ entity, onUpdate }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+  const enabled = !!entity.hitbox;
+  const hb: Hitbox = entity.hitbox ?? { x: 0, y: 0, w: entity.w, h: entity.h };
+  const set = (patch: Partial<Hitbox>) => onUpdate({ hitbox: { ...hb, ...patch } });
+
+  return (
+    <div className="mt-1 panel rounded-md border border-border/60 p-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="font-display text-[11px] tracking-widest text-primary-glow">▣ HITBOX</span>
+        <Toggle
+          label={enabled ? "Activado" : "Desactivado"}
+          on={enabled}
+          onChange={(v) => onUpdate({ hitbox: v ? { x: 0, y: 0, w: entity.w, h: entity.h } : null })}
+        />
+      </div>
+      {enabled && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Slider label="HB X" value={hb.x} min={-entity.w} max={entity.w} step={1} onChange={v => set({ x: v })} />
+            <Slider label="HB Y" value={hb.y} min={-entity.h} max={entity.h} step={1} onChange={v => set({ y: v })} />
+            <Slider label="HB W" value={hb.w} min={1} max={entity.w * 2} step={1} onChange={v => set({ w: v })} />
+            <Slider label="HB H" value={hb.h} min={1} max={entity.h * 2} step={1} onChange={v => set({ h: v })} />
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => set({ x: 0, y: 0, w: entity.w, h: entity.h })}
+              className="py-1.5 rounded border border-border text-muted-foreground font-display text-[10px] tracking-widest"
+            >RELLENAR</button>
+            <button
+              onClick={() => set({
+                x: Math.round(entity.w * 0.15),
+                y: Math.round(entity.h * 0.1),
+                w: Math.round(entity.w * 0.7),
+                h: Math.round(entity.h * 0.85),
+              })}
+              className="py-1.5 rounded border border-border text-muted-foreground font-display text-[10px] tracking-widest"
+            >SHRINK 80%</button>
+          </div>
+          <div className="text-[9px] font-mono text-muted-foreground">Arrastra el rectángulo rosa en el escenario para moverlo, o sus esquinas para redimensionarlo.</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BehaviorsPanel({ ent, onUpdate }: { ent: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+  return (
+    <div className="space-y-2 pt-2 border-t border-border">
+      <div className="text-[10px] font-display tracking-widest text-primary-glow">BEHAVIORS</div>
+
+      {/* Moving platform */}
+      <div className="panel rounded-md p-2 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-display tracking-widest text-muted-foreground">MOVING</span>
+          <button
+            onClick={() => onUpdate({ moving: ent.moving ? null : { axis: "x", range: 120, speed: 80 } })}
+            className="text-[10px] font-display tracking-widest px-2 py-0.5 rounded border border-border"
+          >{ent.moving ? "OFF" : "ON"}</button>
+        </div>
+        {ent.moving && (
+          <>
+            <div className="grid grid-cols-2 gap-1">
+              <button onClick={() => onUpdate({ moving: { ...ent.moving!, axis: "x" } })}
+                className={`py-1 rounded text-[10px] font-display tracking-widest border ${ent.moving.axis === "x" ? "bg-primary/20 border-primary" : "border-border"}`}>X</button>
+              <button onClick={() => onUpdate({ moving: { ...ent.moving!, axis: "y" } })}
+                className={`py-1 rounded text-[10px] font-display tracking-widest border ${ent.moving.axis === "y" ? "bg-primary/20 border-primary" : "border-border"}`}>Y</button>
+            </div>
+            <Slider label="Rango" value={ent.moving.range} min={20} max={800} step={10}
+              onChange={v => onUpdate({ moving: { ...ent.moving!, range: v } })} />
+            <Slider label="Velocidad" value={ent.moving.speed} min={10} max={400} step={10}
+              onChange={v => onUpdate({ moving: { ...ent.moving!, speed: v } })} />
+          </>
+        )}
+      </div>
+
+      {/* Crumble */}
+      <div className="panel rounded-md p-2 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-display tracking-widest text-muted-foreground">CRUMBLE</span>
+          <button
+            onClick={() => onUpdate({ crumble: ent.crumble ? null : { delay: 0.6, respawn: 3 } })}
+            className="text-[10px] font-display tracking-widest px-2 py-0.5 rounded border border-border"
+          >{ent.crumble ? "OFF" : "ON"}</button>
+        </div>
+        {ent.crumble && (
+          <>
+            <Slider label="Retardo s" value={Math.round(ent.crumble.delay * 10) / 10} min={0.1} max={3} step={0.1}
+              onChange={v => onUpdate({ crumble: { ...ent.crumble!, delay: v } })} />
+            <Slider label="Reaparecer s" value={ent.crumble.respawn} min={0} max={10} step={0.5}
+              onChange={v => onUpdate({ crumble: { ...ent.crumble!, respawn: v } })} />
+          </>
+        )}
+      </div>
+
+      {/* Spring */}
+      <div className="panel rounded-md p-2 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-display tracking-widest text-muted-foreground">SPRING</span>
+          <button
+            onClick={() => onUpdate({ spring: ent.spring ? null : { force: 820 } })}
+            className="text-[10px] font-display tracking-widest px-2 py-0.5 rounded border border-border"
+          >{ent.spring ? "OFF" : "ON"}</button>
+        </div>
+        {ent.spring && (
+          <Slider label="Fuerza" value={ent.spring.force} min={200} max={1600} step={20}
+            onChange={v => onUpdate({ spring: { force: v } })} />
+        )}
+      </div>
+
+      {/* Patrol (enemy) */}
+      {ent.kind === "enemy" && (
+        <div className="panel rounded-md p-2 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-display tracking-widest text-muted-foreground">PATROL</span>
+            <button
+              onClick={() => onUpdate({ patrol: ent.patrol ? null : { range: 120 } })}
+              className="text-[10px] font-display tracking-widest px-2 py-0.5 rounded border border-border"
+            >{ent.patrol ? "OFF" : "ON"}</button>
+          </div>
+          {ent.patrol && (
+            <Slider label="Rango" value={ent.patrol.range} min={20} max={600} step={10}
+              onChange={v => onUpdate({ patrol: { range: v } })} />
+          )}
+        </div>
+      )}
+
+      {/* Coin/pickup options */}
+      {ent.collectible && (
+        <div className="panel rounded-md p-2 space-y-1.5">
+          <Slider label="Valor" value={ent.value ?? 10} min={1} max={100} step={1}
+            onChange={v => onUpdate({ value: v })} />
+          <div className="text-[10px] font-display tracking-widest text-muted-foreground">POWER-UP</div>
+          <div className="grid grid-cols-4 gap-1">
+            {(["none","speed","djump","invuln"] as const).map(p => (
+              <button key={p}
+                onClick={() => onUpdate({ powerup: p === "none" ? null : p })}
+                className={`py-1 rounded text-[10px] font-display tracking-widest border ${(ent.powerup ?? "none") === p ? "bg-primary/20 border-primary" : "border-border"}`}>
+                {p.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Switch / Door linkage */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">SWITCH ID</label>
+          <input value={ent.switchId ?? ""} onChange={e => onUpdate({ switchId: e.target.value || undefined })}
+            placeholder="e.g. A"
+            className="w-full mt-1 px-2 py-1 rounded bg-background border border-border text-xs font-mono" />
+        </div>
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">DOOR ID</label>
+          <input value={ent.doorId ?? ""} onChange={e => onUpdate({ doorId: e.target.value || undefined })}
+            placeholder="e.g. A"
+            className="w-full mt-1 px-2 py-1 rounded bg-background border border-border text-xs font-mono" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SceneBgImage({ scene, onChange }: { scene: Scene; onChange: (s: Scene) => void }) {
+  const t = useT();
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="panel rounded-md p-2 space-y-2">
+      <div className="text-[10px] font-display tracking-widest text-muted-foreground">{t("scene.bgImage")}</div>
+      {scene.bgImage && (
+        <div className="relative w-full h-24 rounded overflow-hidden border border-border bg-background">
+          <img src={scene.bgImage} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-1.5">
+        <button
+          onClick={() => ref.current?.click()}
+          className="py-1.5 rounded border border-border text-[10px] font-display tracking-widest text-primary-glow"
+        >{t("scene.bgImagePick")}</button>
+        <button
+          onClick={() => onChange({ ...scene, bgImage: null })}
+          className="py-1.5 rounded border border-border text-[10px] font-display tracking-widest text-muted-foreground"
+        >{t("scene.bgImageClear")}</button>
+      </div>
+      <div className="grid grid-cols-4 gap-1">
+        {(["cover","contain","stretch","tile"] as const).map(m => (
+          <button key={m}
+            onClick={() => onChange({ ...scene, bgImageMode: m })}
+            className={`py-1 rounded text-[9px] font-display tracking-widest border ${
+              (scene.bgImageMode ?? "cover") === m ? "bg-primary/20 border-primary text-primary-glow" : "border-border text-muted-foreground"
+            }`}
+          >{m.toUpperCase()}</button>
+        ))}
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async e => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          const url = await fileToDataURL(f);
+          onChange({ ...scene, bgImage: url });
+          if (ref.current) ref.current.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+function ParticlesButton({ entity, onUpdate }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const has = !!entity.emitter;
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className={`w-full py-2 rounded-md font-display text-[10px] tracking-widest border ${
+          has ? "bg-primary/20 border-primary text-primary-glow" : "border-border text-muted-foreground"
+        }`}
+      >✦ {t("inspector.particles")}{has ? " · ON" : ""}</button>
+      {open && (
+        <ParticleEditor
+          entity={entity}
+          onUpdate={onUpdate}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function ParticleEditor({ entity, onUpdate, onClose }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void; onClose: () => void }) {
+  const t = useT();
+  // If the entity has no emitter yet, the toggle must reflect that (OFF) so
+  // turning it ON actually persists an emitter. Previously the default
+  // {enabled:true} made the toggle appear ON while no emitter was saved,
+  // so the user had to flip it off then on again to make it work.
+  const hasEmitter = !!entity.emitter;
+  const em = entity.emitter ?? {
+    enabled: false, rate: 20, lifetime: 1, speed: 80,
+    direction: 270, spread: 40, size: 4, gravity: 0, color: "#7dd3fc",
+  };
+  const upd = (patch: Partial<typeof em>) =>
+    onUpdate({ emitter: { ...em, ...patch } });
+
+
+  // Live preview
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext("2d")!;
+    let raf = 0;
+    type P = { x: number; y: number; vx: number; vy: number; life: number; max: number };
+    const ps: P[] = [];
+    let acc = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      acc += (em.rate || 0) * dt;
+      while (acc >= 1) {
+        acc -= 1;
+        const dir = ((em.direction || 0) + (Math.random() - 0.5) * (em.spread || 0)) * Math.PI / 180;
+        const sp = em.speed || 80;
+        ps.push({ x: c.width / 2, y: c.height / 2, vx: Math.cos(dir) * sp, vy: Math.sin(dir) * sp, life: em.lifetime || 1, max: em.lifetime || 1 });
+      }
+      ctx.fillStyle = "#0b1220"; ctx.fillRect(0, 0, c.width, c.height);
+      for (let i = ps.length - 1; i >= 0; i--) {
+        const p = ps[i];
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (em.gravity ?? 0) * dt;
+        p.life -= dt;
+        if (p.life <= 0) { ps.splice(i, 1); continue; }
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = em.color || "#7dd3fc";
+        ctx.fillRect(p.x - (em.size || 4) / 2, p.y - (em.size || 4) / 2, em.size || 4, em.size || 4);
+      }
+      ctx.globalAlpha = 1;
+      // direction arrow
+      const cx = c.width / 2, cy = c.height / 2;
+      const dr = (em.direction || 0) * Math.PI / 180;
+      ctx.strokeStyle = "rgba(125,211,252,0.5)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(dr) * 30, cy + Math.sin(dr) * 30); ctx.stroke();
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [em.rate, em.direction, em.spread, em.speed, em.lifetime, em.gravity, em.size, em.color]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-2">
+      <div className="panel glow-border rounded-2xl w-full max-w-md max-h-[90vh] overflow-auto p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="font-display text-sm tracking-widest text-primary-glow">✦ {t("inspector.particles")}</div>
+          <button onClick={onClose} className="text-xs font-display tracking-widest text-muted-foreground">✕</button>
+        </div>
+
+        <Toggle label={t("particles.enable")} on={hasEmitter && em.enabled} onChange={v => upd({ enabled: v })} />
+
+        <div className="rounded-md overflow-hidden border border-border bg-background">
+          <canvas ref={canvasRef} width={320} height={180} className="w-full block" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Slider label={t("particles.rate")} value={em.rate} min={0} max={200} step={1} onChange={v => upd({ rate: v })} />
+          <Slider label={t("particles.lifetime")} value={Math.round(em.lifetime * 10) / 10} min={0.1} max={6} step={0.1} onChange={v => upd({ lifetime: v })} />
+          <Slider label={t("particles.speed")} value={em.speed} min={0} max={600} step={5} onChange={v => upd({ speed: v })} />
+          <Slider label={t("particles.size")} value={em.size} min={1} max={24} step={1} onChange={v => upd({ size: v })} />
+          <Slider label={t("particles.direction")} value={em.direction} min={0} max={360} step={5} onChange={v => upd({ direction: v })} />
+          <Slider label={t("particles.spread")} value={em.spread} min={0} max={360} step={5} onChange={v => upd({ spread: v })} />
+          <Slider label={t("particles.gravity")} value={em.gravity} min={-600} max={1200} step={20} onChange={v => upd({ gravity: v })} />
+        </div>
+
+        <div className="grid grid-cols-4 gap-1">
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(d => (
+            <button key={d}
+              onClick={() => upd({ direction: d })}
+              className={`py-1 rounded text-[10px] font-display tracking-widest border ${
+                em.direction === d ? "bg-primary/20 border-primary text-primary-glow" : "border-border text-muted-foreground"
+              }`}
+            >{d}°</button>
+          ))}
+        </div>
+
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("particles.color")}</label>
+          <input type="color" value={em.color}
+            onChange={e => upd({ color: e.target.value })}
+            className="w-full h-10 rounded-md bg-transparent border border-border mt-1" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            onClick={() => onUpdate({ emitter: null })}
+            className="py-2 rounded-md border border-destructive/50 text-destructive font-display text-[10px] tracking-widest"
+          >QUITAR</button>
+          <button
+            onClick={onClose}
+            className="py-2 rounded-md bg-primary text-primary-foreground font-display text-[10px] tracking-widest"
+          >{t("particles.close")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LayersPanel({
+  scene,
+  onChangeScene,
+  selectedId,
+  onSelect,
+}: {
+  scene: import("@/lib/engine/core").Scene;
+  onChangeScene: (s: import("@/lib/engine/core").Scene) => void;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  // Render sorted by z desc (top layer first) — but reorder operates on the
+  // underlying entities array (z is the source of truth for draw order).
+  const sorted = [...scene.entities].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+  const patch = (id: string, p: Partial<Entity>) =>
+    onChangeScene({ ...scene, entities: scene.entities.map(e => e.id === id ? { ...e, ...p } : e) });
+  const bumpZ = (id: string, dir: 1 | -1) => {
+    const e = scene.entities.find(x => x.id === id);
+    if (!e) return;
+    const cur = e.z ?? 0;
+    patch(id, { z: Math.max(-20, Math.min(20, cur + dir)) });
+  };
+  const toTop = (id: string) => {
+    const maxZ = scene.entities.reduce((m, e) => Math.max(m, e.z ?? 0), 0);
+    patch(id, { z: Math.min(20, maxZ + 1) });
+  };
+  const toBottom = (id: string) => {
+    const minZ = scene.entities.reduce((m, e) => Math.min(m, e.z ?? 0), 0);
+    patch(id, { z: Math.max(-20, minZ - 1) });
+  };
+  const remove = (id: string) => {
+    const e = scene.entities.find(x => x.id === id);
+    if (!e || e.kind === "player") return;
+    onChangeScene({ ...scene, entities: scene.entities.filter(x => x.id !== id) });
+    if (selectedId === id) onSelect(null);
+  };
+  return (
+    <div className="mt-2 space-y-1">
+      {sorted.length === 0 && (
+        <div className="text-[10px] font-mono text-muted-foreground px-2 py-3 text-center border border-dashed border-border rounded">
+          NO LAYERS
+        </div>
+      )}
+      {sorted.map(e => {
+        const isSel = e.id === selectedId;
+        const visible = e.visible ?? true;
+        const locked = !!e.locked;
+        return (
+          <div
+            key={e.id}
+            className={`group flex items-center gap-1 panel rounded-md pl-1.5 pr-1 py-1 text-xs border ${
+              isSel ? "border-primary/70 bg-primary/10" : "border-border/40"
+            }`}
+          >
+            <button
+              onClick={() => bumpZ(e.id, 1)}
+              title="Adelante"
+              className="w-5 h-5 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"
+            ><ArrowUp size={11} /></button>
+            <button
+              onClick={() => bumpZ(e.id, -1)}
+              title="Atrás"
+              className="w-5 h-5 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"
+            ><ArrowDown size={11} /></button>
+            <span
+              className="w-2.5 h-2.5 rounded-sm shrink-0"
+              style={{ background: e.color, boxShadow: visible ? `0 0 8px ${e.color}` : undefined, opacity: visible ? 1 : 0.3 }}
+            />
+            <button
+              onClick={() => onSelect(e.id)}
+              className="flex-1 flex items-center gap-1.5 text-left min-w-0"
+            >
+              <span className="font-display tracking-wider text-[10px] truncate">{e.kind.toUpperCase()}</span>
+              <span className="ml-auto font-mono text-[9px] text-muted-foreground shrink-0">z{e.z ?? 0}</span>
+            </button>
+            <button
+              onClick={() => patch(e.id, { visible: !visible })}
+              title={visible ? "Ocultar" : "Mostrar"}
+              className={`w-6 h-6 grid place-items-center rounded ${visible ? "text-primary-glow" : "text-muted-foreground/50"}`}
+            >{visible ? <Eye size={13} /> : <EyeOff size={13} />}</button>
+            <button
+              onClick={() => patch(e.id, { locked: !locked })}
+              title={locked ? "Desbloquear" : "Bloquear"}
+              className={`w-6 h-6 grid place-items-center rounded ${locked ? "text-destructive" : "text-muted-foreground/60"}`}
+            >{locked ? <Lock size={13} /> : <Unlock size={13} />}</button>
+            <button
+              onClick={() => toTop(e.id)}
+              title="Mover al frente"
+              className="hidden sm:grid w-6 h-6 place-items-center rounded text-muted-foreground hover:text-primary-glow"
+            ><ChevronsUp size={12} /></button>
+            <button
+              onClick={() => toBottom(e.id)}
+              title="Mover al fondo"
+              className="hidden sm:grid w-6 h-6 place-items-center rounded text-muted-foreground hover:text-primary-glow"
+            ><ChevronsDown size={12} /></button>
+            {e.kind !== "player" && (
+              <button
+                onClick={() => remove(e.id)}
+                title="Borrar"
+                className="w-6 h-6 grid place-items-center rounded text-destructive/70 hover:text-destructive"
+              ><Trash2 size={12} /></button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SceneLayersPanel({
+  scene,
+  onChangeScene,
+}: {
+  scene: Scene;
+  onChangeScene: (s: Scene) => void;
+}) {
+  const t = useT();
+  const layers = scene.layers ?? [];
+  const setLayers = (next: SceneLayer[]) => onChangeScene({ ...scene, layers: next });
+  const update = (id: string, p: Partial<SceneLayer>) =>
+    setLayers(layers.map(l => l.id === id ? { ...l, ...p } : l));
+  const addLayer = () => {
+    const maxZ = layers.reduce((m, l) => Math.max(m, l.z), 0);
+    const id = uid();
+    setLayers([...layers, { id, name: `Capa ${layers.length + 1}`, z: maxZ + 1, visible: true, locked: false, opacity: 1 }]);
+  };
+  const duplicate = (id: string) => {
+    const src = layers.find(l => l.id === id);
+    if (!src) return;
+    const newId = uid();
+    const maxZ = layers.reduce((m, l) => Math.max(m, l.z), 0);
+    const copy: SceneLayer = { ...src, id: newId, name: `${src.name} copia`, z: maxZ + 1 };
+    // also clone entities on this layer to the new layer
+    const clonedEnts: Entity[] = scene.entities
+      .filter(e => (e.layerId ?? DEFAULT_LAYER_ID) === id)
+      .map(e => ({ ...e, id: uid(), layerId: newId }));
+    onChangeScene({ ...scene, layers: [...layers, copy], entities: [...scene.entities, ...clonedEnts] });
+  };
+  const remove = (id: string) => {
+    if (layers.length <= 1) return;
+    if (!confirm(`Borrar capa? Las entidades pasarán a la capa principal.`)) return;
+    const fallback = layers.find(l => l.id !== id)?.id ?? DEFAULT_LAYER_ID;
+    onChangeScene({
+      ...scene,
+      layers: layers.filter(l => l.id !== id),
+      entities: scene.entities.map(e => e.layerId === id ? { ...e, layerId: fallback } : e),
+    });
+  };
+  const move = (id: string, dir: -1 | 1) => {
+    const idx = layers.findIndex(l => l.id === id);
+    if (idx < 0) return;
+    const j = idx + dir;
+    if (j < 0 || j >= layers.length) return;
+    const next = [...layers];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    next.forEach((l, i) => { l.z = i; });
+    setLayers(next);
+  };
+  const mergeDown = (id: string) => {
+    const idx = layers.findIndex(l => l.id === id);
+    if (idx <= 0) return;
+    const target = layers[idx - 1];
+    if (!confirm(`Combinar "${layers[idx].name}" con "${target.name}"?`)) return;
+    onChangeScene({
+      ...scene,
+      layers: layers.filter(l => l.id !== id),
+      entities: scene.entities.map(e => e.layerId === id ? { ...e, layerId: target.id } : e),
+    });
+  };
+  return (
+    <div className="panel rounded-md p-2 space-y-2 view-fade">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-display tracking-widest text-primary-glow">{t("scene.layers")} · {layers.length}</span>
+        <button
+          onClick={addLayer}
+          className="flex items-center gap-1 text-[10px] font-display tracking-widest px-2 py-0.5 rounded border border-primary/40 bg-primary/10 text-primary-glow active:scale-95 transition"
+        ><Plus size={11} /> {t("layers.add")}</button>
+      </div>
+      {[...layers].sort((a, b) => b.z - a.z).map((l) => {
+        const count = scene.entities.filter(e => (e.layerId ?? DEFAULT_LAYER_ID) === l.id).length;
+        const op = l.opacity ?? 1;
+        return (
+          <div key={l.id} className="rounded-md border border-border/50 bg-white/[0.02] p-2 space-y-1.5 transition-all hover:border-primary/40">
+            <div className="flex items-center gap-1.5">
+              <input
+                value={l.name}
+                onChange={e => update(l.id, { name: e.target.value })}
+                className="flex-1 min-w-0 bg-input/50 border border-border/40 rounded px-2 py-1 text-xs font-mono"
+              />
+              <span className="text-[9px] font-mono text-muted-foreground tabular-nums w-10 text-right">{count} obj</span>
+            </div>
+            <div className="grid grid-cols-[auto_1fr_auto] gap-1.5 items-center">
+              <button
+                onClick={() => update(l.id, { visible: !l.visible })}
+                title={l.visible ? "Ocultar" : "Mostrar"}
+                className={`w-8 h-7 grid place-items-center rounded transition ${l.visible ? "text-primary-glow bg-primary/15" : "text-muted-foreground bg-muted/30"}`}
+              >{l.visible ? <Eye size={14} /> : <EyeOff size={14} />}</button>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono text-muted-foreground w-3">Z</span>
+                <input
+                  type="number"
+                  value={l.z}
+                  onChange={e => update(l.id, { z: Number(e.target.value) || 0 })}
+                  className="w-14 bg-input/50 border border-border/40 rounded px-1.5 py-1 text-[11px] font-mono tabular-nums"
+                />
+                <button
+                  onClick={() => update(l.id, { locked: !l.locked })}
+                  title={l.locked ? "Desbloquear" : "Bloquear"}
+                  className={`w-8 h-7 grid place-items-center rounded transition ${l.locked ? "text-destructive bg-destructive/15" : "text-muted-foreground bg-muted/30"}`}
+                >{l.locked ? <Lock size={14} /> : <Unlock size={14} />}</button>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <button onClick={() => move(l.id, 1)} title="Subir" className="w-6 h-7 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"><ArrowUp size={12} /></button>
+                <button onClick={() => move(l.id, -1)} title="Bajar" className="w-6 h-7 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"><ArrowDown size={12} /></button>
+                <button onClick={() => duplicate(l.id)} title="Duplicar capa" className="w-6 h-7 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"><Copy size={12} /></button>
+                <button onClick={() => mergeDown(l.id)} title={t("layers.merge")} className="w-6 h-7 grid place-items-center rounded text-muted-foreground hover:text-primary-glow"><Merge size={12} /></button>
+                <button onClick={() => remove(l.id)} title="Borrar" className="w-6 h-7 grid place-items-center rounded text-destructive/70 hover:text-destructive"><Trash2 size={12} /></button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-0.5">
+              <span className="text-[9px] font-mono text-muted-foreground w-10 shrink-0">OPAC.</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={op}
+                onChange={e => update(l.id, { opacity: Number(e.target.value) })}
+                className="flex-1 accent-primary"
+              />
+              <span className="text-[9px] font-mono text-muted-foreground tabular-nums w-9 text-right">{Math.round(op * 100)}%</span>
+            </div>
+          </div>
+        );
+      })}
+      <div className="text-[9px] font-mono text-muted-foreground text-center pt-1">
+        Z más alto = dibujado encima
+      </div>
+    </div>
+  );
+}
