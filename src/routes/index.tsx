@@ -6,7 +6,7 @@ import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, S
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
-import { rankFeedWithOrion } from "@/lib/ai/community-orion";
+import { orderFeedPosts } from "@/lib/social/feed-order";
 import { syncAllProjects } from "@/lib/engine/cloud-sync";
 import { PostComposer } from "@/components/social/PostComposer";
 import { PostCard } from "@/components/social/PostCard";
@@ -164,7 +164,7 @@ function HomePage() {
       if (which === "games") setGames(await fetchGames({ search: search || undefined }));
       else {
         const feed = await fetchFeed({ search: search || undefined });
-        setPosts(await rankFeedWithOrion(feed, followingIds));
+        setPosts(feed);
       }
       loadedTabsRef.current.add(which);
       getMyProfile().then(p => p && setMe(p)).catch(() => {/* ignore */});
@@ -713,12 +713,6 @@ function FeedSubTabs({ value, onChange }: { value: FeedSub; onChange: (v: FeedSu
 }
 
 function filterFeed(posts: PostWithMeta[], sub: FeedSub, myId: string | null, followingIds: string[]): PostWithMeta[] {
-  if (sub === "following") {
-    if (!myId) return [];
-    const following = new Set(followingIds);
-    return posts.filter(post => following.has(post.author_id));
-  }
-  // «Para ti» y «Explorar» conservan el orden semántico que entregó Orión.
-  // Los conteos de reacciones no participan en esta decisión.
-  return posts;
+  if (sub === "following" && !myId) return [];
+  return orderFeedPosts(posts, sub, followingIds);
 }

@@ -1390,3 +1390,17 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Validar publicación aprobada, rechazo válido y errores de invocación.
 - [x] Ejecutar pruebas y compilación.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Ordenamiento determinista por novedad
+
+- [x] Auditar todos los apartados del feed y sus llamadas actuales a Orión.
+- [x] Definir reglas deterministas y explícitas de orden para cada apartado.
+- [x] Hacer que «Para ti» priorice publicaciones nuevas en orden descendente de fecha.
+- [x] Aplicar orden por novedad en cada apartado relacionado sin perder publicaciones.
+- [x] Retirar las llamadas a Orión exclusivamente del ordenamiento del feed.
+- [x] Añadir o ajustar pruebas de orden, desempates y fechas ausentes.
+- [x] Ejecutar compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.
