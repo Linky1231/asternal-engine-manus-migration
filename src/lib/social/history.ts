@@ -3,15 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { PostWithMeta, PostRow, Profile } from "./api";
 import { signMediaUrls } from "./api";
 import { refreshPlayedGameCoverSessions, type PlayedGameMedia } from "./history-cover";
+import { filterPlayHistoryToPublishedGames, isValidPlaySession, type PlaySessionRecord } from "./history-validation";
 
-export type PlaySession = {
-  gameId: string;
-  gameTitle: string;
-  coverUrl: string | null;
-  startedAt: string;
-  endedAt: string;
-  durationSeconds: number;
-};
+export type PlaySession = PlaySessionRecord;
+export { filterPlayHistoryToPublishedGames, isValidPlaySession };
 
 /** Log a play session to localStorage */
 export function logPlaySession(session: PlaySession): void {
@@ -24,15 +19,29 @@ export function logPlaySession(session: PlaySession): void {
   } catch { /* ignore quota errors */ }
 }
 
-/** Get all play sessions, newest first */
+/** Get all valid play sessions, newest first. Invalid or impossible records are ignored. */
 export function getPlayHistory(): PlaySession[] {
   try {
     const raw = localStorage.getItem("play_history");
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isValidPlaySession);
   } catch { return []; }
 }
 
 /** Sincroniza las portadas de sesiones previas con los metadatos reales del juego publicado. */
+export function prunePlayHistoryToPublishedGames(games: readonly PlayedGameMedia[]): boolean {
+  const current = getPlayHistory();
+  const kept = filterPlayHistoryToPublishedGames(current, games);
+  if (kept.length === current.length) return false;
+  try {
+    localStorage.setItem("play_history", JSON.stringify(kept));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function refreshPlayHistoryCovers(games: readonly PlayedGameMedia[]): boolean {
   const current = getPlayHistory();
   const refreshed = refreshPlayedGameCoverSessions(current, games);

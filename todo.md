@@ -1404,3 +1404,17 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir o ajustar pruebas de orden, desempates y fechas ausentes.
 - [x] Ejecutar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Auditoría completa e historial basado en uso real
+
+- [x] Inspeccionar la arquitectura, rutas, componentes, servicios y persistencia de toda la aplicación.
+- [x] Definir por escrito qué es Asternal Engine y cuáles son sus flujos principales.
+- [x] Inventariar las fuentes reales de actividad y detectar apartados o métricas irreales del historial.
+- [x] Diseñar métricas de historial únicamente con datos reales disponibles.
+- [x] Sustituir apartados irreales por métricas verificables, incluyendo horas de uso cuando exista una fuente de sesiones válida.
+- [x] Añadir o ajustar pruebas para evitar datos inventados o hardcodeados.
+- [x] Ejecutar pruebas y compilación.
+- [x] Revisar el diff y guardar checkpoint.

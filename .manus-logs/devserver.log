@@ -2301,3 +2301,7 @@
 [2026-08-25T23:17:16.269Z] 11:17:16 PM [vite] server restarted.
 [2026-08-25T23:29:09.428Z] 11:29:09 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx
 [2026-08-25T23:29:15.365Z] 11:29:15 PM [vite] (client) hmr update /src/styles.css, /src/routes/feed.tsx
+[2026-08-25T23:33:33.052Z] 11:33:33 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx, /src/components/social/GameCard.tsx
+[2026-08-25T23:33:41.300Z] 11:33:41 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx
+[2026-08-25T23:33:58.176Z] 11:33:58 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx, /src/components/social/GameCard.tsx
+[2026-08-25T23:34:41.951Z] 11:34:41 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx, /src/components/social/GameCard.tsx

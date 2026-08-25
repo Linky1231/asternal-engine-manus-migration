@@ -11,6 +11,7 @@ import {
   getTopGame,
   formatPlayTime,
   refreshPlayHistoryCovers,
+  prunePlayHistoryToPublishedGames,
 } from "@/lib/social/history";
 import { UserName } from "./UserName";
 import { GameIconPlaceholder } from "./GameIcon";
@@ -86,7 +87,10 @@ export function HistorySection() {
     let active = true;
     fetchGames()
       .then((games) => {
-        if (active && refreshPlayHistoryCovers(games)) setHistoryRevision((revision) => revision + 1);
+        if (!active) return;
+        const pruned = prunePlayHistoryToPublishedGames(games);
+        const refreshed = refreshPlayHistoryCovers(games);
+        if (pruned || refreshed) setHistoryRevision((revision) => revision + 1);
       })
       .catch(() => {
         // El historial sigue disponible con lo almacenado localmente si no hay conexión.
@@ -121,7 +125,7 @@ export function HistorySection() {
           <div>
             <div className="font-display text-sm font-semibold">Historial</div>
             <div className="text-[11px] text-muted-foreground">
-              {sortedGames.length} juegos jugados · {likedPosts.length} likes
+              {sortedGames.length} juegos con sesiones reales · {likedPosts.length} likes reales
             </div>
           </div>
         </div>
@@ -130,35 +134,35 @@ export function HistorySection() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
           <StatCard
             icon={<Flame size={13} />}
-            label="Hoy"
+            label="Tiempo jugando hoy"
             value={formatPlayTime(stats.today.seconds)}
             sub={`${stats.today.sessions} sesión${stats.today.sessions !== 1 ? "es" : ""} · ${stats.today.uniqueGames} juego${stats.today.uniqueGames !== 1 ? "s" : ""}`}
             tone="primary"
           />
           <StatCard
             icon={<CalendarDays size={13} />}
-            label="7 días"
+            label="Tiempo jugando · 7 días"
             value={formatPlayTime(stats.week.seconds)}
             sub={`${stats.week.sessions} sesiones · ${stats.week.uniqueGames} juegos`}
             tone="accent"
           />
           <StatCard
             icon={<TrendingUp size={13} />}
-            label="30 días"
+            label="Tiempo jugando · 30 días"
             value={formatPlayTime(stats.month.seconds)}
             sub={`${stats.month.sessions} sesiones · ${stats.month.uniqueGames} juegos`}
             tone="emerald"
           />
           <StatCard
             icon={<CalendarDays size={13} />}
-            label="Este año"
+            label="Tiempo jugando · este año"
             value={formatPlayTime(stats.year.seconds)}
             sub={`${stats.year.sessions} sesiones · ${stats.year.uniqueGames} juegos`}
             tone="accent"
           />
           <StatCard
             icon={<BarChart3 size={13} />}
-            label="Total"
+            label="Tiempo jugando total"
             value={formatPlayTime(stats.total.seconds)}
             sub={`${stats.total.sessions} sesiones · ${stats.total.uniqueGames} juegos`}
             tone="primary"
