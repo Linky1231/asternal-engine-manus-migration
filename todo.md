@@ -1458,22 +1458,21 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Mantener la autorización exclusiva de `linkyteam989@gmail.com`.
 - [x] Actualizar lectura, asignación, retirada y renderizado del badge.
 - [x] Añadir pruebas específicas del esquema y del flujo de verificación.
-- [ ] Aplicar la migración actualizada en el proyecto Supabase real; compilación y pruebas locales ya verificadas.
+- [x] Sustituir la migración de Supabase por la sincronización aislada de Manus; compilación y pruebas locales verificadas.
 - [x] Revisar el diff y guardar checkpoint.
 
 
 ---
 
 # Sincronización del verificado mediante Manus
-
-- [ ] Auditar el backend Manus, usuarios autenticados y esquema local disponible.
-- [ ] Crear una fuente persistente de verificación en la base Manus.
-- [ ] Crear procedimientos protegidos para leer y cambiar verificaciones.
-- [ ] Sincronizar Moderación, perfiles y publicaciones con Manus.
-- [ ] Evitar que el flujo del verificado dependa de `user_roles` de Supabase.
-- [ ] Añadir pruebas de autorización, asignación, retirada y persistencia.
-- [ ] Ejecutar validación, compilación y pruebas.
-- [ ] Revisar el diff y guardar checkpoint.
+- [x] Auditar el backend Manus, usuarios autenticados y esquema local disponible.
+- [x] Crear una fuente persistente de verificación en la base Manus.
+- [x] Crear procedimientos protegidos para leer y cambiar verificaciones.
+- [x] Sincronizar Moderación, perfiles y publicaciones con Manus.
+- [x] Evitar que el flujo del verificado dependa de `user_roles` de Supabase.
+- [x] Añadir pruebas de autorización, asignación, retirada y persistencia.
+- [x] Ejecutar validación, compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.
 
 
 ---
