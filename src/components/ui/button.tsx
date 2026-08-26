@@ -10,9 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         // Acción principal con material de vidrio sobre el azul de marca.
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 glass-primary button-texture",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 glass-primary",
         // La CTA de la pantalla: ÚNICO uso dominante del degradado Asternal.
-        gradient: "btn-grad button-texture",
+        gradient: "btn-grad",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 glass-destructive",
         outline:
           "glass-control text-foreground",

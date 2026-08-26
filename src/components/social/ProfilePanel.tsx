@@ -7,7 +7,7 @@ import {
   ImagePlus, MapPin, Cake, Palette, Tag, Sparkles as SparklesIcon, Eye, EyeOff,
   Heart, MessageCircle, ChevronDown, ChevronUp, Share2, Link2, Check,
   Youtube, Instagram, Globe, UserPlus, UserCheck, X, Fingerprint, Copy, QrCode,
-  MoreVertical, Shield, Trophy, Download, BadgeCheck,
+  MoreVertical, Shield, Trophy, Download,
 } from "lucide-react";
 import {
   type Profile,
@@ -367,9 +367,6 @@ export function ProfilePanel({
                 <>
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-display text-base sm:text-lg font-semibold truncate text-foreground" title={profileDisplayName}>{profileDisplayName}</span>
-                    {profile.is_verified && (
-                      <BadgeCheck size={17} className="text-sky-500 shrink-0" fill="currentColor" stroke="white" aria-label="Cuenta verificada" />
-                    )}
                     {isPlusActive(profile) && profile.show_plus_badge !== false && (
                       <span className="px-1.5 py-0.5 rounded-md text-[9px] font-display font-bold text-white shrink-0"
                         style={{ background: "var(--gradient-plus)" }}>PLUS</span>

@@ -1,32 +1,6 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
 import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
 import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-frame";
-import { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator } from "./verification";
-export { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator };
-
-async function manusVerificationFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("Inicia sesión para sincronizar la verificación.");
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  });
-  const result = await response.json().catch(() => ({})) as { error?: string } & T;
-  if (!response.ok) throw new Error(result.error || "No se pudo sincronizar la verificación con Manus.");
-  return result;
-}
-
-async function getManusVerificationStatuses(userIds: string[]): Promise<Set<string>> {
-  if (!userIds.length) return new Set();
-  try {
-    const result = await manusVerificationFetch<{ verifiedUserIds?: string[] }>("/api/verification/statuses", { targetUserIds: userIds });
-    return new Set(result.verifiedUserIds ?? []);
-  } catch {
-    return new Set();
-  }
-}
 
 export type SocialLinks = {
   youtube?: string;
@@ -83,8 +57,6 @@ export type Profile = {
   creator_card_style?: CreatorCardStyle | null;
   // Trust
   trust_points?: number | null;
-  // Verification badge managed by the designated administrator.
-  is_verified?: boolean;
   // QR customization
   qr_style?: QRStyle | null;
 };
@@ -249,7 +221,7 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
     posts.map(p => p.author_id).concat(posts.filter(p => p.seller_id).map(p => p.seller_id!)),
   ));
 
-  const [profiles, reactions, comments, reposts, tagsJoin, purchases, verifiedRoles] = await Promise.all([
+  const [profiles, reactions, comments, reposts, tagsJoin, purchases] = await Promise.all([
     supabase.from("profiles").select("*").in("id", authorIds),
     supabase.from("reactions").select("post_id,user_id,type").in("post_id", ids),
     supabase.from("comments").select("post_id").in("post_id", ids).is("deleted_at", null),
@@ -260,12 +232,8 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
       : Promise.resolve({ data: [] as { post_id: string }[] }),
   ]);
 
-  const verifiedIds = await getManusVerificationStatuses(authorIds);
   const hydratedProfiles = await Promise.all(
-    (profiles.data ?? []).map(profile => hydrateProfileMedia({
-      ...(profile as Profile),
-      is_verified: verifiedIds.has((profile as Profile).id),
-    })),
+    (profiles.data ?? []).map(profile => hydrateProfileMedia(profile as Profile)),
   );
   const pmap = new Map(hydratedProfiles.filter((profile): profile is Profile => !!profile).map(profile => [profile.id, profile]));
   const ownedIds = new Set((purchases.data ?? []).map(x => x.post_id));
@@ -1140,7 +1108,7 @@ export async function cloudDeleteProject(id: string): Promise<void> {
 }
 
 // ---------- Admin ----------
-export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; is_verified: boolean; trust_points: number | null };
+export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; trust_points: number | null };
 
 export async function isAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1163,10 +1131,9 @@ export async function listManagedUsers(search?: string): Promise<ManagedUser[]> 
     arr.push(r.role);
     rmap.set(r.user_id, arr);
   });
-  const verifiedIds = await getManusVerificationStatuses(ids);
   return (profs ?? []).map(p => {
     const rs = rmap.get(p.id) ?? [];
-    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin"), is_verified: verifiedIds.has(p.id) };
+    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin") };
   });
 }
 
@@ -1176,19 +1143,6 @@ export async function setUserModerator(userId: string, on: boolean): Promise<voi
   } else {
     await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "moderator");
   }
-}
-
-export async function isVerificationAdmin(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  return isVerificationAdministrator(user?.email);
-}
-
-export async function setUserVerified(userId: string, on: boolean): Promise<void> {
-  if (!(await isVerificationAdmin())) throw new Error("Solo el administrador autorizado puede gestionar verificaciones.");
-  await manusVerificationFetch<{ verified: boolean }>("/api/verification/toggle", {
-    targetUserId: userId,
-    verified: on,
-  });
 }
 
 
@@ -1283,8 +1237,7 @@ async function hydrateProfileMedia(profile: Profile | null): Promise<Profile | n
 
 export async function fetchProfileById(userId: string): Promise<Profile | null> {
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  const verification = data ? await getManusVerificationStatuses([userId]) : new Set<string>();
-  return hydrateProfileMedia(data ? { ...(data as Profile), is_verified: verification.has(userId) } : null);
+  return hydrateProfileMedia((data as Profile) ?? null);
 }
 
 export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> {

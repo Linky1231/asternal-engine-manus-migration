@@ -25,15 +25,4 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/** Verification state for Supabase accounts, isolated from the social database. */
-export const communityVerifications = mysqlTable("community_verifications", {
-  id: int("id").autoincrement().primaryKey(),
-  supabaseUserId: varchar("supabaseUserId", { length: 128 }).notNull().unique(),
-  verified: int("verified").default(1).notNull(),
-  grantedBy: varchar("grantedBy", { length: 320 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type CommunityVerification = typeof communityVerifications.$inferSelect;
-export type InsertCommunityVerification = typeof communityVerifications.$inferInsert;
+// TODO: Add your tables here

@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import { completeOrionChat } from "./server/orion";
-import { ENV } from "./server/_core/env";
 
 function manusOrionDevEndpoint(): Plugin {
   return {
@@ -34,63 +33,12 @@ function manusOrionDevEndpoint(): Plugin {
   };
 }
 
-function manusStorageDevProxy(): Plugin {
-  return {
-    name: "manus-storage-dev-proxy",
-    configureServer(server) {
-      server.middlewares.use("/manus-storage", async (request, response, next) => {
-        if (request.method !== "GET" && request.method !== "HEAD") return next();
-        const key = request.url?.replace(/^\/?/, "");
-        if (!key) {
-          response.statusCode = 400;
-          response.end("Missing storage key");
-          return;
-        }
-        if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-          response.statusCode = 500;
-          response.end("Storage proxy not configured");
-          return;
-        }
-        try {
-          const forgeUrl = new URL(
-            "v1/storage/presign/get",
-            ENV.forgeApiUrl.replace(/\/+$/, "") + "/",
-          );
-          forgeUrl.searchParams.set("path", key);
-          const forgeResponse = await fetch(forgeUrl, {
-            headers: { Authorization: `Bearer ${ENV.forgeApiKey}` },
-          });
-          if (!forgeResponse.ok) {
-            response.statusCode = 502;
-            response.end("Storage backend error");
-            return;
-          }
-          const payload = (await forgeResponse.json()) as { url?: string };
-          if (!payload.url) {
-            response.statusCode = 502;
-            response.end("Empty signed URL from backend");
-            return;
-          }
-          response.statusCode = 307;
-          response.setHeader("Cache-Control", "no-store");
-          response.setHeader("Location", payload.url);
-          response.end();
-        } catch (error) {
-          console.error("[StorageProxy] dev proxy failed:", error);
-          response.statusCode = 502;
-          response.end("Storage proxy error");
-        }
-      });
-    },
-  };
-}
-
 // https://vite.dev/config/
 export default defineConfig({
   // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
   // import.meta.env además del prefijo estándar VITE_.
   envPrefix: ["VITE_", "V1", "V2", "V3"],
-  plugins: [react(), manusOrionDevEndpoint(), manusStorageDevProxy(), tailwindcss()],
+  plugins: [react(), manusOrionDevEndpoint(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

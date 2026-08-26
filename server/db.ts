@@ -1,6 +1,6 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, communityVerifications } from "../drizzle/schema";
+import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,32 +89,4 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getCommunityVerification(supabaseUserId: string): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-  const rows = await db.select().from(communityVerifications).where(eq(communityVerifications.supabaseUserId, supabaseUserId)).limit(1);
-  return rows[0]?.verified === 1;
-}
-
-export async function getCommunityVerifications(supabaseUserIds: string[]): Promise<Set<string>> {
-  const db = await getDb();
-  if (!db || !supabaseUserIds.length) return new Set();
-  const rows = await db.select({ supabaseUserId: communityVerifications.supabaseUserId })
-    .from(communityVerifications)
-    .where(inArray(communityVerifications.supabaseUserId, supabaseUserIds));
-  return new Set(rows.map(row => row.supabaseUserId));
-}
-
-export async function setCommunityVerification(supabaseUserId: string, verified: boolean, grantedBy: string): Promise<boolean> {
-  const db = await getDb();
-  if (!db) throw new Error("La base de Manus no está disponible.");
-  if (verified) {
-    await db.insert(communityVerifications).values({ supabaseUserId, verified: 1, grantedBy }).onDuplicateKeyUpdate({
-      set: { verified: 1, grantedBy, updatedAt: new Date() },
-    });
-  } else {
-    await db.delete(communityVerifications).where(eq(communityVerifications.supabaseUserId, supabaseUserId));
-  }
-  return verified;
-}
-
+// TODO: add feature queries here as your schema grows.

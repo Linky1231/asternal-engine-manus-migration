@@ -123,7 +123,6 @@
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
   /* ÚNICO degradado de marca: 135° cobalto → azur → cielo (Azure Drift). */
   --gradient-asternal: linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.61 0.12 254) 48%, oklch(0.74 0.08 234) 100%);
-  --button-texture: url("/manus-storage/asternal-button-texture_d35f08f0.png");
   /* Variantes del MISMO degradado: diluido (acentos de fondo) y suave-profundo (banner destacado). */
   --gradient-asternal-soft: linear-gradient(135deg, oklch(0.52 0.15 266 / 0.1), oklch(0.61 0.12 254 / 0.08) 48%, oklch(0.74 0.08 234 / 0.06));
   --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.12 266) 0%, oklch(0.48 0.11 256) 48%, oklch(0.57 0.08 236) 100%);
@@ -178,7 +177,6 @@
   --success: oklch(0.62 0.17 155);
   --warn: oklch(0.75 0.16 80);
   --gradient-asternal: linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.61 0.12 254) 48%, oklch(0.74 0.08 234) 100%);
-  --button-texture: url("/manus-storage/asternal-button-texture_d35f08f0.png");
   --gradient-asternal-soft: linear-gradient(135deg, oklch(0.52 0.15 266 / 0.1), oklch(0.61 0.12 254 / 0.08) 48%, oklch(0.74 0.08 234 / 0.06));
   --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.12 266) 0%, oklch(0.48 0.11 256) 48%, oklch(0.57 0.08 236) 100%);
   --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
@@ -292,12 +290,8 @@
 }
 
 /* La CTA principal de la pantalla: ÚNICO uso dominante del degradado. */
-@utility button-texture {
-  background: url("/manus-storage/asternal-button-texture_d35f08f0.png") center / 112% 348% no-repeat !important;
-}
-
 @utility btn-grad {
-  background: url("/manus-storage/asternal-button-texture_d35f08f0.png") center / 112% 348% no-repeat !important;
+  background: var(--gradient-asternal);
   color: var(--color-primary-foreground);
   border: 1px solid oklch(1 0 0 / 0.32);
   box-shadow: var(--glass-highlight), 0 10px 24px -13px oklch(0.47 0.14 263 / 0.65);
@@ -309,18 +303,6 @@
 }
 .btn-grad:active {
   transform: scale(0.97);
-}
-
-/* Botones azules heredados fuera del componente Button: misma textura, sin tocar iconos. */
-button.bg-primary,
-a.bg-primary,
-button[class*="from-primary"],
-a[class*="from-primary"],
-button[class*="to-primary"],
-a[class*="to-primary"],
-button[style*="var(--gradient-asternal)"],
-a[style*="var(--gradient-asternal)"] {
-  background: url("/manus-storage/asternal-button-texture_d35f08f0.png") center / 112% 348% no-repeat !important;
 }
 
 /* Micro-label consistente de sección (una vez por bloque). */
