@@ -3,28 +3,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import { completeOrionChat } from "./server/orion";
-import { publishGlobalTexture, readGlobalTextureManifest } from "./server/global-textures";
-
-function manusTextureDevEndpoint(): Plugin {
-  return {
-    name: "manus-global-textures-dev-endpoint",
-    configureServer(server) {
-      server.middlewares.use("/api/textures/catalog", (_request, response) => {
-        void readGlobalTextureManifest().then(manifest => {
-          response.setHeader("Content-Type", "application/json");
-          response.setHeader("Cache-Control", "no-store");
-          response.end(JSON.stringify(manifest));
-        }).catch(error => { response.statusCode = 500; response.end(JSON.stringify({ error: error instanceof Error ? error.message : "No se pudo cargar el catálogo." })); });
-      });
-      server.middlewares.use("/api/textures/publish", (request, response, next) => {
-        if (request.method !== "POST") return next();
-        response.statusCode = 503;
-        response.setHeader("Content-Type", "application/json");
-        response.end(JSON.stringify({ error: "La publicación global se habilita en la versión publicada de Asternal." }));
-      });
-    },
-  };
-}
 
 function manusOrionDevEndpoint(): Plugin {
   return {
@@ -60,7 +38,7 @@ export default defineConfig({
   // Exponer también V1/V2/V3 (variables personalizadas del tab Keys) en
   // import.meta.env además del prefijo estándar VITE_.
   envPrefix: ["VITE_", "V1", "V2", "V3"],
-  plugins: [react(), manusTextureDevEndpoint(), manusOrionDevEndpoint(), tailwindcss()],
+  plugins: [react(), manusOrionDevEndpoint(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
