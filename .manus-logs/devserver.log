@@ -2413,3 +2413,7 @@
 [2026-08-26T23:28:13.736Z] 11:28:13 PM [vite] (client) hmr update /src/styles.css, /src/routes/index.tsx, /src/components/social/StoreSection.tsx, /src/components/engine/AsternalEditor.tsx, /src/components/engine/ProjectManager.tsx
 [2026-08-26T23:28:19.153Z] 11:28:19 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ProjectManager.tsx
 [2026-08-26T23:33:15.369Z] 11:33:15 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ProjectManager.tsx
+[2026-08-26T23:41:03.656Z] 11:41:03 PM [vite] (client) hmr update /src/glass-intensity.css, /src/styles.css
+[2026-08-26T23:41:15.390Z] 11:41:15 PM [vite] (client) hmr update /src/glass-intensity.css, /src/styles.css
+[2026-08-26T23:41:31.861Z] 11:41:31 PM [vite] (client) hmr update /src/glass-intensity.css, /src/styles.css
+[2026-08-26T23:42:29.344Z] 11:42:29 PM [vite] (client) hmr update /src/glass-intensity.css, /src/styles.css

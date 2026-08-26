@@ -1557,3 +1557,16 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Implementar scroll infinito o paginación progresiva sin renderizar todos los proyectos al inicio.
 - [x] Mantener búsqueda, sincronización, acciones, limpieza de duplicados y estados de carga.
 - [x] Añadir regresiones y validar rendimiento responsive, build y publicación.
+
+
+# Corrección visual: botones sucios
+- [x] Auditar botones compartidos, textura global, degradados, bordes, sombras y estados.
+- [x] Limpiar estilos globales sin cambiar acciones ni iconos.
+- [x] Normalizar botones con iconos y botones inline que no usan el componente compartido.
+- [x] Validar contraste, responsive, regresiones, build y publicación.
+
+
+# Limpieza visual de botones e iconos
+- [x] Limpiar el acabado visual de botones e iconos: eliminar overlays, desenfoque y sombras acumuladas sin alterar la identidad oscura de Asternal
+- [x] Normalizar botones inline e icon-only para compartir estados, contraste y foco accesible
+- [x] Ejecutar revisión visual, build y pruebas de regresión después de la limpieza
