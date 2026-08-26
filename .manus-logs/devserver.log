@@ -2326,3 +2326,24 @@
 [2026-08-26T01:44:37.921Z] VITE v7.3.6  ready in 180 ms
 [2026-08-26T01:44:37.921Z] ➜  Local:   http://localhost:5173/
 [2026-08-26T01:44:37.921Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-26T01:48:27.733Z] 1:48:27 AM [vite] (client) hmr update /src/styles.css
+[2026-08-26T01:49:15.967Z] 1:49:15 AM [vite] (client) hmr update /src/styles.css
+[2026-08-26T01:50:22.417Z] 1:50:22 AM [vite] vite.config.ts changed, restarting server...
+[2026-08-26T01:50:22.423Z] ✘ [ERROR] Unexpected ","
+[2026-08-26T01:50:22.423Z] vite.config.ts:57:43:
+[2026-08-26T01:50:22.423Z] 57 │             ENV.forgeApiUrl.replace(/\\/+$/, "") + "/",
+[2026-08-26T01:50:22.423Z] ╵                                            ^
+[2026-08-26T01:50:22.424Z] failed to load config from /home/ubuntu/asternal-engine-manus/vite.config.ts
+[2026-08-26T01:50:22.424Z] 1:50:22 AM [vite] Build failed with 1 error:
+[2026-08-26T01:50:22.424Z] vite.config.ts:57:43: ERROR: Unexpected ","
+[2026-08-26T01:50:22.424Z] 1:50:22 AM [vite] server restart failed
+[2026-08-26T01:50:29.150Z] 1:50:29 AM [vite] vite.config.ts changed, restarting server...
+[2026-08-26T01:50:29.180Z] 1:50:29 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+[2026-08-26T01:50:29.197Z] 1:50:29 AM [vite] server restarted.
+[2026-08-26T01:50:34.616Z] [ELIFECYCLE] Command failed.
+[2026-08-26T01:50:34.624Z] Dev server exited with code -1
+[2026-08-26T01:50:35.704Z] Starting dev server with command: pnpm run dev
+[2026-08-26T01:50:35.997Z] $ vite --host
+[2026-08-26T01:50:36.226Z] VITE v7.3.6  ready in 200 ms
+[2026-08-26T01:50:36.226Z] ➜  Local:   http://localhost:5173/
+[2026-08-26T01:50:36.226Z] ➜  Network: http://169.254.0.21:5173/

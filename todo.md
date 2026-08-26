@@ -1513,3 +1513,13 @@ Nota: este bloque fue supersedido por la decisión posterior de sincronizar el v
 - [x] Verificar visualmente desktop y móvil.
 - [x] Ejecutar pruebas y compilación.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Corrección visible de textura en botones
+- [x] Inspeccionar qué estilos sobrescriben la textura en los botones azules.
+- [x] Sustituir inequívocamente el fondo degradado por la imagen original.
+- [x] Verificar visualmente que el botón renderizado ya no usa el degradado por código.
+- [x] Ejecutar pruebas y compilación.
+- [x] Revisar el diff y guardar checkpoint.
