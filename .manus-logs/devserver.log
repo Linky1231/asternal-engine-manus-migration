@@ -2305,3 +2305,11 @@
 [2026-08-25T23:33:41.300Z] 11:33:41 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx
 [2026-08-25T23:33:58.176Z] 11:33:58 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx, /src/components/social/GameCard.tsx
 [2026-08-25T23:34:41.951Z] 11:34:41 PM [vite] (client) hmr update /src/styles.css, /src/components/social/HistorySection.tsx, /src/components/social/GameCard.tsx
+[2026-08-26T02:13:22.984Z] Starting dev server with command: pnpm run dev
+[2026-08-26T02:13:23.241Z] $ vite --host
+[2026-08-26T02:13:23.456Z] 2:13:23 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+[2026-08-26T02:13:23.478Z] VITE v7.3.6  ready in 213 ms
+[2026-08-26T02:13:23.478Z] ➜  Local:   http://localhost:5173/
+[2026-08-26T02:13:23.478Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-26T02:14:44.196Z] 2:14:44 AM [vite] (client) page reload .builda-agent/sdk/web/builda-dev-shell.html
+[2026-08-26T02:22:38.689Z] 2:22:38 AM [vite] (client) hmr update /src/styles.css, /src/components/ai/OrionPanel.tsx

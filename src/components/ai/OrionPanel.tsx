@@ -307,35 +307,43 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <div className="max-h-56 overflow-y-auto no-scrollbar py-1">
                     {chats.map(c => (
-                      <button
+                      <div
                         key={c.id}
-                        onClick={() => {
-                          setActiveId(c.id);
-                          setPickerOpen(false);
-                          setErr(null);
-                          stop();
-                        }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition ${
+                        className={`flex min-h-14 items-stretch border-b border-border/30 last:border-b-0 ${
                           c.id === activeId ? "bg-primary/[0.06]" : ""
                         }`}
                       >
-                        <MessageSquare size={12} className={`shrink-0 ${c.id === activeId ? "text-primary" : "text-muted-foreground/60"}`} />
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[11px] font-medium truncate">{c.title}</span>
-                          <span className="block text-[9px] font-mono text-muted-foreground/50 truncate">
-                            {c.messages.length} mensaje{c.messages.length !== 1 ? "s" : ""} ·{" "}
-                            {new Date(c.updatedAt).toLocaleDateString("es", { day: "numeric", month: "short" })}
-                          </span>
-                        </span>
-                        {c.id === activeId && <Check size={12} className="text-primary shrink-0" />}
                         <button
-                          onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
-                          className="p-1 rounded-md text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-500/10 transition shrink-0"
+                          type="button"
+                          onClick={() => {
+                            setActiveId(c.id);
+                            setPickerOpen(false);
+                            setErr(null);
+                            stop();
+                          }}
+                          aria-pressed={c.id === activeId}
+                          className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition"
+                        >
+                          <MessageSquare size={12} className={`shrink-0 ${c.id === activeId ? "text-primary" : "text-muted-foreground/60"}`} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[11px] font-medium truncate">{c.title}</span>
+                            <span className="block text-[9px] font-mono text-muted-foreground/50 truncate">
+                              {c.messages.length} mensaje{c.messages.length !== 1 ? "s" : ""} ·{" "}
+                              {new Date(c.updatedAt).toLocaleDateString("es", { day: "numeric", month: "short" })}
+                            </span>
+                          </span>
+                          {c.id === activeId && <Check size={12} className="text-primary shrink-0" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteChat(c.id)}
+                          className="my-2 mr-2 shrink-0 rounded-md p-1.5 text-muted-foreground/50 hover:bg-rose-500/10 hover:text-rose-500 transition"
                           title="Eliminar conversación"
+                          aria-label={`Eliminar ${c.title}`}
                         >
                           <Trash2 size={11} />
                         </button>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </motion.div>

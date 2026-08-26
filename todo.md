@@ -1433,3 +1433,9 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Redactar documentos completos en formato Markdown dentro de `docs/`.
 - [x] Verificar los documentos contra el código y ejecutar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+# Corrección del selector de conversaciones de Orión
+
+- [x] Auditar el componente, el posicionamiento y los estados visuales del selector señalado.
+- [x] Corregir el recorte y el solapamiento de la conversación activa sin cambiar el flujo de selección.
+- [x] Validar Orión en móvil y escritorio, ejecutar pruebas y compilación, y guardar checkpoint.
