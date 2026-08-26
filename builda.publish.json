@@ -1,0 +1,28 @@
+{
+  "title": "Asternal Engine",
+  "tagline": "Crea, juega y comparte experiencias interactivas.",
+  "desc": "Asternal Engine es una plataforma de creación, ejecución y distribución de juegos y experiencias interactivas.",
+  "category": "other",
+  "engine": "h5",
+  "tags": [
+    "h5"
+  ],
+  "orientation": "landscape",
+  "minChromeMajor": 80,
+  "minIOSMajor": 15,
+  "coverKind": "palette",
+  "coverPalette": "azure",
+  "coverUrl": "",
+  "buildPrefix": "builds/a8decd0414377ff109a9931add001d54",
+  "buildEntry": "index.html",
+  "buildSize": 2826157,
+  "bundleUrl": "https://builda-godot-play.poni.fun/cysj2/release/bundles/a8decd0414377ff109a9931add001d54.zip",
+  "bundleMd5": "cb3b1c36e3884a7c6df595a9d8311da0",
+  "bundleVersion": "a8decd0414377ff109a9931add001d54",
+  "bundleEntry": "index.html",
+  "bundleSize": 672666,
+  "assetsVersion": "",
+  "assetsBaseUrl": "",
+  "assetsManifestUrl": "",
+  "sdkVersion": "0.4.34"
+}

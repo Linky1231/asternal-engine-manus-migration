@@ -1536,3 +1536,7 @@ Nota: este bloque fue supersedido por la decisión posterior de sincronizar el v
 - [x] Generar un paquete HTML5 completo con recursos incluidos o referenciados correctamente.
 - [x] Validar apertura, carga de recursos, compilación y tamaño del paquete.
 - [x] Revisar el diff y guardar checkpoint.
+
+- [x] Renovar el enlace/código de autorización de Builda porque la autorización anterior venció.
+- [ ] Completar la publicación del bundle HTML5 en la cuenta de Builda del usuario; la carga fue aceptada, pero la creación del borrador requiere habilitación de publicación externa.
+- [x] Verificar y documentar el resultado final de la publicación de Builda: bundle listo y cargado; creación de borrador bloqueada por permisos de early access.
