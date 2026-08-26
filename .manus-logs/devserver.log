@@ -2336,3 +2336,5 @@
 [2026-08-26T19:16:47.910Z] 7:16:47 PM [vite] (client) hmr update /src/styles.css, /src/components/social/GamesHome.tsx
 [2026-08-26T19:26:08.504Z] 7:26:08 PM [vite] (client) hmr update /src/routes/index.tsx, /src/styles.css
 [2026-08-26T19:26:19.428Z] 7:26:19 PM [vite] (client) hmr update /src/components/social/NotificationBell.tsx, /src/styles.css
+[2026-08-26T19:31:04.158Z] 7:31:04 PM [vite] (client) hmr update /src/components/social/NotificationBell.tsx, /src/styles.css
+[2026-08-26T19:31:11.621Z] 7:31:11 PM [vite] (client) hmr update /src/styles.css, /src/components/social/NotificationsPanel.tsx

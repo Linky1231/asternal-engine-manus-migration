@@ -75,7 +75,12 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     void reload();
     const interval = window.setInterval(() => void reload(), 45000);
-    return () => window.clearInterval(interval);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.clearInterval(interval);
+      document.body.style.overflow = previousOverflow;
+    };
   }, []);
 
   const totals = useMemo(() => notificationTotals(items), [items]);
@@ -93,7 +98,7 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-background flex flex-col">
+    <div className="fixed inset-0 z-[150] bg-background flex flex-col" role="dialog" aria-modal="true" aria-label="Notificaciones">
       <div className="h-[2px] shrink-0 bg-primary/70" />
       <header className="shrink-0 border-b border-border/60 bg-background px-3 sm:px-4 py-2.5 flex items-center gap-2.5">
         <button onClick={onClose} aria-label="Cerrar notificaciones" className="w-9 h-9 rounded-lg border border-line-strong bg-card text-ink-2 grid place-items-center hover:bg-muted/60 hover:text-foreground active:scale-95 transition shrink-0">

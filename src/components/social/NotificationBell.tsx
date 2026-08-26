@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell } from "lucide-react";
 import { countUnreadNotifications } from "@/lib/social/api";
 import { NotificationsPanel } from "./NotificationsPanel";
@@ -11,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const reload = async () => {
     try {
@@ -47,7 +47,7 @@ export function NotificationBell() {
   }, []);
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       <button
         onClick={() => setOpen(true)}
         title={unread > 0 ? `${unread > 99 ? "+99" : unread} notificaciones sin leer` : "Notificaciones"}
@@ -60,7 +60,10 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && <NotificationsPanel onClose={() => setOpen(false)} />}
+      {open && typeof document !== "undefined" && createPortal(
+        <NotificationsPanel onClose={() => setOpen(false)} />,
+        document.body,
+      )}
     </div>
   );
 }

@@ -1463,3 +1463,9 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Retirar Notificaciones del menú de tres rayitas y añadir un botón independiente entre Orbes y el menú.
 - [x] Mostrar badge numérico de 1 a 99 y `+99` cuando corresponda, conservando el indicador de actividad.
 - [x] Validar interacción, accesibilidad, responsive, pruebas, compilación y checkpoint.
+
+# Corrección de apertura del panel de Notificaciones
+
+- [x] Auditar el contenedor, z-index, posicionamiento y scroll del panel abierto desde el nuevo icono.
+- [x] Hacer que Notificaciones se muestre como overlay independiente sobre Inicio, sin solapamiento incorrecto.
+- [x] Validar cierre, responsive, accesibilidad, pruebas, compilación y checkpoint.
