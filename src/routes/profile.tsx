@@ -91,13 +91,14 @@ function ProfilePage() {
         }
       />
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto w-full px-3 py-3 pb-24">
-        <section className="profile-multimodal-card mb-3 rounded-2xl border border-primary/25 bg-card/80 p-4 shadow-[0_16px_44px_rgba(40,120,210,0.12)]">
+        <section className="profile-multimodal-card relative mb-3 overflow-hidden rounded-2xl border-2 border-primary/35 bg-[radial-gradient(circle_at_92%_8%,rgba(91,142,255,0.24),transparent_34%),linear-gradient(135deg,rgba(23,42,88,0.96),rgba(9,22,48,0.96))] p-4 shadow-[0_18px_52px_rgba(40,120,210,0.2)]">
+          <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
           <div className="flex items-start gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/15 text-primary ring-1 ring-primary/25"><Link2 size={19} /></span>
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-cyan-300 text-slate-950 shadow-[0_8px_24px_rgba(62,177,255,0.3)]"><Link2 size={20} /></span>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2"><h2 className="font-display text-sm font-semibold">Login multimodal</h2><ShieldCheck size={14} className="text-primary" /></div>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Vincula tu identidad de Manus con tu cuenta Asternal. Tus credenciales de Manus nunca se comparten con Supabase.</p>
-              <button type="button" aria-label="Login multimodal con Manus" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 px-4 text-[11px] font-display font-semibold tracking-[0.08em] text-white shadow-[0_8px_22px_rgba(45,140,240,0.28)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70">
+              <div className="flex flex-wrap items-center gap-2"><h2 className="font-display text-sm font-semibold text-white">Login multimodal</h2><ShieldCheck size={14} className="text-cyan-300" /><span className="rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2 py-0.5 text-[9px] font-mono tracking-[0.12em] text-cyan-100">MANUS OFICIAL</span></div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-200/75">Vincula tu identidad de Manus con tu cuenta Asternal. Tus credenciales de Manus nunca se comparten con Supabase.</p>
+              <button type="button" aria-label="Login multimodal con Manus" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="mt-3 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-400 via-blue-500 to-cyan-300 px-5 text-[11px] font-display font-bold tracking-[0.1em] text-slate-950 shadow-[0_10px_26px_rgba(45,140,240,0.34)] transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70">
                 {multimodalState === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
                 {multimodalState === "loading" ? "SINCRONIZANDO…" : "LOGIN MULTIMODAL"}
               </button>

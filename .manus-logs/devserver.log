@@ -2347,3 +2347,12 @@
 [2026-08-26T19:46:54.277Z] VITE v7.3.6  ready in 207 ms
 [2026-08-26T19:46:54.277Z] ➜  Local:   http://localhost:5173/
 [2026-08-26T19:46:54.277Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-26T20:11:58.536Z] 8:11:58 PM [vite] (client) hmr update /src/routes/profile.tsx, /src/styles.css
+[2026-08-26T20:16:28.929Z] [ELIFECYCLE] Command failed.
+[2026-08-26T20:16:28.933Z] Dev server exited with code -1
+[2026-08-26T20:16:30.022Z] Starting dev server with command: pnpm run dev
+[2026-08-26T20:16:30.319Z] $ vite --host
+[2026-08-26T20:16:30.574Z] 8:16:30 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+[2026-08-26T20:16:30.601Z] VITE v7.3.6  ready in 254 ms
+[2026-08-26T20:16:30.601Z] ➜  Local:   http://localhost:5173/
+[2026-08-26T20:16:30.601Z] ➜  Network: http://169.254.0.21:5173/

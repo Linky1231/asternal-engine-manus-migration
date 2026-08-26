@@ -1477,3 +1477,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Definir una vinculación segura Manus–Supabase sin transportar ni reutilizar contraseñas de Manus.
 - [x] Añadir en Perfil un botón visual «Login multimodal» y el flujo de autenticación/vinculación correspondiente.
 - [x] Validar seguridad, estados de error, responsive, pruebas, compilación y checkpoint.
+
+# Visibilidad y despliegue de Login multimodal
+
+- [x] Diagnosticar por qué el botón no aparece en la pantalla de Perfil y corregir el error de despliegue `ERR_MODULE_NOT_FOUND`.
+- [x] Rediseñar el bloque de Login multimodal como acción visible, decorada y coherente con la paleta actual.
+- [x] Confirmar que el clic usa el OAuth oficial de Manus y que el retorno completa la vinculación Supabase.
+- [x] Validar despliegue, estados de carga/error, responsive, pruebas y checkpoint.

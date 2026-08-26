@@ -12,7 +12,9 @@ describe("Manus multimodal login", () => {
   it("protects the link endpoint with Manus session authentication", () => {
     expect(server).toContain('app.post("/api/supabase/link-manus"');
     expect(server).toContain("sdk.authenticateRequest(req)");
-    expect(server).toContain("supabaseAdmin.auth.admin");
+    expect(server).toContain("listSupabaseUsers");
+    expect(server).toContain("createSupabaseUser");
+    expect(server).toContain("signInSupabaseUser");
     expect(server).toContain('crypto.randomBytes(32)');
     expect(server).not.toContain("manusUser.password");
   });

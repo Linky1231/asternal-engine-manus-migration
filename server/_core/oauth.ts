@@ -1,5 +1,5 @@
-import { COOKIE_NAME, MULTIMODAL_LINK_COOKIE, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "@shared/const";
-import { parse as parseCookieHeader } from "cookie";
+import { COOKIE_NAME, MULTIMODAL_LINK_COOKIE, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "../../shared/const";
+const parseCookieHeader = (header: string): Record<string, string> => Object.fromEntries(header.split(";").map(part => { const [key, ...value] = part.trim().split("="); return [key, decodeURIComponent(value.join("=") || "")]; }).filter(([key]) => Boolean(key)));
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
