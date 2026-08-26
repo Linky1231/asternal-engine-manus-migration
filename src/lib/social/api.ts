@@ -4,6 +4,30 @@ import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-fr
 import { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator } from "./verification";
 export { VERIFICATION_ADMIN_EMAIL, isVerificationAdministrator };
 
+async function manusVerificationFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Inicia sesión para sincronizar la verificación.");
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => ({})) as { error?: string } & T;
+  if (!response.ok) throw new Error(result.error || "No se pudo sincronizar la verificación con Manus.");
+  return result;
+}
+
+async function getManusVerificationStatuses(userIds: string[]): Promise<Set<string>> {
+  if (!userIds.length) return new Set();
+  try {
+    const result = await manusVerificationFetch<{ verifiedUserIds?: string[] }>("/api/verification/statuses", { targetUserIds: userIds });
+    return new Set(result.verifiedUserIds ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
 export type SocialLinks = {
   youtube?: string;
   tiktok?: string;
@@ -234,12 +258,9 @@ async function enrichPosts(rawPosts: PostRow[], me: string | null, tag?: string)
     me
       ? supabase.from("game_purchases").select("post_id").eq("user_id", me).in("post_id", ids)
       : Promise.resolve({ data: [] as { post_id: string }[] }),
-    authorIds.length
-      ? supabase.from("user_roles").select("user_id").eq("role", "verified").in("user_id", authorIds)
-      : Promise.resolve({ data: [] as { user_id: string }[] }),
   ]);
 
-  const verifiedIds = new Set((verifiedRoles.data ?? []).map(row => row.user_id));
+  const verifiedIds = await getManusVerificationStatuses(authorIds);
   const hydratedProfiles = await Promise.all(
     (profiles.data ?? []).map(profile => hydrateProfileMedia({
       ...(profile as Profile),
@@ -1142,9 +1163,10 @@ export async function listManagedUsers(search?: string): Promise<ManagedUser[]> 
     arr.push(r.role);
     rmap.set(r.user_id, arr);
   });
+  const verifiedIds = await getManusVerificationStatuses(ids);
   return (profs ?? []).map(p => {
     const rs = rmap.get(p.id) ?? [];
-    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin"), is_verified: rs.includes("verified") };
+    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin"), is_verified: verifiedIds.has(p.id) };
   });
 }
 
@@ -1163,16 +1185,10 @@ export async function isVerificationAdmin(): Promise<boolean> {
 
 export async function setUserVerified(userId: string, on: boolean): Promise<void> {
   if (!(await isVerificationAdmin())) throw new Error("Solo el administrador autorizado puede gestionar verificaciones.");
-  if (on) {
-    const { data: existing, error: lookupError } = await supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle();
-    if (lookupError) throw lookupError;
-    if (existing) return;
-    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "verified" });
-    if (error) throw error;
-  } else {
-    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "verified");
-    if (error) throw error;
-  }
+  await manusVerificationFetch<{ verified: boolean }>("/api/verification/toggle", {
+    targetUserId: userId,
+    verified: on,
+  });
 }
 
 
@@ -1266,11 +1282,9 @@ async function hydrateProfileMedia(profile: Profile | null): Promise<Profile | n
 }
 
 export async function fetchProfileById(userId: string): Promise<Profile | null> {
-  const [{ data }, { data: verifiedRole }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle(),
-  ]);
-  return hydrateProfileMedia(data ? { ...(data as Profile), is_verified: !!verifiedRole } : null);
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const verification = data ? await getManusVerificationStatuses([userId]) : new Set<string>();
+  return hydrateProfileMedia(data ? { ...(data as Profile), is_verified: verification.has(userId) } : null);
 }
 
 export async function fetchUserPosts(userId: string, opts: { games?: boolean; artwork?: boolean } = {}): Promise<PostWithMeta[]> {

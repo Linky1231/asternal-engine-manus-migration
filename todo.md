@@ -1460,3 +1460,30 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir pruebas específicas del esquema y del flujo de verificación.
 - [ ] Aplicar la migración actualizada en el proyecto Supabase real; compilación y pruebas locales ya verificadas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Sincronización del verificado mediante Manus
+
+- [ ] Auditar el backend Manus, usuarios autenticados y esquema local disponible.
+- [ ] Crear una fuente persistente de verificación en la base Manus.
+- [ ] Crear procedimientos protegidos para leer y cambiar verificaciones.
+- [ ] Sincronizar Moderación, perfiles y publicaciones con Manus.
+- [ ] Evitar que el flujo del verificado dependa de `user_roles` de Supabase.
+- [ ] Añadir pruebas de autorización, asignación, retirada y persistencia.
+- [ ] Ejecutar validación, compilación y pruebas.
+- [ ] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Sincronización aislada del verificado mediante Manus
+- [x] Diseñar validación segura de identidad entre sesión Supabase y backend Manus.
+- [x] Crear persistencia aislada del verificado en Manus.
+- [x] Crear endpoint protegido para leer y cambiar el verificado.
+- [x] Conectar Moderación y perfiles a la fuente aislada de Manus.
+- [x] Mantener el resto de roles y funciones en Supabase sin cambios.
+- [x] Añadir pruebas de autorización, sincronización y persistencia.
+- [x] Ejecutar compilación y pruebas.
+- [x] Revisar el diff y guardar checkpoint.

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
+import { readManusVerification, readManusVerifications, writeManusVerification } from "../verification";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -44,6 +45,38 @@ app.post("/api/orion/rank-feed", async (req, res) => {
     res.json(await rankCommunityFeed(req.body));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Orión no pudo ordenar el feed.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/verification/status", async (req, res) => {
+  try {
+    const targetUserId = typeof req.body?.targetUserId === "string" ? req.body.targetUserId.trim() : "";
+    if (!targetUserId) return res.status(400).json({ error: "Falta la cuenta destinataria." });
+    res.json(await readManusVerification(req.header("authorization"), targetUserId));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo consultar la verificación.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/verification/statuses", async (req, res) => {
+  try {
+    const targetUserIds = Array.isArray(req.body?.targetUserIds) ? req.body.targetUserIds : [];
+    res.json(await readManusVerifications(req.header("authorization"), targetUserIds));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudieron consultar las verificaciones.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/verification/toggle", async (req, res) => {
+  try {
+    const targetUserId = typeof req.body?.targetUserId === "string" ? req.body.targetUserId.trim() : "";
+    if (!targetUserId) return res.status(400).json({ error: "Falta la cuenta destinataria." });
+    res.json(await writeManusVerification(req.header("authorization"), targetUserId, req.body?.verified === true));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo actualizar la verificación.";
     res.status(400).json({ error: message });
   }
 });
