@@ -20,6 +20,7 @@ import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProj
 import { syncAllProjects, withCloudTimeout, deduplicateExactCloudProjects } from "@/lib/engine/cloud-sync";
 import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
+const PROJECT_PAGE_SIZE = 24;
 
 function timeAgo(t: number) {
   const s = Math.max(1, Math.floor((Date.now() - t) / 1000));
@@ -49,9 +50,27 @@ export function ProjectManager({
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
+  const [localVisibleCount, setLocalVisibleCount] = useState(PROJECT_PAGE_SIZE);
+  const [cloudVisibleCount, setCloudVisibleCount] = useState(PROJECT_PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const autoSyncStarted = useRef(false);
 
   const refresh = () => setItems(listProjects());
+  const visibleItems = items.slice(0, localVisibleCount);
+  const visibleCloudList = cloudList.slice(0, cloudVisibleCount);
+  const hasMoreProjects = visibleItems.length < items.length || visibleCloudList.length < cloudList.length;
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !hasMoreProjects) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      setLocalVisibleCount(current => Math.min(current + PROJECT_PAGE_SIZE, items.length));
+      setCloudVisibleCount(current => Math.min(current + PROJECT_PAGE_SIZE, cloudList.length));
+    }, { rootMargin: "320px 0px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreProjects, items.length, cloudList.length]);
   const refreshCloud = async () => {
     try {
       const { data: { session } } = await withCloudTimeout(supabase.auth.getSession(), "La sesión de nube no respondió a tiempo");
@@ -251,7 +270,7 @@ export function ProjectManager({
                 <p className="text-xs text-muted-foreground/70 mt-1">Crea tu primer juego con «Nuevo proyecto».</p>
               </div>
             ) : (
-              items.map((m) => (
+              visibleItems.map((m) => (
                 <div
                   key={m.id}
                   className="group flex items-center gap-3 rounded-lg border border-border/70 bg-surface px-3 py-2.5 transition-colors hover:border-border-strong"
@@ -360,7 +379,7 @@ export function ProjectManager({
                   Nada guardado en la nube todavía. Usa el icono <CloudUpload size={12} className="inline" /> para respaldar un proyecto y acceder a él desde cualquier dispositivo.
                 </div>
               ) : (
-                cloudList.map(c => {
+                visibleCloudList.map(c => {
                   const inLocal = items.some(m => getProjectCloudId(m.id) === c.id);
                   return (
                     <div key={c.id} className="flex items-center gap-3 rounded-lg border border-border/70 bg-surface px-3 py-2.5">
@@ -395,6 +414,11 @@ export function ProjectManager({
           {!signedIn && (
             <div className="rounded-lg border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
               Inicia sesión para sincronizar tus juegos en la nube y no perderlos al cambiar de dispositivo.
+            </div>
+          )}
+          {hasMoreProjects && (
+            <div ref={loadMoreRef} className="flex min-h-12 items-center justify-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+              <Loader2 size={13} className="animate-spin" /> Cargando más proyectos…
             </div>
           )}
         </div>

@@ -1549,3 +1549,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Deduplicar copias generadas por autosave sin borrar proyectos reales ni datos del usuario.
 - [x] Añadir pruebas de creación, actualización, autosave repetido, sincronización y limpieza segura.
 - [x] Validar lag, lista de proyectos y producción; guardar checkpoint y publicar.
+
+
+# Mejora: lista de proyectos con carga progresiva
+
+- [x] Auditar la lista local y cloud y definir el tamaño de página y el contenedor de scroll.
+- [x] Implementar scroll infinito o paginación progresiva sin renderizar todos los proyectos al inicio.
+- [x] Mantener búsqueda, sincronización, acciones, limpieza de duplicados y estados de carga.
+- [x] Añadir regresiones y validar rendimiento responsive, build y publicación.
