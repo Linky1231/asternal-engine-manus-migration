@@ -1447,3 +1447,16 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir pruebas de autorización, asignación, retirada y renderizado.
 - [x] Ejecutar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Corrección del enum de verificación
+
+- [x] Confirmar el esquema real de `profiles` y `user_roles` y la ruta exacta del error `app_role`.
+- [x] Sustituir el uso inválido de `verified` dentro del enum por un campo persistente compatible.
+- [x] Mantener la autorización exclusiva de `linkyteam989@gmail.com`.
+- [x] Actualizar lectura, asignación, retirada y renderizado del badge.
+- [x] Añadir pruebas específicas del esquema y del flujo de verificación.
+- [ ] Aplicar la migración actualizada en el proyecto Supabase real; compilación y pruebas locales ya verificadas.
+- [x] Revisar el diff y guardar checkpoint.

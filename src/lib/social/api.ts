@@ -1164,7 +1164,8 @@ export async function isVerificationAdmin(): Promise<boolean> {
 export async function setUserVerified(userId: string, on: boolean): Promise<void> {
   if (!(await isVerificationAdmin())) throw new Error("Solo el administrador autorizado puede gestionar verificaciones.");
   if (on) {
-    const { data: existing } = await supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle();
+    const { data: existing, error: lookupError } = await supabase.from("user_roles").select("user_id").eq("user_id", userId).eq("role", "verified").maybeSingle();
+    if (lookupError) throw lookupError;
     if (existing) return;
     const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "verified" });
     if (error) throw error;

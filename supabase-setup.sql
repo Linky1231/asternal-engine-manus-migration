@@ -13,7 +13,10 @@ set check_function_bodies = off;
 
 -- ─────────────────────────── ENUMS ───────────────────────────
 do $$ begin
-  create type public.app_role as enum ('admin','moderator','user');
+  create type public.app_role as enum ('admin','moderator','user','verified');
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter type public.app_role add value if not exists 'verified';
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -603,9 +606,15 @@ create policy projects_delete on public.user_projects for delete using (auth.uid
 drop policy if exists roles_read on public.user_roles;
 create policy roles_read on public.user_roles for select using (true);
 drop policy if exists roles_insert on public.user_roles;
-create policy roles_insert on public.user_roles for insert with check (public.has_role('admin', auth.uid()));
+create policy roles_insert on public.user_roles for insert with check (
+  public.has_role('admin', auth.uid())
+  and (role <> 'verified'::public.app_role or lower(coalesce((select email from auth.users where id = auth.uid()), '')) = 'linkyteam989@gmail.com')
+);
 drop policy if exists roles_delete on public.user_roles;
-create policy roles_delete on public.user_roles for delete using (public.has_role('admin', auth.uid()));
+create policy roles_delete on public.user_roles for delete using (
+  public.has_role('admin', auth.uid())
+  and (role <> 'verified'::public.app_role or lower(coalesce((select email from auth.users where id = auth.uid()), '')) = 'linkyteam989@gmail.com')
+);
 
 -- banned_emails: solo staff
 drop policy if exists bans_read on public.banned_emails;
