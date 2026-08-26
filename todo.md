@@ -1439,3 +1439,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Auditar el componente, el posicionamiento y los estados visuales del selector señalado.
 - [x] Corregir el recorte y el solapamiento de la conversación activa sin cambiar el flujo de selección.
 - [x] Validar Orión en móvil y escritorio, ejecutar pruebas y compilación, y guardar checkpoint.
+
+# Migración global a la paleta oscura de referencia
+
+- [x] Auditar tokens, colores directos, superficies, estados y componentes de toda la aplicación.
+- [x] Definir la paleta oscura objetivo a partir de la imagen de referencia y documentar sus reglas de uso.
+- [x] Aplicar la paleta global en tema, componentes compartidos, pantallas y estados sin romper la funcionalidad.
+- [x] Revisar cada pantalla disponible en escritorio y móvil para corregir contraste, legibilidad, overflow y coherencia visual.
+- [x] Ejecutar pruebas, compilación y validaciones visuales; guardar checkpoint final con los pendientes documentados si existe alguna limitación de acceso.

@@ -298,12 +298,12 @@ export function SearchSection() {
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+      <div className="flex flex-wrap gap-1.5 -mx-1 px-1 pb-1">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-[11px] font-semibold tracking-wide whitespace-nowrap transition-all duration-200 shrink-0 ${
+            className={`flex items-center gap-1 px-2.5 sm:gap-1.5 sm:px-3.5 h-8 rounded-lg text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap transition-all duration-200 shrink-0 ${
               tab === t.id
                 ? "grad-brand text-primary-foreground"
                 : "bg-card border border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/20"
@@ -333,11 +333,11 @@ export function SearchSection() {
       {!loading && !searched && (
         <div className="text-center py-16 space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30 grid place-items-center">
-            <Search size={26} className="text-primary/20" />
+            <Search size={26} className="text-primary/45" />
           </div>
           <div>
             <div className="text-sm font-semibold text-foreground/70">¿Qué estás buscando?</div>
-            <div className="text-[11px] text-muted-foreground/40 mt-1 max-w-[240px] mx-auto">
+            <div className="text-[11px] text-muted-foreground/65 mt-1 max-w-[240px] mx-auto">
               Usuarios, juegos, publicaciones o arte de la galería
             </div>
           </div>
@@ -348,11 +348,11 @@ export function SearchSection() {
       {!loading && searched && !hasAny && (
         <div className="text-center py-16 space-y-3">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-muted/30 border border-border/30 grid place-items-center">
-            <Search size={20} className="text-muted-foreground/25" />
+            <Search size={20} className="text-muted-foreground/45" />
           </div>
           <div>
-            <div className="text-sm text-muted-foreground/60 font-medium">Sin resultados para «{q}»</div>
-            <div className="text-[11px] text-muted-foreground/35 mt-1">Prueba con otros términos</div>
+            <div className="text-sm text-muted-foreground/85 font-medium">Sin resultados para «{q}»</div>
+            <div className="text-[11px] text-muted-foreground/65 mt-1">Prueba con otros términos</div>
           </div>
         </div>
       )}

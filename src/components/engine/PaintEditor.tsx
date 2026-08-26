@@ -714,7 +714,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-border gap-2 shrink-0"
         style={{
-          background: "linear-gradient(180deg, oklch(1 0 0 / 0.9), oklch(0.97 0.005 250 / 0.8))",
+          background: "linear-gradient(180deg, oklch(0.18 0.03 258 / 0.96), oklch(0.14 0.025 258 / 0.92))",
           backdropFilter: "blur(20px) saturate(180%)",
         }}
       >
@@ -722,7 +722,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
           <div
             className="w-8 h-8 rounded-lg shrink-0"
             style={{
-              backgroundColor: "#e5e7eb",
+              backgroundColor: "#20283b",
               backgroundImage: thumb ? `url(${thumb})` : undefined,
               backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
@@ -780,7 +780,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                 "linear-gradient(45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.955 0.003 250) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.955 0.003 250) 75%)",
               backgroundSize: "20px 20px",
               backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
-              backgroundColor: "#ffffff",
+              backgroundColor: "#f8fafc",
             }}
           >
             <canvas
@@ -823,7 +823,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
 
       {/* Bottom panel — scrollable, taller for easier access */}
       <div className="shrink-0 max-h-[45dvh] overflow-y-auto border-t border-border" style={{
-        background: "linear-gradient(0deg, oklch(0.97 0.005 250 / 0.95), oklch(0.99 0 0 / 0.9))",
+        background: "linear-gradient(0deg, oklch(0.18 0.03 258 / 0.98), oklch(0.14 0.025 258 / 0.94))",
         backdropFilter: "blur(20px) saturate(180%)",
       }}>
         <button onClick={() => setToolsExpanded(e => !e)} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-display tracking-widest text-muted-foreground hover:text-foreground transition">
@@ -833,9 +833,9 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
           <div className="px-3 pb-3 space-y-2">
             {/* Tool dock */}
             <div className="flex gap-1 p-1 rounded-2xl" style={{
-              background: "oklch(0.22 0.04 262 / 0.6)",
+              background: "oklch(0.18 0.03 258 / 0.98)",
               backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
+              border: "1px solid oklch(0.58 0.06 258 / 0.38)",
               boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.05), 0 4px 14px -8px oklch(0 0 0 / 0.4)",
             }}>
               {TOOLS.map(t => (
@@ -858,9 +858,9 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
 
             {/* Color + size */}
             <div className="p-3 rounded-2xl flex flex-col gap-2" style={{
-              background: "oklch(0.22 0.04 262 / 0.5)",
+              background: "oklch(0.22 0.035 258 / 0.82)",
               backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
+              border: "1px solid oklch(0.58 0.06 258 / 0.38)",
             }}>
               <div className="flex items-center gap-2">
                 <div className="relative w-9 h-9 shrink-0">
@@ -908,9 +908,9 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
 
             {/* Layers */}
             <div className="p-3 rounded-2xl flex flex-col gap-2" style={{
-              background: "oklch(0.22 0.04 262 / 0.5)",
+              background: "oklch(0.22 0.035 258 / 0.82)",
               backdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid oklch(1 0 0 / 0.06)",
+              border: "1px solid oklch(0.58 0.06 258 / 0.38)",
             }}>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5"><Layers size={11} /> CAPAS · {layers.length}</span>
@@ -926,7 +926,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                     <div key={l.id} className={`group rounded-xl p-1.5 flex items-center gap-1.5 transition-all cursor-pointer ${isActive ? "bg-primary/15 border border-primary/40" : "bg-muted border border-border hover:bg-muted"}`}
                       onClick={() => { setActiveLayerId(l.id); activeLayerIdRef.current = l.id; }}>
                       <div className="w-8 h-8 rounded-md shrink-0" style={{
-                        backgroundColor: "#ffffff",
+                        backgroundColor: "#f8fafc",
                         backgroundImage: `url(${(() => { try { return l.canvas.toDataURL("image/png"); } catch { return ""; }})()})`,
                         backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
                         boxShadow: "inset 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",

@@ -2,13 +2,12 @@
    Conserva los azules de Asternal y hace perceptible la materialidad en pantalla. */
 
 :root {
-  --glass-hot-edge: oklch(1 0 0 / 0.92);
-  --glass-blue-edge: oklch(0.74 0.08 236 / 0.52);
-  --glass-deep-shadow: 0 24px 50px -28px oklch(0.37 0.12 258 / 0.46), 0 8px 18px -13px oklch(0.25 0.06 260 / 0.24);
-  --glass-control-shadow: inset 0 1.5px 0 oklch(1 0 0 / 0.78), inset 0 -1px 0 oklch(0.42 0.10 258 / 0.09), 0 8px 17px -13px oklch(0.28 0.05 260 / 0.45);
-  /* Firma Azure Drift original: cobalto → azur → cielo. El vidrio aporta
-     volumen, pero no sustituye ni apaga el azul de marca. */
-  --asternal-control-gradient: linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.61 0.12 254) 48%, oklch(0.74 0.08 234) 100%);
+  --glass-hot-edge: oklch(0.96 0.04 252 / 0.64);
+  --glass-blue-edge: oklch(0.62 0.12 252 / 0.52);
+  --glass-deep-shadow: 0 24px 50px -28px oklch(0.02 0.02 258 / 0.78), 0 8px 18px -13px oklch(0.03 0.03 258 / 0.56);
+  --glass-control-shadow: inset 0 1.5px 0 oklch(0.98 0.02 252 / 0.14), inset 0 -1px 0 oklch(0.05 0.04 258 / 0.38), 0 8px 17px -13px oklch(0.03 0.02 258 / 0.58);
+  /* Firma de referencia: cobalto → periwinkle → aqua sobre navy. */
+  --asternal-control-gradient: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
   /* Aurora queda disponible solo para las superficies Plus autorizadas. */
   --plus-aurora-gradient: linear-gradient(135deg, #268FB3 0%, #30ABAD 52%, #7ACBD9 100%);
   --plus-aurora-solid: #268FB3;
@@ -73,7 +72,7 @@
 
 /* Superficies y estructuras: un vidrio blanco pronunciado para separar capas. */
 :is(.bg-card, .bg-surface, .bg-popover, .panel, .surface, .surface-2, .glass-surface, .glass-menu, .glass-control) {
-  background-color: oklch(1 0 0 / 0.68) !important;
+  background-color: var(--glass-fill) !important;
   border-color: var(--glass-blue-edge) !important;
   box-shadow: var(--glass-control-shadow), var(--glass-deep-shadow) !important;
   backdrop-filter: blur(22px) saturate(1.18) !important;
@@ -84,23 +83,23 @@
 :is(button, a).glass-btn,
 :is(button, a).neu-btn,
 :is(button, a)[class~="bg-card"] {
-  background-image: linear-gradient(125deg, oklch(1 0 0 / 0.72), oklch(1 0 0 / 0.18) 48%, transparent 75%);
-  border-color: oklch(1 0 0 / 0.88) !important;
-  box-shadow: inset 0 1.5px 0 oklch(1 0 0 / 0.9), 0 12px 22px -18px oklch(0.28 0.05 260 / 0.48) !important;
+  background-image: linear-gradient(125deg, oklch(0.36 0.045 258 / 0.78), oklch(0.25 0.03 258 / 0.34) 48%, transparent 75%);
+  border-color: oklch(0.62 0.07 258 / 0.62) !important;
+  box-shadow: inset 0 1.5px 0 oklch(0.98 0.02 252 / 0.14), 0 12px 22px -18px oklch(0.03 0.02 258 / 0.58) !important;
 }
 
 :is(button, a).glass-control:hover,
 :is(button, a).glass-btn:hover,
 :is(button, a).neu-btn:hover,
 :is(button, a)[class~="bg-card"]:hover {
-  background-color: oklch(1 0 0 / 0.86) !important;
+  background-color: oklch(0.35 0.045 258 / 0.96) !important;
   border-color: var(--glass-hot-edge) !important;
-  box-shadow: inset 0 1.5px 0 oklch(1 0 0 / 0.96), 0 16px 28px -18px oklch(0.35 0.09 260 / 0.5) !important;
+  box-shadow: inset 0 1.5px 0 oklch(0.98 0.02 252 / 0.18), 0 16px 28px -18px oklch(0.03 0.02 258 / 0.68) !important;
 }
 
 /* Las coincidencias del buscador son contenido navegable, no acciones principales. */
 .search-result-row {
-  background-color: oklch(1 0 0 / 0.72) !important;
+  background-color: oklch(0.22 0.03 258 / 0.86) !important;
   background-image: none !important;
   border-color: oklch(0.74 0.03 250 / 0.4) !important;
   box-shadow: 0 6px 16px -16px oklch(0.28 0.05 260 / 0.26) !important;
@@ -108,7 +107,7 @@
 }
 
 .search-result-row:hover {
-  background-color: oklch(1 0 0 / 0.9) !important;
+  background-color: oklch(0.32 0.04 258 / 0.94) !important;
   border-color: oklch(0.62 0.07 245 / 0.34) !important;
   box-shadow: 0 10px 20px -17px oklch(0.32 0.06 260 / 0.28) !important;
 }
@@ -118,7 +117,7 @@
 .notification-category-panel,
 .notification-empty-state,
 .notification-event-row {
-  background-color: oklch(1 0 0 / 0.72) !important;
+  background-color: oklch(0.22 0.03 258 / 0.86) !important;
   background-image: none !important;
   border-color: oklch(0.72 0.035 248 / 0.42) !important;
   box-shadow: 0 8px 18px -18px oklch(0.28 0.05 260 / 0.3) !important;
@@ -134,19 +133,19 @@
 }
 
 .notification-filter-control:hover {
-  background-color: oklch(0.94 0.025 248 / 0.52) !important;
+  background-color: oklch(0.32 0.045 258 / 0.82) !important;
   border-color: oklch(0.62 0.07 245 / 0.24) !important;
 }
 
 .notification-filter-control-active {
-  background-color: oklch(0.91 0.04 245 / 0.58) !important;
+  background-color: color-mix(in oklab, var(--primary) 22%, var(--surface-2)) !important;
   border-color: oklch(0.56 0.11 252 / 0.34) !important;
   box-shadow: inset 3px 0 0 var(--primary) !important;
 }
 
 .notification-event-row { border-color: transparent !important; }
-.notification-event-row:hover { background-color: oklch(0.96 0.018 248 / 0.7) !important; }
-.notification-event-row-unread { background-color: oklch(0.93 0.035 246 / 0.46) !important; }
+.notification-event-row:hover {   background-color: oklch(0.30 0.04 258 / 0.9) !important; }
+.notification-event-row-unread {   background-color: color-mix(in oklab, var(--primary) 14%, var(--surface-2)) !important; }
 
 /* Acciones contextuales y navegación azul: misma firma de marca, no variantes de degradado. */
 :is(button, a)[class*="bg-primary/"] {
@@ -166,9 +165,9 @@
 }
 
 :is(button, a)[class*="bg-muted/"] {
-  background-color: oklch(1 0 0 / 0.42) !important;
-  border-color: oklch(1 0 0 / 0.64) !important;
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.7), 0 7px 15px -16px oklch(0.28 0.05 260 / 0.5) !important;
+  background-color: oklch(0.31 0.04 258 / 0.7) !important;
+  border-color: oklch(0.58 0.06 258 / 0.58) !important;
+  box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12), 0 7px 15px -16px oklch(0.03 0.02 258 / 0.56) !important;
   backdrop-filter: blur(14px) saturate(1.1);
 }
 
@@ -189,23 +188,23 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* La barra de navegación debe mostrar vidrio incluso con contenido claro detrás. */
 .app-header,
 .glass-header {
-  background: linear-gradient(135deg, oklch(1 0 0 / 0.78), oklch(0.96 0.012 252 / 0.56)) !important;
-  border-color: oklch(1 0 0 / 0.8) !important;
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.94), 0 9px 24px -24px oklch(0.28 0.05 260 / 0.62) !important;
+  background: linear-gradient(135deg, oklch(0.18 0.03 258 / 0.92), oklch(0.24 0.035 258 / 0.82)) !important;
+  border-color: oklch(0.54 0.05 258 / 0.58) !important;
+  box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.14), 0 9px 24px -24px oklch(0.02 0.02 258 / 0.72) !important;
   backdrop-filter: blur(24px) saturate(1.16) !important;
 }
 
 /* Menú principal: mantiene profundidad de vidrio, pero las opciones no compiten como CTAs. */
 .menu-drawer {
-  background: linear-gradient(160deg, oklch(0.985 0.006 252 / 0.96), oklch(0.94 0.018 246 / 0.9)) !important;
-  border-color: oklch(1 0 0 / 0.72) !important;
+  background: linear-gradient(160deg, oklch(0.20 0.03 258 / 0.98), oklch(0.14 0.025 258 / 0.96)) !important;
+  border-color: oklch(0.52 0.05 258 / 0.62) !important;
   box-shadow: -18px 0 42px -26px oklch(0.28 0.05 260 / 0.48), inset 1px 0 0 oklch(1 0 0 / 0.84) !important;
   backdrop-filter: blur(20px) saturate(1.08) !important;
 }
 
 .menu-drawer .menu-action {
-  background: oklch(1 0 0 / 0.2) !important;
-  border: 1px solid oklch(1 0 0 / 0.52);
+  background: oklch(0.30 0.04 258 / 0.58) !important;
+  border: 1px solid oklch(0.55 0.05 258 / 0.56);
   box-shadow: none !important;
 }
 
@@ -215,9 +214,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 .menu-drawer .menu-action:hover {
-  background: oklch(1 0 0 / 0.46) !important;
+  background: oklch(0.36 0.05 258 / 0.78) !important;
   border-color: oklch(0.61 0.08 246 / 0.18) !important;
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.66) !important;
+  box-shadow: inset 1px 0 0 oklch(0.98 0.02 252 / 0.12) !important;
 }
 
 .menu-drawer .menu-action:active { transform: scale(0.985); }

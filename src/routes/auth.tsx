@@ -494,7 +494,7 @@ function AuthPage() {
                     {/* Selector de acceso: mismo gris suave y pastilla clara de la navegación inferior. */}
                     <div className="flex bg-muted/60 rounded-xl p-0.5 mb-5 relative" role="tablist" aria-label="Modo de acceso">
                       <div
-                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-[10px] bg-white shadow-sm will-change-transform"
+                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-[10px] grad-brand shadow-sm will-change-transform"
                         style={{
                           left: 0,
                           transform: `translateX(${mode === "signin" ? 0 : 100}%)`,
@@ -507,8 +507,8 @@ function AuthPage() {
                           aria-selected={mode === m}
                           className={`relative z-10 flex-1 min-h-11 rounded-[10px] text-xs font-display font-semibold tracking-wider transition-colors duration-200 ${
                             mode === m
-                              ? "text-foreground"
-                              : "text-muted-foreground/80 hover:text-foreground"
+                              ? "text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground"
                           }`}>
                           {m === "signin" ? "ACCEDER" : "REGISTRARSE"}
                         </button>

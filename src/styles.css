@@ -55,83 +55,83 @@
   --radius: 0.75rem;
 
   /* ── Lienzo "espacio profundo": claro, frío, casi blanco ── */
-  --canvas: oklch(0.972 0.006 252);
+  --canvas: oklch(0.155 0.025 258);
   --background: var(--canvas);
-  --foreground: oklch(0.165 0.028 258);
-  --ink: oklch(0.165 0.028 258);
-  --ink-2: oklch(0.43 0.028 256);
-  --ink-3: oklch(0.55 0.022 256);
+  --foreground: oklch(0.94 0.018 252);
+  --ink: oklch(0.94 0.018 252);
+  --ink-2: oklch(0.76 0.025 252);
+  --ink-3: oklch(0.61 0.028 252);
 
   /* ── Superficies ── */
-  --card: oklch(1 0 0);
+  --card: oklch(0.21 0.03 258);
   --card-foreground: var(--ink);
-  --surface-2: oklch(0.95 0.008 252);
-  --popover: oklch(1 0 0);
+  --surface-2: oklch(0.255 0.032 258);
+  --popover: oklch(0.21 0.03 258);
   --popover-foreground: var(--ink);
 
   /* ── Azul Asternal «Azure Drift»: cobalto → azur → cielo (suave, luminoso,
      profesional). Es la única familia azul de la app: botones, degradados,
      sombras de color y monogramas usan estos mismos tonos. ── */
-  --primary: oklch(0.55 0.15 262);
-  --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.63 0.12 252);
-  --blue-600: oklch(0.46 0.15 268);
-  --azure: oklch(0.72 0.08 236);
+  --primary: oklch(0.68 0.16 268);
+  --primary-foreground: oklch(0.12 0.025 258);
+  --primary-glow: oklch(0.78 0.12 245);
+  --blue-600: oklch(0.57 0.18 270);
+  --azure: oklch(0.82 0.10 222);
   --violet-accent: oklch(0.63 0.15 300);
-  --cyan-accent: oklch(0.75 0.07 210);
+  --cyan-accent: oklch(0.84 0.10 205);
   --accent: var(--azure);
-  --accent-foreground: oklch(0.25 0.03 260);
+  --accent-foreground: oklch(0.16 0.025 258);
 
   --secondary: var(--surface-2);
-  --secondary-foreground: oklch(0.27 0.03 256);
+  --secondary-foreground: oklch(0.9 0.018 252);
 
   --muted: var(--surface-2);
-  --muted-foreground: oklch(0.52 0.024 256);
+  --muted-foreground: oklch(0.70 0.028 252);
 
   /* ── Líneas y estados ── */
-  --line: oklch(0.9 0.012 252 / 0.6);
-  --line-strong: oklch(0.83 0.016 252 / 0.75);
+  --line: oklch(0.38 0.032 258 / 0.78);
+  --line-strong: oklch(0.48 0.045 258 / 0.9);
   --border: var(--line);
-  --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.55 0.13 262 / 0.35);
-  --grid: oklch(0.87 0.01 252 / 0.4);
-  --destructive: oklch(0.577 0.215 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.62 0.17 155);
-  --warn: oklch(0.75 0.16 80);
+  --input: oklch(0.29 0.032 258 / 0.95);
+  --ring: oklch(0.72 0.15 266 / 0.55);
+  --grid: oklch(0.42 0.035 258 / 0.34);
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.12 0.025 258);
+  --success: oklch(0.75 0.14 165);
+  --warn: oklch(0.82 0.14 88);
 
   /* ── Elevación (jerarquía: borde → sombra) ── */
-  --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
-  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
-  --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
-  --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
-  --shadow-xl: 0 20px 44px -12px oklch(0 0 0 / 0.14);
+  --shadow-xs: 0 1px 2px 0 oklch(0.03 0.02 258 / 0.35);
+  --shadow-sm: 0 2px 8px -2px oklch(0.03 0.02 258 / 0.42), 0 1px 2px -1px oklch(0.03 0.02 258 / 0.32);
+  --shadow-md: 0 8px 20px -6px oklch(0.03 0.02 258 / 0.5), 0 2px 6px -2px oklch(0.03 0.02 258 / 0.35);
+  --shadow-lg: 0 16px 34px -10px oklch(0.03 0.02 258 / 0.58), 0 5px 14px -5px oklch(0.03 0.02 258 / 0.42);
+  --shadow-xl: 0 26px 56px -16px oklch(0.03 0.02 258 / 0.7);
 
 /* Sombras de color (elementos flotando sobre el lienzo blanco) */
-  --shadow-float: 0 18px 44px -18px oklch(0.5 0.13 266 / 0.3);
-  --shadow-glow: 0 10px 30px -12px oklch(0.55 0.14 262 / 0.3), 0 4px 18px -8px oklch(0.68 0.08 230 / 0.26);
+  --shadow-float: 0 18px 44px -18px oklch(0.08 0.08 270 / 0.78);
+  --shadow-glow: 0 10px 30px -12px oklch(0.62 0.16 266 / 0.42), 0 4px 18px -8px oklch(0.78 0.1 225 / 0.28);
 
   /* Material de interfaz: vidrio luminoso con la paleta actual de Asternal. */
-  --glass-fill: oklch(1 0 0 / 0.64);
-  --glass-fill-strong: oklch(1 0 0 / 0.8);
-  --glass-fill-soft: oklch(1 0 0 / 0.46);
-  --glass-edge-muted: oklch(0.78 0.035 252 / 0.28);
-  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.8);
-  --glass-shadow: 0 16px 38px -24px oklch(0.28 0.05 260 / 0.3), 0 3px 10px -7px oklch(0.28 0.05 260 / 0.16);
+  --glass-fill: oklch(0.24 0.032 258 / 0.74);
+  --glass-fill-strong: oklch(0.28 0.035 258 / 0.9);
+  --glass-fill-soft: oklch(0.22 0.03 258 / 0.62);
+  --glass-edge-muted: oklch(0.52 0.045 258 / 0.36);
+  --glass-highlight: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12);
+  --glass-shadow: 0 16px 38px -24px oklch(0.02 0.02 258 / 0.7), 0 3px 10px -7px oklch(0.02 0.02 258 / 0.5);
   --glass-blur: blur(18px) saturate(1.1);
 
   /* ── Degradados oficiales (DESIGN.md §2.2) ── */
   /* ÚNICO degradado de marca: 135° cobalto → azur → cielo (Azure Drift). */
-  --gradient-asternal: linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.61 0.12 254) 48%, oklch(0.74 0.08 234) 100%);
+  --gradient-asternal: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
   /* Variantes del MISMO degradado: diluido (acentos de fondo) y suave-profundo (banner destacado). */
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.52 0.15 266 / 0.1), oklch(0.61 0.12 254 / 0.08) 48%, oklch(0.74 0.08 234 / 0.06));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.12 266) 0%, oklch(0.48 0.11 256) 48%, oklch(0.57 0.08 236) 100%);
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.61 0.18 273 / 0.2), oklch(0.69 0.15 257 / 0.14) 48%, oklch(0.82 0.1 222 / 0.12));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.14 273) 0%, oklch(0.5 0.12 257) 48%, oklch(0.65 0.09 222) 100%);
 
   /* Asternal Plus — azul cian (logo gota+cruz) */
-  --plus: oklch(0.62 0.12 220);
-  --plus-glow: oklch(0.74 0.11 195);
-  --plus-fg: oklch(0.99 0 0);
-  --gradient-plus: linear-gradient(135deg, oklch(0.62 0.12 220), oklch(0.74 0.11 195));
+  --plus: oklch(0.76 0.12 220);
+  --plus-glow: oklch(0.84 0.10 195);
+  --plus-fg: oklch(0.12 0.025 258);
+  --gradient-plus: linear-gradient(135deg, oklch(0.76 0.12 220), oklch(0.84 0.10 195));
   --shadow-plus: 0 10px 30px -10px oklch(0.62 0.12 220 / 0.4);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -142,49 +142,49 @@
 .dark {
   /* Light-first product — .dark mirrors :root to prevent OS dark-mode surprises. */
   --radius: 0.75rem;
-  --canvas: oklch(0.972 0.006 252);
+  --canvas: oklch(0.155 0.025 258);
   --background: var(--canvas);
-  --foreground: oklch(0.165 0.028 258);
-  --ink: oklch(0.165 0.028 258);
-  --ink-2: oklch(0.43 0.028 256);
-  --ink-3: oklch(0.55 0.022 256);
-  --card: oklch(1 0 0);
+  --foreground: oklch(0.94 0.018 252);
+  --ink: oklch(0.94 0.018 252);
+  --ink-2: oklch(0.76 0.025 252);
+  --ink-3: oklch(0.61 0.028 252);
+  --card: oklch(0.21 0.03 258);
   --card-foreground: var(--ink);
-  --surface-2: oklch(0.95 0.008 252);
-  --popover: oklch(1 0 0);
+  --surface-2: oklch(0.255 0.032 258);
+  --popover: oklch(0.21 0.03 258);
   --popover-foreground: var(--ink);
-  --primary: oklch(0.55 0.15 262);
-  --primary-foreground: oklch(0.99 0 0);
-  --primary-glow: oklch(0.63 0.12 252);
-  --blue-600: oklch(0.46 0.15 268);
-  --azure: oklch(0.72 0.08 236);
+  --primary: oklch(0.68 0.16 268);
+  --primary-foreground: oklch(0.12 0.025 258);
+  --primary-glow: oklch(0.78 0.12 245);
+  --blue-600: oklch(0.57 0.18 270);
+  --azure: oklch(0.82 0.10 222);
   --violet-accent: oklch(0.63 0.15 300);
-  --cyan-accent: oklch(0.75 0.07 210);
+  --cyan-accent: oklch(0.84 0.10 205);
   --accent: var(--azure);
-  --accent-foreground: oklch(0.25 0.03 260);
+  --accent-foreground: oklch(0.16 0.025 258);
   --secondary: var(--surface-2);
-  --secondary-foreground: oklch(0.27 0.03 256);
+  --secondary-foreground: oklch(0.9 0.018 252);
   --muted: var(--surface-2);
-  --muted-foreground: oklch(0.52 0.024 256);
-  --line: oklch(0.9 0.012 252 / 0.6);
-  --line-strong: oklch(0.83 0.016 252 / 0.75);
+  --muted-foreground: oklch(0.70 0.028 252);
+  --line: oklch(0.38 0.032 258 / 0.78);
+  --line-strong: oklch(0.48 0.045 258 / 0.9);
   --border: var(--line);
-  --input: oklch(0.92 0.008 252 / 0.7);
-  --ring: oklch(0.55 0.13 262 / 0.35);
-  --grid: oklch(0.87 0.01 252 / 0.4);
-  --destructive: oklch(0.577 0.215 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.62 0.17 155);
-  --warn: oklch(0.75 0.16 80);
-  --gradient-asternal: linear-gradient(135deg, oklch(0.52 0.15 266) 0%, oklch(0.61 0.12 254) 48%, oklch(0.74 0.08 234) 100%);
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.52 0.15 266 / 0.1), oklch(0.61 0.12 254 / 0.08) 48%, oklch(0.74 0.08 234 / 0.06));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.12 266) 0%, oklch(0.48 0.11 256) 48%, oklch(0.57 0.08 236) 100%);
-  --shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 260 / 0.05);
-  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
-  --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.04);
-  --shadow-lg: 0 12px 28px -8px oklch(0 0 0 / 0.10), 0 4px 12px -4px oklch(0 0 0 / 0.06);
-  --shadow-float: 0 18px 44px -18px oklch(0.5 0.13 266 / 0.3);
-  --shadow-glow: 0 10px 30px -12px oklch(0.55 0.14 262 / 0.3), 0 4px 18px -8px oklch(0.68 0.08 230 / 0.26);
+  --input: oklch(0.29 0.032 258 / 0.95);
+  --ring: oklch(0.72 0.15 266 / 0.55);
+  --grid: oklch(0.42 0.035 258 / 0.34);
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.12 0.025 258);
+  --success: oklch(0.75 0.14 165);
+  --warn: oklch(0.82 0.14 88);
+  --gradient-asternal: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
+  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.61 0.18 273 / 0.2), oklch(0.69 0.15 257 / 0.14) 48%, oklch(0.82 0.1 222 / 0.12));
+  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.14 273) 0%, oklch(0.5 0.12 257) 48%, oklch(0.65 0.09 222) 100%);
+  --shadow-xs: 0 1px 2px 0 oklch(0.03 0.02 258 / 0.35);
+  --shadow-sm: 0 2px 8px -2px oklch(0.03 0.02 258 / 0.42), 0 1px 2px -1px oklch(0.03 0.02 258 / 0.32);
+  --shadow-md: 0 8px 20px -6px oklch(0.03 0.02 258 / 0.5), 0 2px 6px -2px oklch(0.03 0.02 258 / 0.35);
+  --shadow-lg: 0 16px 34px -10px oklch(0.03 0.02 258 / 0.58), 0 5px 14px -5px oklch(0.03 0.02 258 / 0.42);
+  --shadow-float: 0 18px 44px -18px oklch(0.08 0.08 270 / 0.78);
+  --shadow-glow: 0 10px 30px -12px oklch(0.62 0.16 266 / 0.42), 0 4px 18px -8px oklch(0.78 0.1 225 / 0.28);
 }
 
 @layer base {
@@ -293,12 +293,12 @@
 @utility btn-grad {
   background: var(--gradient-asternal);
   color: var(--color-primary-foreground);
-  border: 1px solid oklch(1 0 0 / 0.32);
+  border: 1px solid oklch(0.98 0.02 252 / 0.22);
   box-shadow: var(--glass-highlight), 0 10px 24px -13px oklch(0.47 0.14 263 / 0.65);
   transition: transform 120ms var(--ease-out-expo);
 }
 .btn-grad:hover {
-  border-color: oklch(1 0 0 / 0.55);
+  border-color: oklch(0.96 0.04 252 / 0.48);
   box-shadow: var(--glass-highlight), var(--shadow-glow);
 }
 .btn-grad:active {
@@ -380,7 +380,7 @@
   backdrop-filter: blur(14px) saturate(1.08);
   transition: transform 120ms var(--ease-out-smooth);
 }
-.neu-btn:hover { background: oklch(1 0 0 / 0.9); box-shadow: var(--glass-highlight), var(--glass-shadow); }
+.neu-btn:hover { background: oklch(0.34 0.04 258 / 0.96); box-shadow: var(--glass-highlight), var(--glass-shadow); }
 .neu-btn:active {
   box-shadow: none;
   transform: scale(0.98);
@@ -497,11 +497,11 @@
     linear-gradient(90deg, var(--grid) 1px, transparent 1px),
     var(--gradient-asternal-soft);
   background-size: 24px 24px, 24px 24px, 100% 100%;
-  border: 1px solid oklch(0.87 0.018 255 / 0.7);
+  border: 1px solid oklch(0.62 0.12 252 / 0.64);
   box-shadow: var(--shadow-float);
 }
 .tile-blueprint:hover {
-  border-color: oklch(0.56 0.14 262 / 0.4);
+  border-color: oklch(0.76 0.14 266 / 0.72);
   box-shadow: var(--shadow-glow);
 }
 
@@ -521,7 +521,7 @@
   transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 @utility glass-btn-hover {
-  background: oklch(1 0 0 / 0.94);
+  background: oklch(0.34 0.04 258 / 0.96);
   box-shadow: var(--glass-highlight), var(--glass-shadow);
 }
 
@@ -535,36 +535,36 @@
 @utility glass-control {
   background: var(--glass-fill-strong);
   border: 1px solid var(--glass-edge-muted);
-  box-shadow: var(--glass-highlight), 0 2px 6px -5px oklch(0.28 0.05 260 / 0.34);
+  box-shadow: var(--glass-highlight), 0 2px 6px -5px oklch(0.03 0.02 258 / 0.52);
   backdrop-filter: blur(14px) saturate(1.08);
   transition: transform 120ms var(--ease-out-expo);
 }
-.glass-control:hover { background: oklch(1 0 0 / 0.92); border-color: oklch(0.72 0.08 236 / 0.42); }
-.glass-control:focus-visible { border-color: oklch(0.55 0.15 262 / 0.7); box-shadow: var(--glass-highlight), 0 0 0 3px oklch(0.55 0.15 262 / 0.16); }
+.glass-control:hover { background: oklch(0.34 0.04 258 / 0.96); border-color: oklch(0.82 0.1 222 / 0.62); }
+.glass-control:focus-visible { border-color: oklch(0.74 0.16 268 / 0.9); box-shadow: var(--glass-highlight), 0 0 0 3px oklch(0.68 0.16 268 / 0.28); }
 
 @utility glass-menu {
-  background: oklch(0.99 0.004 252 / 0.82);
+  background: oklch(0.20 0.03 258 / 0.94);
   border: 1px solid var(--glass-edge-muted);
-  box-shadow: var(--glass-highlight), 0 20px 46px -22px oklch(0.28 0.05 260 / 0.42);
+  box-shadow: var(--glass-highlight), 0 20px 46px -22px oklch(0.02 0.02 258 / 0.72);
   backdrop-filter: blur(22px) saturate(1.12);
 }
 
 @utility glass-header {
-  background: oklch(0.972 0.006 252 / 0.76);
-  border-color: oklch(0.78 0.035 252 / 0.22);
-  box-shadow: 0 1px 0 oklch(1 0 0 / 0.72);
+  background: oklch(0.17 0.028 258 / 0.86);
+  border-color: oklch(0.5 0.045 258 / 0.48);
+  box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12);
   backdrop-filter: blur(14px) saturate(1.08);
 }
 
 @utility glass-primary {
-  border: 1px solid oklch(1 0 0 / 0.34);
-  box-shadow: var(--glass-highlight), 0 10px 22px -14px oklch(0.47 0.14 263 / 0.7);
+  border: 1px solid oklch(0.98 0.02 252 / 0.24);
+  box-shadow: var(--glass-highlight), 0 10px 22px -14px oklch(0.54 0.16 270 / 0.78);
 }
 .glass-primary:hover { box-shadow: var(--glass-highlight), var(--shadow-glow); }
 
 @utility glass-destructive {
-  border: 1px solid oklch(1 0 0 / 0.32);
-  box-shadow: var(--glass-highlight), 0 8px 18px -14px oklch(0.577 0.215 25 / 0.64);
+  border: 1px solid oklch(0.98 0.02 252 / 0.22);
+  box-shadow: var(--glass-highlight), 0 8px 18px -14px oklch(0.68 0.19 25 / 0.72);
 }
 
 @utility glass-ghost {
@@ -573,7 +573,7 @@
 }
 .glass-ghost:hover { background: var(--glass-fill-soft); border-color: var(--glass-edge-muted); }
 
-.app-header { box-shadow: 0 1px 0 oklch(1 0 0 / 0.64); }
+.app-header {   box-shadow: 0 1px 0 oklch(0.48 0.04 258 / 0.72); }
 
 @media (prefers-reduced-motion: reduce) {
   .glass-control, .glass-btn, .neu-btn, .btn-grad, .glass-ghost, .banner-shine, .badge-glow { transition-duration: 0ms; animation: none !important; }
@@ -789,9 +789,9 @@
 @utility anim-shimmer {
   background: linear-gradient(
     90deg,
-    oklch(0.95 0.005 250) 0%,
-    oklch(0.98 0.005 250) 50%,
-    oklch(0.95 0.005 250) 100%
+    oklch(0.24 0.032 258) 0%,
+    oklch(0.36 0.045 258) 50%,
+    oklch(0.24 0.032 258) 100%
   );
   background-size: 800px 100%;
   animation: shimmer 1.6s linear infinite;
@@ -1012,5 +1012,79 @@
   [style*="orbit-slow-rev"],
   [style*="drift-slow"] {
     animation: none !important;
+  }
+}
+
+/* ═══════════ DARK REFERENCE COMPATIBILITY LAYER ═══════════
+   Los componentes antiguos todavía contienen algunas utilidades cromáticas
+   directas. Se traducen aquí a los tokens de la referencia para que ninguna
+   pantalla quede con superficies blancas o texto ilegible durante la migración. */
+@layer utilities {
+  :where([class*="bg-white"], [class*="bg-gray-"], [class*="bg-slate-"], [class*="bg-zinc-"], [class*="bg-neutral-"]) {
+    background-color: color-mix(in oklab, var(--card) 92%, transparent) !important;
+  }
+
+  :where([class*="bg-black"], [class*="bg-gray-950"], [class*="bg-slate-950"], [class*="bg-neutral-950"]) {
+    background-color: color-mix(in oklab, var(--canvas) 94%, transparent) !important;
+  }
+
+  :where([class*="bg-emerald-"], [class*="bg-green-"], [class*="bg-teal-"]) {
+    background-color: color-mix(in oklab, var(--success) 18%, transparent) !important;
+  }
+
+  :where([class*="bg-rose-"], [class*="bg-red-"], [class*="bg-pink-"]) {
+    background-color: color-mix(in oklab, var(--destructive) 18%, transparent) !important;
+  }
+
+  :where([class*="bg-amber-"], [class*="bg-orange-"], [class*="bg-yellow-"]) {
+    background-color: color-mix(in oklab, var(--warn) 20%, transparent) !important;
+  }
+
+  :where([class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-sky-"], [class*="bg-cyan-"], [class*="bg-violet-"], [class*="bg-purple-"]) {
+    background-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  }
+
+  :where([class*="text-white"], [class*="text-black"], [class*="text-zinc-100"], [class*="text-gray-900"], [class*="text-slate-900"], [class*="text-neutral-900"]) {
+    color: var(--foreground) !important;
+  }
+
+  :where([class*="text-gray-"], [class*="text-slate-"], [class*="text-zinc-"], [class*="text-neutral-"]) {
+    color: var(--muted-foreground) !important;
+  }
+
+  :where([class*="text-emerald-"], [class*="text-green-"], [class*="text-teal-"]) {
+    color: var(--success) !important;
+  }
+
+  :where([class*="text-rose-"], [class*="text-red-"], [class*="text-pink-"]) {
+    color: var(--destructive) !important;
+  }
+
+  :where([class*="text-amber-"], [class*="text-orange-"], [class*="text-yellow-"]) {
+    color: var(--warn) !important;
+  }
+
+  :where([class*="text-blue-"], [class*="text-indigo-"], [class*="text-sky-"], [class*="text-cyan-"], [class*="text-violet-"], [class*="text-purple-"]) {
+    color: var(--primary-glow) !important;
+  }
+
+  :where([class*="border-white"], [class*="border-gray-"], [class*="border-slate-"], [class*="border-zinc-"], [class*="border-neutral-"]) {
+    border-color: var(--border) !important;
+  }
+
+  :where([class*="border-emerald-"], [class*="border-green-"], [class*="border-teal-"]) {
+    border-color: color-mix(in oklab, var(--success) 48%, var(--border)) !important;
+  }
+
+  :where([class*="border-rose-"], [class*="border-red-"], [class*="border-pink-"]) {
+    border-color: color-mix(in oklab, var(--destructive) 48%, var(--border)) !important;
+  }
+
+  :where([class*="border-amber-"], [class*="border-orange-"], [class*="border-yellow-"]) {
+    border-color: color-mix(in oklab, var(--warn) 48%, var(--border)) !important;
+  }
+
+  :where([class*="border-blue-"], [class*="border-indigo-"], [class*="border-sky-"], [class*="border-cyan-"], [class*="border-violet-"], [class*="border-purple-"]) {
+    border-color: color-mix(in oklab, var(--primary) 52%, var(--border)) !important;
   }
 }
