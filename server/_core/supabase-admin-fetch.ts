@@ -49,6 +49,13 @@ export async function upsertSupabaseProfile(input: { id: string; username: strin
   await request<unknown>("/rest/v1/profiles?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ id: input.id, username: input.username, display_name: input.displayName, updated_at: new Date().toISOString() }) });
 }
 
+export async function verifySupabaseProfile(id: string): Promise<{ id: string; username: string }> {
+  const rows = await request<Array<{ id: string; username: string }>>(`/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=id,username&limit=1`);
+  const profile = rows[0];
+  if (!profile?.id) throw new Error("Supabase no confirmó la fila del perfil sincronizado.");
+  return profile;
+}
+
 export async function signInSupabaseUser(email: string, password: string): Promise<SupabaseSession> {
   return request<SupabaseSession>("/auth/v1/token?grant_type=password", { method: "POST", body: JSON.stringify({ email, password }) });
 }

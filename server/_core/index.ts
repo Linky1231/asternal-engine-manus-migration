@@ -6,7 +6,7 @@ import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
 import { sdk } from "./sdk";
 import { registerOAuthRoutes } from "./oauth";
-import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile } from "./supabase-admin-fetch";
+import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile, verifySupabaseProfile } from "./supabase-admin-fetch";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -71,8 +71,9 @@ app.post("/api/supabase/link-manus", async (req, res) => {
       ? await updateSupabaseUser(existing.id, { password, metadata })
       : await createSupabaseUser({ email: linkEmail, password, metadata });
     await upsertSupabaseProfile({ id: supabaseUser.id, username, displayName: manusUser.name || username });
+    const profile = await verifySupabaseProfile(supabaseUser.id);
     const sessionData = await signInSupabaseUser(linkEmail, password);
-    res.json({ ok: true, username, session: sessionData });
+    res.json({ ok: true, username: profile.username, profile, session: sessionData });
   } catch (error) {
     console.error("[Supabase] Manus multimodal link failed", error);
     res.status(401).json({ error: error instanceof Error ? error.message : "No se pudo vincular la cuenta." });

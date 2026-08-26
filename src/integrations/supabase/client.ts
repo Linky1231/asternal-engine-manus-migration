@@ -201,8 +201,12 @@ const localAuth = {
     const s = getSession();
     return { data: { user: s ? { id: s.userId, email: s.email } : null }, error: null };
   },
-  setSession: async ({ access_token, expires_at, user }: { access_token: string; refresh_token?: string; expires_at?: number; user?: { id?: string; email?: string } }) => {
+  setSession: async ({ access_token, expires_at, user }: { access_token: string; refresh_token?: string; expires_at?: number; user?: { id?: string; email?: string; user_metadata?: { username?: string; manus_username?: string } } }) => {
     if (!user?.id || !user.email) return { data: { session: null }, error: new Error('Sesión Supabase incompleta') };
+    // El enlace server-side crea la identidad real, pero el cliente local de
+    // compatibilidad también necesita materializar el perfil para que la UI no
+    // quede autenticada con un encabezado vacío cuando no hay anon key local.
+    ensureProfileExists(user.id, user.email, user.user_metadata?.username || user.user_metadata?.manus_username);
     const session: LocalSession = {
       userId: user.id,
       email: user.email,

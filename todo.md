@@ -1531,3 +1531,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Corregir estados de carga, manejo de errores, sesión y timeout de sincronización.
 - [x] Añadir regresiones para éxito, usuario no autenticado, fallo de red y recuperación del botón.
 - [x] Validar en preview y producción, guardar checkpoint y publicar.
+
+
+# Corrección: usuario de Login multimodal no sincronizado
+
+- [x] Rastrear callback Manus, endpoint de enlace, sesión Supabase y carga del perfil visible.
+- [x] Corregir creación o recuperación del usuario, perfil y sesión sin perder la identidad Manus.
+- [x] Corregir estados de carga, carreras de autenticación y mensaje de sincronización pendiente.
+- [x] Añadir regresiones del enlace seguro y validar el flujo en preview/producción.
+- [x] Guardar checkpoint y publicar la corrección del login.

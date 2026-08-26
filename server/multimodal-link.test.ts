@@ -8,6 +8,7 @@ const oauth = readFileSync(resolve(root, "server/_core/oauth.ts"), "utf8");
 const profile = readFileSync(resolve(root, "src/routes/profile.tsx"), "utf8");
 const auth = readFileSync(resolve(root, "src/routes/auth.tsx"), "utf8");
 const helper = readFileSync(resolve(root, "src/lib/auth/manus.ts"), "utf8");
+const supabaseClient = readFileSync(resolve(root, "src/integrations/supabase/client.ts"), "utf8");
 
 describe("Manus multimodal login", () => {
   it("protects the link endpoint with Manus session authentication", () => {
@@ -18,6 +19,7 @@ describe("Manus multimodal login", () => {
     expect(server).toContain("listSupabaseUsers");
     expect(server).toContain("createSupabaseUser");
     expect(server).toContain("signInSupabaseUser");
+    expect(server).toContain("verifySupabaseProfile");
     expect(server).toContain('crypto.randomBytes(32)');
     expect(server).not.toContain("manusUser.password");
   });
@@ -31,6 +33,11 @@ describe("Manus multimodal login", () => {
     expect(helper).not.toContain("asternaleng-ceskknda.manus.space");
     expect(helper).not.toContain("isAsternalRuntime");
     expect(readFileSync(resolve(root, "src/routes/index.tsx"), "utf8")).toContain("multimodalReturn");
+  });
+
+  it("materializes a visible profile when the compatibility client receives the returned session", () => {
+    expect(supabaseClient).toContain("ensureProfileExists(user.id, user.email");
+    expect(supabaseClient).toContain("user.user_metadata?.manus_username");
   });
 
   it("exposes the action inside Log in and establishes the returned Supabase session", () => {
