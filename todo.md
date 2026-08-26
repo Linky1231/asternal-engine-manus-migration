@@ -1486,3 +1486,30 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Añadir pruebas de autorización, sincronización y persistencia.
 - [x] Ejecutar compilación y pruebas.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Tabla aislada de verificados con Supabase
+- [x] Preservar sin cambios el sistema de supervisión, roles y moderación actuales.
+- [x] Confirmar que no se requieren credenciales nuevas: la sincronización equivalente quedó aislada en Manus.
+- [x] Añadir una tabla separada para verificaciones sin modificar `user_roles` existente.
+- [x] Crear sincronización segura de lectura y escritura para el badge mediante Manus.
+- [x] Validar permisos exclusivos y compatibilidad con las cuentas actuales.
+- [x] Ejecutar pruebas y compilación.
+- [x] Revisar el diff y guardar checkpoint.
+
+Nota: este bloque fue supersedido por la decisión posterior de sincronizar el verificado de forma aislada mediante Manus.
+
+
+---
+
+# Textura original para botones azules
+- [x] Inventariar botones degradados azules y sus variantes de iconos.
+- [x] Alojar la textura original `2778.png` fuera del proyecto y referenciarla con su URL estable.
+- [x] Aplicar la textura exacta a todos los botones degradados azules.
+- [x] Mantener iconos, etiquetas, acciones, tamaños funcionales y accesibilidad.
+- [x] Ajustar solo la escala/alineación de iconos cuando el botón lo requiera.
+- [x] Verificar visualmente desktop y móvil.
+- [x] Ejecutar pruebas y compilación.
+- [x] Revisar el diff y guardar checkpoint.

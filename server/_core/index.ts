@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
 import { readManusVerification, readManusVerifications, writeManusVerification } from "../verification";
+import { registerStorageProxy } from "./storageProxy";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+registerStorageProxy(app);
 
 app.post("/api/orion/chat", async (req, res) => {
   try {
