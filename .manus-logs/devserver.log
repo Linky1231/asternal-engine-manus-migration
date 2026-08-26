@@ -2347,3 +2347,9 @@
 [2026-08-26T01:50:36.226Z] VITE v7.3.6  ready in 200 ms
 [2026-08-26T01:50:36.226Z] ➜  Local:   http://localhost:5173/
 [2026-08-26T01:50:36.226Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-26T01:57:04.595Z] 1:57:04 AM [vite] (client) page reload .builda-agent/.sdk-install.r8R8XB/stage/web/builda-dev-shell.html
+[2026-08-26T01:57:04.599Z] 1:57:04 AM [vite] (client) page reload .builda-agent/sdk/web/builda-dev-shell.html
+[2026-08-26T01:57:04.697Z] 1:57:04 AM [vite] (client) page reload .builda-agent/.sdk-install.r8R8XB/stage/web/builda-dev-shell.html
+[2026-08-26T01:57:23.715Z] 1:57:23 AM [vite] (client) page reload index.html
+[2026-08-26T01:57:48.880Z] 1:57:48 AM [vite] (client) page reload builda-h5/index.html
+[2026-08-26T01:57:48.892Z] 1:57:48 AM [vite] (client) page reload builda-h5/index.html

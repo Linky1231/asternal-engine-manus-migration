@@ -1523,3 +1523,16 @@ Nota: este bloque fue supersedido por la decisión posterior de sincronizar el v
 - [x] Verificar visualmente que el botón renderizado ya no usa el degradado por código.
 - [x] Ejecutar pruebas y compilación.
 - [x] Revisar el diff y guardar checkpoint.
+
+
+---
+
+# Publicación HTML5 con Builda
+
+- [x] Revisar `https://ai.builda.game/agent/setup.md` y registrar sus requisitos.
+- [x] Instalar las herramientas de publicación de Builda sin ejecutar instrucciones no verificadas.
+- [x] Confirmar cómo debe estructurarse un paquete HTML5 de Builda.
+- [x] Adaptar únicamente la salida de publicación, manteniendo el código fuente y la experiencia de Asternal.
+- [x] Generar un paquete HTML5 completo con recursos incluidos o referenciados correctamente.
+- [x] Validar apertura, carga de recursos, compilación y tamaño del paquete.
+- [x] Revisar el diff y guardar checkpoint.
