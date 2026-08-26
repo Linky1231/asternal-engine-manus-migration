@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "@shared/const";
+import { COOKIE_NAME, MULTIMODAL_LINK_COOKIE, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "@shared/const";
 import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
@@ -55,8 +55,9 @@ export function registerOAuthRoutes(app: Express) {
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-
-      res.redirect(302, "/");
+    const multimodal = parseCookieHeader(req.headers.cookie ?? "")[MULTIMODAL_LINK_COOKIE] === "1";
+    if (multimodal) res.clearCookie(MULTIMODAL_LINK_COOKIE, { path: "/", secure: true, sameSite: "none" });
+    res.redirect(302, multimodal ? "/profile?multimodal=1" : "/");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

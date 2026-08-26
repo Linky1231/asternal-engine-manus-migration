@@ -49,7 +49,7 @@ export function NotificationBell() {
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); setUnread(0); }}
         title={unread > 0 ? `${unread > 99 ? "+99" : unread} notificaciones sin leer` : "Notificaciones"}
         aria-label={unread > 0 ? `${unread > 99 ? "+99" : unread} notificaciones sin leer` : "Notificaciones"}
         className="relative w-10 h-10 rounded-lg border border-line-strong bg-card grid place-items-center active:scale-95 transition text-ink-2 hover:bg-muted/60 hover:text-foreground shrink-0"

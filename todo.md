@@ -1469,3 +1469,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Auditar el contenedor, z-index, posicionamiento y scroll del panel abierto desde el nuevo icono.
 - [x] Hacer que Notificaciones se muestre como overlay independiente sobre Inicio, sin solapamiento incorrecto.
 - [x] Validar cierre, responsive, accesibilidad, pruebas, compilación y checkpoint.
+
+# Lectura de Notificaciones y Login multimodal
+
+- [x] Auditar cómo se marca la lectura, cómo se recalcula el contador y qué autenticación Manus/Supabase existe actualmente.
+- [x] Al abrir o marcar Notificaciones, limpiar el contador y ocultar el filtro/estado de no leídas.
+- [x] Definir una vinculación segura Manus–Supabase sin transportar ni reutilizar contraseñas de Manus.
+- [x] Añadir en Perfil un botón visual «Login multimodal» y el flujo de autenticación/vinculación correspondiente.
+- [x] Validar seguridad, estados de error, responsive, pruebas, compilación y checkpoint.

@@ -201,6 +201,18 @@ const localAuth = {
     const s = getSession();
     return { data: { user: s ? { id: s.userId, email: s.email } : null }, error: null };
   },
+  setSession: async ({ access_token, expires_at, user }: { access_token: string; refresh_token?: string; expires_at?: number; user?: { id?: string; email?: string } }) => {
+    if (!user?.id || !user.email) return { data: { session: null }, error: new Error('Sesión Supabase incompleta') };
+    const session: LocalSession = {
+      userId: user.id,
+      email: user.email,
+      accessToken: access_token,
+      expiresAt: new Date((expires_at ?? Math.floor(Date.now() / 1000) + 3600) * 1000).toISOString(),
+    };
+    localStorage.setItem('_local_auth_session', JSON.stringify(session));
+    notifyAuth('SIGNED_IN', session);
+    return { data: { session: { user: { id: user.id, email: user.email }, access_token, expires_at }, error: null } };
+  },
   signUp: async ({ email, password, options }: { email: string; password: string; options?: { data?: { username?: string } } }) => {
     const users = getAuthUsers();
     if (users.find(u => u.email === email.toLowerCase())) return { data: { user: null, session: null }, error: new Error('Este email ya está registrado') };

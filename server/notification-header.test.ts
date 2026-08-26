@@ -31,4 +31,10 @@ describe("notification header placement", () => {
     expect(panel).toContain('document.body.style.overflow = "hidden"');
     expect(panel).toContain('role="dialog"');
   });
+
+  it("marks notifications read on open and refreshes the real unread state", () => {
+    expect(panel).toContain("await markNotificationsRead()");
+    expect(panel).toContain('asternal-notifications:changed');
+    expect(bell).toContain("setOpen(true); setUnread(0)");
+  });
 });

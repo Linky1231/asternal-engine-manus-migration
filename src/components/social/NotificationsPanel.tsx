@@ -73,11 +73,21 @@ export function NotificationsPanel({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    void reload();
+    let active = true;
+    void (async () => {
+      try {
+        await markNotificationsRead();
+        if (active) await reload();
+        window.dispatchEvent(new Event("asternal-notifications:changed"));
+      } catch {
+        if (active) await reload();
+      }
+    })();
     const interval = window.setInterval(() => void reload(), 45000);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      active = false;
       window.clearInterval(interval);
       document.body.style.overflow = previousOverflow;
     };

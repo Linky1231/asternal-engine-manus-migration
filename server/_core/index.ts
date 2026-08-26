@@ -1,8 +1,11 @@
 import express from "express";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
+import { sdk } from "./sdk";
+import { supabaseAdmin } from "../../src/integrations/supabase/client.server";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -45,6 +48,36 @@ app.post("/api/orion/rank-feed", async (req, res) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Orión no pudo ordenar el feed.";
     res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/supabase/link-manus", async (req, res) => {
+  try {
+    const manusUser = await sdk.authenticateRequest(req);
+    const username = String(req.body?.username || manusUser.name || `user_${manusUser.openId.slice(-8)}`)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .slice(0, 32) || `user_${manusUser.openId.slice(-8)}`;
+    const openId = manusUser.openId;
+    const linkEmail = manusUser.email?.trim().toLowerCase() || `${crypto.createHash("sha256").update(openId).digest("hex").slice(0, 24)}@manus-link.invalid`;
+    const password = crypto.randomBytes(32).toString("base64url");
+    const { data: listed, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (listError) throw listError;
+    const existing = listed.users.find(user => user.user_metadata?.manus_open_id === openId || user.email?.toLowerCase() === linkEmail);
+    const userResult = existing
+      ? await supabaseAdmin.auth.admin.updateUserById(existing.id, { password, user_metadata: { ...existing.user_metadata, manus_open_id: openId, manus_username: username, source: "manus-multimodal" } })
+      : await supabaseAdmin.auth.admin.createUser({ email: linkEmail, password, email_confirm: true, user_metadata: { manus_open_id: openId, manus_username: username, source: "manus-multimodal" } });
+    if (userResult.error || !userResult.data.user) throw userResult.error ?? new Error("No se pudo crear la cuenta Supabase vinculada.");
+    const supabaseUser = userResult.data.user;
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({ id: supabaseUser.id, username, display_name: manusUser.name || username, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    if (profileError) throw profileError;
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({ email: linkEmail, password });
+    if (sessionError || !sessionData.session) throw sessionError ?? new Error("No se pudo iniciar la sesión Supabase vinculada.");
+    res.json({ ok: true, username, session: sessionData.session });
+  } catch (error) {
+    console.error("[Supabase] Manus multimodal link failed", error);
+    res.status(401).json({ error: error instanceof Error ? error.message : "No se pudo vincular la cuenta." });
   }
 });
 
