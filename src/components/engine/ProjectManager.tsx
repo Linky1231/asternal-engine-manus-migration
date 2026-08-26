@@ -10,6 +10,7 @@ import {
   saveProjectById,
   setProjectCloudId,
   getProjectCloudId,
+  initializeStorageOwner,
   type ProjectMeta,
 } from "@/lib/engine/storage";
 import type { Project } from "@/lib/engine/core";
@@ -46,6 +47,7 @@ export function ProjectManager({
   const [cloudErr, setCloudErr] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
 
   const refresh = () => setItems(listProjects());
   const refreshCloud = async () => {
@@ -74,7 +76,18 @@ export function ProjectManager({
     finally { setSyncing(false); }
   };
 
-  useEffect(() => { refresh(); refreshCloud(); runAutoSync(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await initializeStorageOwner();
+      if (cancelled) return;
+      setStorageReady(true);
+      refresh();
+      void refreshCloud();
+      void runAutoSync();
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const pushLocalToCloud = async (m: ProjectMeta) => {
     setCloudBusy(m.id); setCloudErr(null);
@@ -169,6 +182,14 @@ export function ProjectManager({
     };
     input.click();
   };
+
+  if (!storageReady) {
+    return (
+      <div className="h-screen w-full grid place-items-center bg-background text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm"><Loader2 size={16} className="animate-spin" /> Preparando tus proyectos…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-background">

@@ -3,6 +3,7 @@ import type { Entity, EntityKind, Scene } from "@/lib/engine/core";
 import { KIND_PRESETS, uid, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
 import { getRenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
+import { drawPlayerPill } from "@/lib/engine/player-visual";
 
 interface Props {
   scene: Scene;
@@ -310,6 +311,8 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
             ctx.lineTo(e.w / 2 + 2, 20);
             ctx.closePath();
             ctx.fill();
+          } else if (e.kind === "player") {
+            drawPlayerPill(ctx, 0, 0, e.w, e.h, { time: tSec, speed: e.vx, facing: e.facing ?? 1, visualEffects: true });
           } else {
             const r = e.kind === "platform" ? 4 : 6;
             ctx.beginPath();
@@ -320,12 +323,6 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
             ctx.arcTo(0, 0, e.w, 0, r);
             ctx.closePath();
             ctx.fill();
-            if (e.kind === "player") {
-              ctx.shadowBlur = 0;
-              ctx.fillStyle = "#020617";
-              ctx.fillRect(10, 16, 6, 6);
-              ctx.fillRect(24, 16, 6, 6);
-            }
           }
           ctx.restore();
         }

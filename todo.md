@@ -1504,7 +1504,22 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 
 # Depuración definitiva del 404 OAuth
 
-- [ ] Capturar la URL exacta, el host y la respuesta que muestran el 404 después de Continuar con Google.
+- [x] Capturar la URL exacta, el host y la respuesta que muestran el 404 después de Continuar con Google.
 - [ ] Corregir el callback, cookies y retorno para todos los hosts de ejecución, incluido el contenedor HTML5.
 - [ ] Validar el recorrido completo con pruebas de regresión, compilación y una comprobación de producción.
 - [ ] Guardar y publicar la corrección solo después de confirmar que la ruta final existe.
+
+
+# Primera tarea extensa — Editor, sincronización, scripts y niveles
+
+- [x] Auditar editor, runtime, almacenamiento local, scripts, bloques, proyectos y rutas existentes; documentar contratos y riesgos.
+- [x] Definir modelo de proyecto vinculado a usuario, versionado y estrategia segura de sincronización entre dispositivos.
+- [x] Implementar sincronización por cuenta de proyectos y cambios del editor, preservando modo offline/local y evitando cruces entre cuentas.
+- [x] Mejorar la píldora azul: movimiento, dirección y animación de ojos coherentes con el desplazamiento.
+- [x] Corregir sonidos condicionales de scripts y permitir seleccionar archivos de audio del proyecto.
+- [x] Probar individualmente condiciones, scripts y bloques disponibles; corregir errores y añadir regresiones automatizadas.
+- [x] Reorganizar el editor en categorías jerárquicas claras, incluyendo Movimiento del jugador y áreas funcionales relacionadas.
+- [x] Añadir panel central de gestión de proyectos antes de entrar al editor desde Crear juego.
+- [x] Implementar construcción de niveles con tiles en cuadrícula sin eliminar el sistema 9-slicing existente.
+- [x] Integrar tiles de cuadrícula y 9-slicing como modos multimodales coexistentes.
+- [x] Validar datos reales, responsive, compilación, pruebas, rutas y publicación; documentar la entrega.

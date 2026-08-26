@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
+import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Grid3X3, Play, LibraryBig } from "lucide-react";
 import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
-import type { EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
+import type { AudioAsset, EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
 import { newScene, uid, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
-import { loadProject, loadProjectById, saveProject, saveProjectById, getCurrentProjectId, setCurrentProjectId } from "@/lib/engine/storage";
+import { loadProject, loadProjectById, saveProject, saveProjectById, getCurrentProjectId, setCurrentProjectId, initializeStorageOwner, getStorageNamespaceKey } from "@/lib/engine/storage";
 import { useFormFactor } from "@/hooks/use-mobile";
 import { fileToDataURL } from "@/lib/engine/images";
+import { playAudioSource } from "@/lib/engine/sfx";
 import { SceneEditor } from "./SceneEditor";
+import { TilemapEditor } from "./TilemapEditor";
 import { GameRuntime } from "./GameRuntime";
 import { AnimationEditor } from "./AnimationEditor";
 import { PaintEditor } from "./PaintEditor";
@@ -24,7 +26,7 @@ import { useT, setLang } from "@/lib/i18n";
 
 
 type Tool = EntityKind | "select" | "erase";
-type Tab = "build" | "inspect" | "ui" | "scenes" | "assets" | "settings";
+type Tab = "build" | "inspect" | "ui" | "tiles" | "scenes" | "assets" | "settings";
 
 const TOOL_LIST: { id: Tool; tKey: string; icon: ReactNode }[] = [
   { id: "select", tKey: "tool.select", icon: <MousePointer2 size={15} strokeWidth={1.9} /> },
@@ -36,18 +38,24 @@ const TOOL_LIST: { id: Tool; tKey: string; icon: ReactNode }[] = [
   { id: "player", tKey: "tool.player", icon: <PersonStanding size={15} strokeWidth={1.9} /> },
   { id: "erase", tKey: "tool.erase", icon: <Eraser size={15} strokeWidth={1.9} /> },
 ];
+const TOOL_GROUPS: { label: string; ids: Tool[] }[] = [
+  { label: "Selección", ids: ["select", "erase"] },
+  { label: "Entorno", ids: ["platform", "decor"] },
+  { label: "Actores", ids: ["player", "enemy"] },
+  { label: "Objetivos", ids: ["coin", "goal"] },
+];
 
 // ---- Asset library (saved presets) ----
 type LibraryItem = { id: string; name: string; preset: Omit<Entity, "id" | "x" | "y"> };
-const LIBRARY_KEY = "asternal:library";
+function libraryKey() { return getStorageNamespaceKey("library"); }
 function loadLibrary(): LibraryItem[] {
-  try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]") as LibraryItem[]; } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(libraryKey()) || "[]") as LibraryItem[]; } catch { return []; }
 }
 function saveLibrary(items: LibraryItem[]) {
-  try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+  try { localStorage.setItem(libraryKey(), JSON.stringify(items)); } catch { /* ignore */ }
 }
 
-export function AsternalEditor() {
+export function AsternalEditor({ startInManager = false }: { startInManager?: boolean } = {}) {
   const t = useT();
   const [project, setProject] = useState<Project | null>(null);
   const [projectId, setProjectId] = useState<string>("");
@@ -57,7 +65,7 @@ export function AsternalEditor() {
   const [playing, setPlaying] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [showManager, setShowManager] = useState(false);
+  const [showManager, setShowManager] = useState(startInManager);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -74,15 +82,21 @@ export function AsternalEditor() {
   const isTablet = formFactor === "tablet" || formFactor === "desktop";
 
   useEffect(() => {
+    let cancelled = false;
     setLang("es");
-    const id = getCurrentProjectId();
-    setProjectId(id);
-    const loaded = loadProjectById(id) ?? loadProject();
-    if (loaded) {
-      // migrate: ensure every scene has at least one layer
-      loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
-    }
-    setProject(loaded);
+    void (async () => {
+      await initializeStorageOwner();
+      if (cancelled) return;
+      const id = getCurrentProjectId();
+      const loaded = loadProjectById(id) ?? loadProject();
+      if (loaded) loaded.scenes = loaded.scenes.map(s => ensureSceneLayers(s));
+      if (!cancelled) {
+        setProjectId(id);
+        setProject(loaded);
+        setLibrary(loadLibrary());
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Biblioteca de assets en la nube: al abrir el editor con una cuenta real se
@@ -95,6 +109,8 @@ export function AsternalEditor() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || cancelled) return;
+        await initializeStorageOwner();
+        if (cancelled) return;
         const cloud = await pullAssetLibraryFromCloud();
         if (cancelled) return;
         const local = loadLibrary();
@@ -220,6 +236,8 @@ export function AsternalEditor() {
       <div className="h-screen w-full">
         <GameRuntime
           scene={activeScene}
+          sounds={playProject.assets?.sounds ?? []}
+          sprites={playProject.assets?.sprites ?? []}
           fpsCap={60}
           showHUD={playProject.settings.showHUD}
           showFPS={playProject.settings.showFPS ?? true}
@@ -241,6 +259,7 @@ export function AsternalEditor() {
     ["build", t("tab.build"), <Boxes size={18} strokeWidth={1.75} key="build" />],
     ["inspect", t("tab.inspect"), <SlidersHorizontal size={18} strokeWidth={1.75} key="inspect" />],
     ["ui", t("tab.ui"), <PanelsTopLeft size={18} strokeWidth={1.75} key="ui" />],
+    ["tiles", "Tiles", <Grid3X3 size={18} strokeWidth={1.75} key="tiles" />],
     ["assets", t("tab.assets"), <ImageIcon size={18} strokeWidth={1.75} key="assets" />],
     ["scenes", t("tab.scenes"), <Layers3 size={18} strokeWidth={1.75} key="scenes" />],
     ["settings", t("tab.settings"), <Settings size={18} strokeWidth={1.75} key="settings" />],
@@ -398,6 +417,9 @@ export function AsternalEditor() {
           </>
         )}
 
+        {tab === "tiles" && (
+          <TilemapEditor scene={activeScene} sprites={project.assets?.sprites ?? []} onChange={updateScene} />
+        )}
         {tab === "inspect" && (
           <InspectorPanel
             scene={activeScene}
@@ -479,21 +501,30 @@ export function AsternalEditor() {
       {/* Tool strip — only on build */}
       {tab === "build" && (
         <div className="px-2 py-2 border-t border-border/70 bg-card">
-          <div className="flex gap-1 overflow-x-auto no-scrollbar">
-            {TOOL_LIST.map(toolItem => (
-              <button
-                key={toolItem.id}
-                onClick={() => setTool(toolItem.id)}
-                title={t(toolItem.tKey)}
-                className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[10px] font-display font-medium transition-colors duration-150 active:scale-95 ${
-                  tool === toolItem.id
-                    ? "btn-grad border-transparent text-primary-foreground"
-                    : "border-transparent text-ink-2 hover:bg-muted/60 hover:text-foreground"
-                }`}
-              >
-                {toolItem.icon}
-                <span className="truncate">{t(toolItem.tKey).toUpperCase()}</span>
-              </button>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {TOOL_GROUPS.map(group => (
+              <div key={group.label} className="shrink-0 flex items-center gap-1 rounded-xl border border-border/50 bg-background/30 px-1.5 py-1">
+                <span className="px-1.5 text-[8px] font-display tracking-[0.14em] uppercase text-muted-foreground">{group.label}</span>
+                {group.ids.map(id => {
+                  const toolItem = TOOL_LIST.find(item => item.id === id)!;
+                  return (
+                    <button
+                      key={toolItem.id}
+                      onClick={() => setTool(toolItem.id)}
+                      title={t(toolItem.tKey)}
+                      aria-pressed={tool === toolItem.id}
+                      className={`shrink-0 flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-[10px] font-display font-medium transition-colors duration-150 active:scale-95 ${
+                        tool === toolItem.id
+                          ? "btn-grad border-transparent text-primary-foreground"
+                          : "border-transparent text-ink-2 hover:bg-muted/60 hover:text-foreground"
+                      }`}
+                    >
+                      {toolItem.icon}
+                      <span className="truncate">{t(toolItem.tKey).toUpperCase()}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ))}
           </div>
         </div>
@@ -501,7 +532,7 @@ export function AsternalEditor() {
 
       {/* Bottom tabs (mobile only) */}
       {!isTablet && (
-      <nav className="grid grid-cols-6 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
+      <nav className="grid grid-cols-7 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
         {TABS.map(([id, label, icon]) => (
           <button
             key={id}
@@ -729,7 +760,7 @@ function InspectorPanel({
       />
 
       <AnimationsButton entity={ent} onUpdate={update} />
-      <ScriptsButton entity={ent} onUpdate={update} />
+      <ScriptsButton entity={ent} sounds={project?.assets?.sounds ?? []} onUpdate={update} />
       <DialogEditor entity={ent} onUpdate={update} />
       <HitboxEditor entity={ent} onUpdate={update} />
 
@@ -1217,7 +1248,9 @@ function AssetsPanel({
   onPlaceOnScene: (sprite: SpriteAsset) => void;
 }) {
   const sprites = project.assets?.sprites ?? [];
+  const sounds = project.assets?.sounds ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLInputElement>(null);
   const [paintOpen, setPaintOpen] = useState(false);
 
   const addSprite = (asset: SpriteAsset) => {
@@ -1255,12 +1288,31 @@ function AssetsPanel({
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const removeSprite = (id: string) => {
+    const removeSprite = (id: string) => {
     if (!confirm("Delete this sprite?")) return;
     const list = sprites.filter(s => s.id !== id);
     onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sprites: list } });
   };
-
+  const importAudio = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) { alert("Selecciona un archivo de audio válido."); return; }
+    if (file.size > 8 * 1024 * 1024) { alert("El audio debe pesar menos de 8 MB para mantener el proyecto portable."); return; }
+    const asset: AudioAsset = { id: uid(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 32) || "audio", mimeType: file.type, dataUrl: await fileToDataURL(file) };
+    const probeUrl = URL.createObjectURL(file);
+    await new Promise<void>(resolve => {
+      const probe = new Audio(probeUrl);
+      probe.onloadedmetadata = () => { asset.duration = Number.isFinite(probe.duration) ? probe.duration : undefined; resolve(); };
+      probe.onerror = () => resolve();
+    });
+    URL.revokeObjectURL(probeUrl);
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sounds: [...sounds, asset] } });
+    if (audioRef.current) audioRef.current.value = "";
+  };
+  const removeAudio = (id: string) => {
+    if (!confirm("¿Eliminar este audio del proyecto?")) return;
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sounds: sounds.filter(sound => sound.id !== id) } });
+  };
   return (
     <div className="h-full overflow-auto p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -1293,6 +1345,26 @@ function AssetsPanel({
 
 
 
+      <section className="panel rounded-lg border border-border/60 p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <SectionTitle>AUDIO · {sounds.length}</SectionTitle>
+          <button onClick={() => audioRef.current?.click()} className="text-xs font-display px-3 py-1.5 rounded-md bg-primary/10 border border-primary/50 text-primary-glow glow-border">+ IMPORTAR</button>
+        </div>
+        <input ref={audioRef} type="file" accept="audio/*" className="hidden" onChange={e => void importAudio(e.target.files)} />
+        {sounds.length === 0 ? (
+          <p className="text-[10px] font-mono text-muted-foreground">Importa un sonido para usarlo en un bloque PLAY SOUND.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {sounds.map(sound => (
+              <div key={sound.id} className="flex items-center gap-2 rounded-md border border-border/50 bg-background/40 px-2 py-1.5">
+                <button type="button" onClick={() => playAudioSource(sound.dataUrl)} aria-label={`Preescuchar ${sound.name}`} className="grid place-items-center w-7 h-7 rounded border border-primary/40 text-primary-glow">▶</button>
+                <div className="min-w-0 flex-1"><div className="text-xs truncate text-foreground">{sound.name}</div><div className="text-[9px] text-muted-foreground font-mono">{sound.duration ? `${sound.duration.toFixed(1)} s` : sound.mimeType}</div></div>
+                <button type="button" onClick={() => removeAudio(sound.id)} aria-label={`Eliminar ${sound.name}`} className="text-destructive text-xs px-1">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
       {selectedEntity ? (
         <div className="text-[10px] font-mono text-muted-foreground panel rounded-md px-2 py-1.5 border border-border/50">
           Tap a sprite to assign to <span className="text-primary-glow">{selectedEntity.kind.toUpperCase()}</span>
@@ -1372,7 +1444,7 @@ function scaleScene(scene: Scene, k: number): Scene {
   };
 }
 
-function ScriptsButton({ entity, onUpdate }: { entity: Entity; onUpdate: (patch: Partial<Entity>) => void }) {
+function ScriptsButton({ entity, sounds, onUpdate }: { entity: Entity; sounds: import("@/lib/engine/core").AudioAsset[]; onUpdate: (patch: Partial<Entity>) => void }) {
   const [open, setOpen] = useState(false);
   const count = entity.scripts?.length ?? 0;
   return (
@@ -1387,6 +1459,7 @@ function ScriptsButton({ entity, onUpdate }: { entity: Entity; onUpdate: (patch:
       {open && (
         <ScriptEditor
           entity={entity}
+          sounds={sounds}
           onChange={onUpdate}
           onClose={() => setOpen(false)}
         />
@@ -1758,8 +1831,8 @@ function SceneBgImage({ scene, onChange }: { scene: Scene; onChange: (s: Scene) 
           className="py-1.5 rounded border border-border text-[10px] font-display tracking-widest text-muted-foreground"
         >{t("scene.bgImageClear")}</button>
       </div>
-      <div className="grid grid-cols-4 gap-1">
-        {(["cover","contain","stretch","tile"] as const).map(m => (
+      <div className="grid grid-cols-5 gap-1">
+        {(["cover","contain","stretch","tile","nine-slice"] as const).map(m => (
           <button key={m}
             onClick={() => onChange({ ...scene, bgImageMode: m })}
             className={`py-1 rounded text-[9px] font-display tracking-widest border ${
@@ -1768,6 +1841,16 @@ function SceneBgImage({ scene, onChange }: { scene: Scene; onChange: (s: Scene) 
           >{m.toUpperCase()}</button>
         ))}
       </div>
+      {scene.bgImageMode === "nine-slice" && (
+        <div className="grid grid-cols-4 gap-1.5">
+          {(["left", "right", "top", "bottom"] as const).map(side => (
+            <label key={side} className="text-[9px] font-mono text-muted-foreground uppercase">
+              {side}
+              <input type="number" min={0} value={scene.bgNineSlice?.[side] ?? 16} onChange={event => onChange({ ...scene, bgNineSlice: { left: 16, right: 16, top: 16, bottom: 16, ...(scene.bgNineSlice ?? {}), [side]: Math.max(0, Number(event.target.value) || 0) } })} className="mt-1 w-full rounded border border-border bg-input/60 px-1.5 py-1 text-xs text-foreground" />
+            </label>
+          ))}
+        </div>
+      )}
       <input
         ref={ref}
         type="file"

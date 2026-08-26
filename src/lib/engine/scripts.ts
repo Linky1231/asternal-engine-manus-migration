@@ -101,6 +101,7 @@ export interface Block {
   h?: number;
   text?: string;
   sound?: SoundName;
+  audioId?: string;
   color?: string;
   bool?: boolean;
   cond?: "scoreGte" | "scoreLte";
@@ -222,9 +223,19 @@ export const ALL_BLOCKS: BlockKind[] = [
   "log", "comment", "if", "wait", "setVariable", "changeVariable", "setProperty", "changeProperty", "broadcast", "ifVariable", "repeat",
 ];
 
+export const BLOCK_GROUPS: { id: string; label: string; blocks: BlockKind[] }[] = [
+  { id: "player-movement", label: "Movimiento del jugador", blocks: ["jump", "impulse", "setVx", "setVy", "setSpeed", "stop", "flipVx", "flipVy", "bounceY", "setX", "setY", "moveX", "moveY", "teleport", "wrapScreen", "setFacing"] },
+  { id: "entities", label: "Entidades y objetivos", blocks: ["spawnEntity", "cloneSelf", "destroySelf", "destroyOther", "removeAllOf", "faceTarget", "chase", "knockback", "pushAway"] },
+  { id: "scene", label: "Escena y partida", blocks: ["setSceneGravity", "setBg", "restartScene", "win", "lose", "addScore", "setScore", "resetScore", "addLives", "setLives"] },
+  { id: "audio-feedback", label: "Audio y respuesta", blocks: ["playSound", "playRandomSound", "vibrate", "shake"] },
+  { id: "appearance", label: "Apariencia y físicas", blocks: ["setColor", "setVisible", "setOpacity", "setSize", "setGravity", "setControllable", "setHazard", "setSolid", "setCollectible", "setGoalFlag", "setHitbox", "clearHitbox"] },
+  { id: "logic", label: "Lógica y variables", blocks: ["log", "comment", "if", "wait", "setVariable", "changeVariable", "setProperty", "changeProperty", "broadcast", "ifVariable", "repeat"] },
+];
+
 export interface RuntimeHooks {
   shake: (intensity: number, duration: number) => void;
   restart: () => void;
+  playProjectSound?: (audioId: string) => void;
 }
 
 interface ExecCtx {
@@ -293,7 +304,10 @@ function execBlock(b: Block, ctx: ExecCtx) {
       ctx.self.y = b.y ?? ctx.self.y;
       break;
     case "log": console.log("[script]", b.text ?? "", ctx.self.kind); break;
-    case "playSound": playSound((b.sound ?? "blip") as SoundName); break;
+    case "playSound":
+      if (b.audioId) ctx.hooks.playProjectSound?.(b.audioId);
+      else playSound((b.sound ?? "blip") as SoundName);
+      break;
     case "vibrate": vibrate(Math.max(1, b.value ?? 50)); break;
     case "shake": ctx.hooks.shake(Math.max(1, b.value ?? 8), 0.3); break;
     case "setColor": if (b.color) ctx.self.color = b.color; break;

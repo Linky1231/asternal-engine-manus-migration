@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { Entity, RuntimeInput, RuntimeState, Scene, UIElement } from "@/lib/engine/core";
+import type { AudioAsset, Entity, RuntimeInput, RuntimeState, Scene, SpriteAsset, UIElement } from "@/lib/engine/core";
 import { stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
-import { getRenderableImage } from "@/lib/engine/images";
+import { getRenderableImage, type RenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
 import { createScriptRunner } from "@/lib/engine/scripts";
-import { startMusic, stopMusic, setVolume, setMuted } from "@/lib/engine/sfx";
+import { playAudioSource, startMusic, stopMusic, setVolume, setMuted } from "@/lib/engine/sfx";
 import { drawUIElement } from "./UIEditor";
+import { drawPlayerPill } from "@/lib/engine/player-visual";
 
 interface Props {
   scene: Scene;
+  sounds?: AudioAsset[];
+  sprites?: SpriteAsset[];
   fpsCap: 30 | 60;
   showHUD: boolean;
   showFPS?: boolean;
@@ -23,7 +26,7 @@ interface Props {
 }
 
 export function GameRuntime({
-  scene, fpsCap, showHUD,
+  scene, sounds = [], sprites = [], fpsCap, showHUD,
   showFPS = true, volume = 0.8, muted = false, music = false, musicUrl = null,
   touchControls = true, autoPause = true, showHitboxes = false,
   onExit,
@@ -56,6 +59,10 @@ export function GameRuntime({
       shake: (intensity: number, duration: number) => {
         shake.intensity = Math.max(shake.intensity, intensity);
         shake.time = Math.max(shake.time, duration);
+      },
+      playProjectSound: (audioId: string) => {
+        const asset = sounds.find(item => item.id === audioId);
+        if (asset) playAudioSource(asset.dataUrl);
       },
       restart: () => {
         work = JSON.parse(JSON.stringify(initial));
@@ -150,6 +157,8 @@ export function GameRuntime({
             ctx.drawImage(img, 0, 0, W, H);
           } else if (mode === "tile") {
             for (let x = 0; x < W; x += img.width) for (let y = 0; y < H; y += img.height) ctx.drawImage(img, x, y);
+          } else if (mode === "nine-slice") {
+            drawNineSlice(ctx, img, W, H, work.bgNineSlice);
           } else {
             const sa = img.width / img.height;
             const da = W / H;
@@ -198,6 +207,26 @@ export function GameRuntime({
 
       const tSec = performance.now() / 1000;
       const visualEffects = W >= 700;
+      const tilemap = work.tilemap;
+      if (tilemap) {
+        const spriteMap = new Map(sprites.map(sprite => [sprite.id, sprite]));
+        const previousSmoothing = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
+        for (let row = 0; row < tilemap.rows; row++) {
+          for (let col = 0; col < tilemap.cols; col++) {
+            const tileId = tilemap.cells[row * tilemap.cols + col];
+            if (!tileId) continue;
+            const sprite = spriteMap.get(tileId);
+            const source = sprite?.frames[0]?.composite;
+            const image = source ? getRenderableImage(source) : null;
+            const x = col * tilemap.tileSize;
+            const y = row * tilemap.tileSize;
+            if (image && image.width > 0) ctx.drawImage(image, x, y, tilemap.tileSize, tilemap.tileSize);
+            else { ctx.fillStyle = "rgba(45,212,191,0.24)"; ctx.fillRect(x + 1, y + 1, tilemap.tileSize - 2, tilemap.tileSize - 2); }
+          }
+        }
+        ctx.imageSmoothingEnabled = previousSmoothing;
+      }
       for (const e of drawList) {
         if (e.visible === false) continue;
         const la = layerOpacityFor(work, e);
@@ -545,6 +574,29 @@ function TouchBtn({ label, onDown, onUp, big }: { label: string; onDown: () => v
   );
 }
 
+function drawNineSlice(ctx: CanvasRenderingContext2D, img: RenderableImage, width: number, height: number, inset?: { left: number; right: number; top: number; bottom: number }) {
+  const left = Math.max(0, Math.min(img.width, inset?.left ?? Math.round(img.width * 0.25)));
+  const right = Math.max(0, Math.min(img.width - left, inset?.right ?? Math.round(img.width * 0.25)));
+  const top = Math.max(0, Math.min(img.height, inset?.top ?? Math.round(img.height * 0.25)));
+  const bottom = Math.max(0, Math.min(img.height - top, inset?.bottom ?? Math.round(img.height * 0.25)));
+  const centerSourceW = Math.max(1, img.width - left - right);
+  const centerSourceH = Math.max(1, img.height - top - bottom);
+  const centerDestW = Math.max(1, width - left - right);
+  const centerDestH = Math.max(1, height - top - bottom);
+  const x = [0, left, width - right];
+  const y = [0, top, height - bottom];
+  const sw = [left, centerSourceW, right];
+  const sh = [top, centerSourceH, bottom];
+  const dw = [left, centerDestW, right];
+  const dh = [top, centerDestH, bottom];
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      if (dw[col] <= 0 || dh[row] <= 0 || sw[col] <= 0 || sh[row] <= 0) continue;
+      ctx.drawImage(img, col === 0 ? 0 : col === 1 ? left : img.width - right, row === 0 ? 0 : row === 1 ? top : img.height - bottom, sw[col], sh[row], x[col], y[row], dw[col], dh[row]);
+    }
+  }
+}
+
 export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: number, visualEffects = true) {
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -610,16 +662,12 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: numbe
     ctx.lineTo(e.x + e.w / 2 + 2, e.y + 20);
     ctx.closePath();
     ctx.fill();
+  } else if (e.kind === "player") {
+    drawPlayerPill(ctx, e.x, e.y, e.w, e.h, { time, speed: e.vx, facing: e.facing ?? 1, visualEffects });
   } else {
     const r = e.kind === "platform" ? 4 : 6;
     roundRect(ctx, e.x, e.y, e.w, e.h, r);
     ctx.fill();
-    if (e.kind === "player") {
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#020617";
-      ctx.fillRect(e.x + 10, e.y + 16, 6, 6);
-      ctx.fillRect(e.x + 24, e.y + 16, 6, 6);
-    }
   }
   ctx.restore();
 }

@@ -56,6 +56,20 @@ export function playSound(name: SoundName) {
 
 export const SOUND_NAMES: SoundName[] = ["jump","coin","hit","win","lose","power","laser","blip","thud"];
 
+/** Reproduce un archivo de audio serializado en el proyecto. */
+export function playAudioSource(url: string | null | undefined, gain = 1): boolean {
+  if (muted || !url || typeof window === "undefined") return false;
+  try {
+    const audio = new Audio(url);
+    audio.volume = Math.max(0, Math.min(1, volume * gain));
+    audio.addEventListener("ended", () => { audio.removeAttribute("src"); audio.load(); }, { once: true });
+    void audio.play().catch(() => { /* el navegador puede requerir un gesto */ });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function vibrate(ms: number) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     try { (navigator as Navigator).vibrate(ms); } catch { /* ignore */ }

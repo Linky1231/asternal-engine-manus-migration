@@ -27,6 +27,14 @@ export interface SpriteAsset {
   frames: SpriteFrame[];
 }
 
+export interface AudioAsset {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+  duration?: number;
+}
+
 export interface Hitbox {
   x: number; // offset relative to entity x
   y: number;
@@ -164,12 +172,19 @@ export interface UIElement {
   visible?: boolean;
 }
 
+export interface Tilemap {
+  tileSize: number;
+  cols: number;
+  rows: number;
+  cells: (string | null)[];
+}
 export interface Scene {
   id: string;
   name: string;
   bg: string;
   bgImage?: string | null;       // dataURL or CDN URL
-  bgImageMode?: "cover" | "contain" | "stretch" | "tile";
+  bgImageMode?: "cover" | "contain" | "stretch" | "tile" | "nine-slice";
+  bgNineSlice?: { left: number; right: number; top: number; bottom: number };
   gravity: number;
   width: number;
   height: number;
@@ -181,6 +196,8 @@ export interface Scene {
   layers?: SceneLayer[];         // Z-ordered scene layers
   startLives?: number;
   ui?: UIElement[];
+  /** Capa de tiles opcional; se renderiza debajo de entidades y convive con bgImageMode 9-slicing. */
+  tilemap?: Tilemap;
 }
 
 export const DEFAULT_LAYER_ID = "default";
@@ -244,7 +261,7 @@ export interface Project {
   name: string;
   scenes: Scene[];
   activeSceneId: string;
-  assets?: { sprites: SpriteAsset[] };
+  assets?: { sprites: SpriteAsset[]; sounds?: AudioAsset[] };
   settings: ProjectSettings;
 }
 

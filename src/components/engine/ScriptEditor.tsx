@@ -1,21 +1,22 @@
 import { useState } from "react";
-import type { Entity, EntityKind } from "@/lib/engine/core";
+import type { AudioAsset, Entity, EntityKind } from "@/lib/engine/core";
 import {
   type Block, type BlockKind, type EventType, type GenericProperty, type Script, type ScriptTarget, type VariableOperator, type VariableScope,
-  ALL_BLOCKS, BLOCK_LABELS, EVENT_LABELS, uid,
+  ALL_BLOCKS, BLOCK_GROUPS, BLOCK_LABELS, EVENT_LABELS, uid,
 } from "@/lib/engine/scripts";
-import { SOUND_NAMES, type SoundName, playSound } from "@/lib/engine/sfx";
+import { SOUND_NAMES, type SoundName, playAudioSource, playSound } from "@/lib/engine/sfx";
 
 const KIND_OPTIONS: (EntityKind | "any")[] = ["any", "player", "platform", "enemy", "coin", "goal"];
 const KIND_ONLY: EntityKind[] = ["player", "platform", "enemy", "coin", "goal"];
 
 interface Props {
   entity: Entity;
+  sounds?: AudioAsset[];
   onChange: (patch: Partial<Entity>) => void;
   onClose: () => void;
 }
 
-export function ScriptEditor({ entity, onChange, onClose }: Props) {
+export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) {
   const [scripts, setScripts] = useState<Script[]>(entity.scripts ?? []);
   const [openId, setOpenId] = useState<string | null>(scripts[0]?.id ?? null);
 
@@ -147,6 +148,7 @@ export function ScriptEditor({ entity, onChange, onClose }: Props) {
                       <BlockRow
                         key={b.id}
                         block={b}
+                        sounds={sounds}
                         onChange={patch => updateBlock(s.id, b.id, patch)}
                         onRemove={() => removeBlock(s.id, b.id)}
                       />
@@ -226,30 +228,48 @@ function defaultBlock(k: BlockKind): Block {
     case "removeAllOf": return { ...base, text: "coin" };
     case "setHitbox": return { ...base, x: 0, y: 0, w: 32, h: 32 };
     case "comment": return { ...base, text: "note" };
+    case "stop":
+    case "flipVx":
+    case "flipVy":
+    case "wrapScreen":
+    case "resetScore":
+    case "destroySelf":
+    case "destroyOther":
+    case "win":
+    case "lose":
+    case "restartScene":
+    case "hurtPlayer":
+    case "playRandomSound":
+    case "clearHitbox":
+    case "pushAway":
+      return base;
+    case "setFacing": return { ...base, value: 1 };
+    case "knockback": return { ...base, x: 240, y: -320 };
+    case "wait": return { ...base, value: 250 };
     default: return base;
   }
 }
 
-function BlockRow({ block, onChange, onRemove }: { block: Block; onChange: (p: Partial<Block>) => void; onRemove: () => void }) {
+function BlockRow({ block, sounds, onChange, onRemove }: { block: Block; sounds: AudioAsset[]; onChange: (p: Partial<Block>) => void; onRemove: () => void }) {
   return (
     <div className="panel rounded-md border border-border/60 p-2 space-y-1.5">
       <div className="flex items-center gap-2">
         <span className="text-xs font-display text-primary-glow tracking-widest">{BLOCK_LABELS[block.kind]}</span>
         <button onClick={onRemove} className="ml-auto text-destructive text-sm px-1">✕</button>
       </div>
-      <BlockFields block={block} onChange={onChange} />
+      <BlockFields block={block} sounds={sounds} onChange={onChange} />
       {(block.kind === "if" || block.kind === "ifVariable" || block.kind === "repeat") && (
-        <NestedBlocks label={block.kind === "repeat" ? "REPETIR" : "ENTONCES"} blocks={block.thenBlocks ?? []}
+        <NestedBlocks sounds={sounds} label={block.kind === "repeat" ? "REPETIR" : "ENTONCES"} blocks={block.thenBlocks ?? []}
           onChange={thenBlocks => onChange({ thenBlocks })} />
       )}
       {block.kind === "ifVariable" && (
-        <NestedBlocks label="SI NO" blocks={block.elseBlocks ?? []} onChange={elseBlocks => onChange({ elseBlocks })} />
+        <NestedBlocks sounds={sounds} label="SI NO" blocks={block.elseBlocks ?? []} onChange={elseBlocks => onChange({ elseBlocks })} />
       )}
     </div>
   );
 }
 
-function BlockFields({ block, onChange }: { block: Block; onChange: (p: Partial<Block>) => void }) {
+function BlockFields({ block, sounds, onChange }: { block: Block; sounds: AudioAsset[]; onChange: (p: Partial<Block>) => void }) {
   const num = (k: keyof Block, v: string) => onChange({ [k]: Number(v) } as Partial<Block>);
   switch (block.kind) {
     // single value
@@ -345,17 +365,30 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (p: Partial<
           className="w-full bg-input/60 border border-border rounded px-2 py-1 text-sm font-mono" />
       );
 
-    case "playSound":
+    case "playSound": {
+      const selected = block.audioId ? `audio:${block.audioId}` : `preset:${block.sound ?? "blip"}`;
+      const selectedAudio = sounds.find(sound => sound.id === block.audioId);
       return (
         <div className="flex gap-2">
-          <select value={block.sound ?? "blip"} onChange={e => onChange({ sound: e.target.value as SoundName })}
-            className="flex-1 bg-input/60 border border-border rounded px-2 py-1 text-sm font-mono">
-            {SOUND_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+          <select value={selected} onChange={e => {
+            const value = e.target.value;
+            if (value.startsWith("audio:")) onChange({ audioId: value.slice(6), sound: undefined });
+            else onChange({ sound: value.slice(7) as SoundName, audioId: undefined });
+          }} className="flex-1 min-w-0 bg-input/60 border border-border rounded px-2 py-1 text-sm font-mono">
+            <optgroup label="Presets">
+              {SOUND_NAMES.map(n => <option key={n} value={`preset:${n}`}>{n}</option>)}
+            </optgroup>
+            {sounds.length > 0 && (
+              <optgroup label="Audio del proyecto">
+                {sounds.map(sound => <option key={sound.id} value={`audio:${sound.id}`}>{sound.name}</option>)}
+              </optgroup>
+            )}
           </select>
-          <button type="button" onClick={() => playSound((block.sound ?? "blip") as SoundName)}
-            className="px-2 py-1 text-xs rounded border border-primary/40 text-primary-glow font-display">▶</button>
+          <button type="button" onClick={() => selectedAudio ? playAudioSource(selectedAudio.dataUrl) : playSound((block.sound ?? "blip") as SoundName)}
+            className="px-2 py-1 text-xs rounded border border-primary/40 text-primary-glow font-display" aria-label="Preescuchar sonido">▶</button>
         </div>
       );
+    }
 
     case "setColor":
     case "setBg":
@@ -440,10 +473,10 @@ function PropertyFields({ block, onChange }: { block: Block; onChange: (p: Parti
   </div>;
 }
 
-function NestedBlocks({ label, blocks, onChange }: { label: string; blocks: Block[]; onChange: (blocks: Block[]) => void }) {
+function NestedBlocks({ label, blocks, sounds, onChange }: { label: string; blocks: Block[]; sounds: AudioAsset[]; onChange: (blocks: Block[]) => void }) {
   return <div className="ml-2 border-l-2 border-primary/30 pl-2 space-y-1.5">
     <div className="text-[9px] font-display tracking-widest text-primary-glow">{label}</div>
-    {blocks.map((nested, index) => <BlockRow key={nested.id} block={nested} onChange={patch => onChange(blocks.map((item, i) => i === index ? { ...item, ...patch } : item))} onRemove={() => onChange(blocks.filter((_, i) => i !== index))} />)}
+    {blocks.map((nested, index) => <BlockRow key={nested.id} block={nested} sounds={sounds} onChange={patch => onChange(blocks.map((item, i) => i === index ? { ...item, ...patch } : item))} onRemove={() => onChange(blocks.filter((_, i) => i !== index))} />)}
     <AddBlock onAdd={kind => onChange([...blocks, defaultBlock(kind)])} />
   </div>;
 }
@@ -451,9 +484,9 @@ function NestedBlocks({ label, blocks, onChange }: { label: string; blocks: Bloc
 function AddBlock({ onAdd }: { onAdd: (k: BlockKind) => void }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
-  const filtered = filter
-    ? ALL_BLOCKS.filter(k => BLOCK_LABELS[k].toLowerCase().includes(filter.toLowerCase()))
-    : ALL_BLOCKS;
+  const groups = filter
+    ? [{ id: "search", label: "Resultados", blocks: ALL_BLOCKS.filter(k => BLOCK_LABELS[k].toLowerCase().includes(filter.toLowerCase())) }]
+    : BLOCK_GROUPS;
   return (
     <div>
       <button
@@ -468,13 +501,21 @@ function AddBlock({ onAdd }: { onAdd: (k: BlockKind) => void }) {
             placeholder="search blocks…"
             className="w-full bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono"
           />
-          <div className="grid grid-cols-2 gap-1.5 max-h-72 overflow-auto">
-            {filtered.map(k => (
-              <button key={k}
-                onClick={() => { onAdd(k); setOpen(false); setFilter(""); }}
-                className="text-[11px] py-1.5 rounded panel border border-border/60 text-left px-2 font-mono"
-              >{BLOCK_LABELS[k]}</button>
+          <div className="space-y-3 max-h-80 overflow-auto">
+            {groups.map(group => (
+              <section key={group.id} className="space-y-1.5">
+                <div className="text-[9px] font-display tracking-[0.16em] text-primary-glow uppercase">{group.label}</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {group.blocks.map(k => (
+                    <button key={k}
+                      onClick={() => { onAdd(k); setOpen(false); setFilter(""); }}
+                      className="text-[11px] py-1.5 rounded panel border border-border/60 text-left px-2 font-mono hover:border-primary/50 hover:text-primary-glow transition-colors"
+                    >{BLOCK_LABELS[k]}</button>
+                  ))}
+                </div>
+              </section>
             ))}
+            {groups[0]?.blocks.length === 0 && <div className="text-xs text-muted-foreground py-2">No se encontraron bloques.</div>}
           </div>
         </div>
       )}
