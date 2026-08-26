@@ -178,6 +178,15 @@ function HomePage() {
   useEffect(() => {
     (async () => {
       try {
+        const multimodalReturn = new URLSearchParams(window.location.search).get("multimodal") === "1";
+        if (multimodalReturn) {
+          const response = await fetch("/api/supabase/link-manus", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({}) });
+          const payload = await response.json() as { error?: string; session?: Record<string, unknown> };
+          if (!response.ok || !payload.session) throw new Error(payload.error || "No se pudo sincronizar la cuenta.");
+          const { error } = await supabase.auth.setSession(payload.session as never);
+          if (error) throw error;
+          window.history.replaceState({}, "", "/");
+        }
         let session = null;
         try {
           const res = await supabase.auth.getSession();

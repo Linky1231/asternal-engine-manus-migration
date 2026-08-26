@@ -6,10 +6,10 @@ export function startMultimodalLogin(): void {
   const appId = import.meta.env.VITE_APP_ID as string | undefined;
   if (!oauthPortalUrl || !appId) throw new Error("Falta la configuración OAuth de Manus.");
 
-  const host = window.location.hostname;
-  const isAsternalRuntime = host === "localhost" || host === "127.0.0.1" || host.endsWith(".manus.space") || host.endsWith(".manus.computer");
-  const redirectOrigin = isAsternalRuntime ? window.location.origin : "https://asternaleng-ceskknda.manus.space";
-  const redirectUri = `${redirectOrigin}/api/oauth/callback`;
+  // El callback debe pertenecer al origen que realmente abrió el OAuth.
+  // No se adivina ni se sustituye por un dominio fijo: el portal valida esta
+  // URI y el backend recibe el mismo host que estableció las cookies.
+  const redirectUri = `${window.location.origin}/api/oauth/callback`;
   const nonce = crypto.randomUUID();
   document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
   document.cookie = `${MULTIMODAL_LINK_COOKIE}=1; Path=/; Max-Age=600; SameSite=None; Secure`;

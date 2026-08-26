@@ -12,6 +12,8 @@ const helper = readFileSync(resolve(root, "src/lib/auth/manus.ts"), "utf8");
 describe("Manus multimodal login", () => {
   it("protects the link endpoint with Manus session authentication", () => {
     expect(server).toContain('app.post("/api/supabase/link-manus"');
+    expect(server).toContain('import { registerOAuthRoutes } from "./oauth";');
+    expect(server).toContain("registerOAuthRoutes(app);");
     expect(server).toContain("sdk.authenticateRequest(req)");
     expect(server).toContain("listSupabaseUsers");
     expect(server).toContain("createSupabaseUser");
@@ -22,11 +24,13 @@ describe("Manus multimodal login", () => {
 
   it("returns to profile only for the one-time multimodal intent", () => {
     expect(oauth).toContain("MULTIMODAL_LINK_COOKIE");
-    expect(oauth).toContain('/auth?multimodal=1');
+    expect(oauth).toContain('/?multimodal=1');
     expect(helper).toContain("OAUTH_STATE_COOKIE");
     expect(helper).toContain("crypto.randomUUID()");
-    expect(helper).toContain("asternaleng-ceskknda.manus.space");
-    expect(helper).toContain("isAsternalRuntime");
+    expect(helper).toContain("window.location.origin");
+    expect(helper).not.toContain("asternaleng-ceskknda.manus.space");
+    expect(helper).not.toContain("isAsternalRuntime");
+    expect(readFileSync(resolve(root, "src/routes/index.tsx"), "utf8")).toContain("multimodalReturn");
   });
 
   it("exposes the action inside Log in and establishes the returned Supabase session", () => {

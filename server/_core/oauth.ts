@@ -57,7 +57,7 @@ export function registerOAuthRoutes(app: Express) {
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
     const multimodal = parseCookieHeader(req.headers.cookie ?? "")[MULTIMODAL_LINK_COOKIE] === "1";
     if (multimodal) res.clearCookie(MULTIMODAL_LINK_COOKIE, { path: "/", secure: true, sameSite: "none" });
-    res.redirect(302, multimodal ? "/auth?multimodal=1" : "/");
+    res.redirect(302, multimodal ? "/?multimodal=1" : "/");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

@@ -1501,3 +1501,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Diagnosticar la URL final, callback OAuth y ruta que produce el 404 en producción.
 - [x] Corregir el retorno para llegar a una ruta válida y completar la sincronización.
 - [x] Validar login, rutas de producción, estados de error, pruebas, compilación y checkpoint.
+
+# Depuración definitiva del 404 OAuth
+
+- [ ] Capturar la URL exacta, el host y la respuesta que muestran el 404 después de Continuar con Google.
+- [ ] Corregir el callback, cookies y retorno para todos los hosts de ejecución, incluido el contenedor HTML5.
+- [ ] Validar el recorrido completo con pruebas de regresión, compilación y una comprobación de producción.
+- [ ] Guardar y publicar la corrección solo después de confirmar que la ruta final existe.

@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
 import { sdk } from "./sdk";
+import { registerOAuthRoutes } from "./oauth";
 import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile } from "./supabase-admin-fetch";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+registerOAuthRoutes(app);
 
 app.post("/api/orion/chat", async (req, res) => {
   try {

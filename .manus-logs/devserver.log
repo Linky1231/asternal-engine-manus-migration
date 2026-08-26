@@ -2361,3 +2361,5 @@
 [2026-08-26T20:24:00.002Z] 8:24:00 PM [vite] (client) hmr update /src/routes/profile.tsx, /src/styles.css
 [2026-08-26T20:28:19.796Z] 8:28:19 PM [vite] (client) hmr update /src/routes/auth.tsx, /src/styles.css
 [2026-08-26T20:33:55.197Z] 8:33:55 PM [vite] (client) hmr update /src/styles.css, /src/routes/auth.tsx
+[2026-08-26T20:38:52.873Z] 8:38:52 PM [vite] (client) hmr update /src/routes/index.tsx, /src/styles.css
+[2026-08-26T20:47:59.816Z] 8:47:59 PM [vite] (client) hmr update /src/styles.css, /src/routes/auth.tsx
