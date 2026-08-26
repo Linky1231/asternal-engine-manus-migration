@@ -50,12 +50,13 @@ export function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen(true)}
-        title="Notificaciones"
+        title={unread > 0 ? `${unread > 99 ? "+99" : unread} notificaciones sin leer` : "Notificaciones"}
+        aria-label={unread > 0 ? `${unread > 99 ? "+99" : unread} notificaciones sin leer` : "Notificaciones"}
         className="relative w-10 h-10 rounded-lg border border-line-strong bg-card grid place-items-center active:scale-95 transition text-ink-2 hover:bg-muted/60 hover:text-foreground shrink-0"
       >
         <Bell size={16} />
         {unread > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[9px] font-mono rounded-full min-w-4 h-4 px-0.5 grid place-items-center animate-in zoom-in">{unread > 99 ? "99+" : unread}</span>
+          <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[9px] font-mono rounded-full min-w-4 h-4 px-0.5 grid place-items-center animate-in zoom-in">{unread > 99 ? "+99" : unread}</span>
         )}
       </button>
 

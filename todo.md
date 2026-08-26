@@ -1456,3 +1456,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Mejorar el contraste y la jerarquía de botones y textos del apartado Plus, especialmente redes sociales.
 - [x] Normalizar botones y elementos relacionados con Twitter/X y revisar consistencia transversal.
 - [x] Auditar cada pantalla, panel, overlay y estado responsive; ejecutar pruebas, compilación y guardar checkpoint.
+
+# Reubicación de Notificaciones en el encabezado de Inicio
+
+- [x] Auditar el menú de tres rayitas, el encabezado de Inicio y la fuente real de notificaciones.
+- [x] Retirar Notificaciones del menú de tres rayitas y añadir un botón independiente entre Orbes y el menú.
+- [x] Mostrar badge numérico de 1 a 99 y `+99` cuando corresponda, conservando el indicador de actividad.
+- [x] Validar interacción, accesibilidad, responsive, pruebas, compilación y checkpoint.

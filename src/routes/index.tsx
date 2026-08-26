@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, Bell, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
+import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
@@ -13,7 +13,6 @@ import { PostCard } from "@/components/social/PostCard";
 import { GamesHome } from "@/components/social/GamesHome";
 import { NotificationBell } from "@/components/social/NotificationBell";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
-import { NotificationsPanel } from "@/components/social/NotificationsPanel";
 import ChatSection from "@/components/social/ChatSection";
 import OrionPanel from "@/components/ai/OrionPanel";
 import { ForumSection } from "@/components/social/ForumSection";
@@ -107,7 +106,6 @@ function HomePage() {
   const [chatInitialView, setChatInitialView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
   const [chatRetryNonce, setChatRetryNonce] = useState(0);
   const [orionOpen, setOrionOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [chatShareText, setChatShareText] = useState<string | null>(null);
   const [chatShareView, setChatShareView] = useState<"group" | "dms" | "groups" | undefined>(undefined);
   const [eventsOpen, setEventsOpen] = useState(false);
@@ -252,7 +250,7 @@ function HomePage() {
   }, [tab, reload, myId]);
 
   const logout = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
-  const closeMenu = () => { setMenuOpen(false); setNotifOpen(false); };
+  const closeMenu = () => { setMenuOpen(false); };
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
@@ -277,6 +275,7 @@ function HomePage() {
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
             </div>
           )}
+          <NotificationBell />
           <button onClick={() => setMenuOpen(true)} title="Menú"
             className="glass-control w-9 h-9 rounded-lg text-ink-2 grid place-items-center hover:text-foreground active:scale-95 shrink-0">
             <Menu size={16} />
@@ -458,7 +457,6 @@ function HomePage() {
               <MenuItem icon={<MessageCircle size={16} className="text-primary/80"/>} label="Chats" onClick={() => { setChatOpen(true); closeMenu(); }} />
               <MenuItem icon={<Bot size={16} className="text-primary/80"/>} label="Asistencia · Orión" onClick={() => { setOrionOpen(true); closeMenu(); }} />
               <MenuLink icon={<Search size={16} className="text-primary/80"/>} label="Buscar" to="/search" onClick={closeMenu} />
-              <MenuItem icon={<Bell size={16} className="text-primary/80"/>} label="Notificaciones" onClick={() => { setMenuOpen(false); setNotifOpen(true); }} />
             </div>
 
             {/* Categoría: COMUNIDAD */}
@@ -509,9 +507,6 @@ function HomePage() {
       <AnimatePresence>
         {orionOpen && <OrionPanel onClose={() => setOrionOpen(false)} />}
       </AnimatePresence>
-
-      {/* Full-screen panel de notificaciones */}
-      {notifOpen && <NotificationsPanel onClose={() => setNotifOpen(false)} />}
 
       {/* Full-screen panel de Eventos */}
       <AnimatePresence>
