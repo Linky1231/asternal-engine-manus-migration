@@ -2399,3 +2399,14 @@
 [2026-08-26T21:52:44.076Z] 9:52:44 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ProjectManager.tsx
 [2026-08-26T21:52:55.184Z] 9:52:55 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ProjectManager.tsx
 [2026-08-26T21:53:04.034Z] 9:53:04 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ProjectManager.tsx
+[2026-08-26T22:54:38.427Z] 10:54:38 PM [vite] (client) hmr update /src/styles.css
+[2026-08-26T22:59:07.682Z] 10:59:07 PM [vite] (client) hmr update /src/main.tsx, /src/styles.css
+[2026-08-26T23:01:36.492Z] 11:01:36 PM [vite] (client) hmr update /src/main.tsx, /src/styles.css
+[2026-08-26T23:01:49.977Z] 11:01:49 PM [vite] (client) hmr update /src/main.tsx, /src/styles.css
+[2026-08-26T23:02:24.061Z] 11:02:24 PM [vite] (client) hmr update /src/main.tsx, /src/styles.css
+[2026-08-26T23:04:13.513Z] 11:04:13 PM [vite] vite.config.ts changed, restarting server...
+[2026-08-26T23:04:13.772Z] [OAuth] Initialized with baseURL: https://api.manus.im
+[2026-08-26T23:04:13.787Z] 11:04:13 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+[2026-08-26T23:04:13.802Z] 11:04:13 PM [vite] server restarted.
+[2026-08-26T23:05:03.946Z] 11:05:03 PM [vite] vite.config.ts changed, restarting server...
+[2026-08-26T23:05:03.968Z] 11:05:03 PM [vite] server restarted.

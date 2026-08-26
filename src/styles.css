@@ -95,6 +95,7 @@
   --input: oklch(0.29 0.032 258 / 0.95);
   --ring: oklch(0.72 0.15 266 / 0.55);
   --grid: oklch(0.42 0.035 258 / 0.34);
+  --global-button-texture: url("/manus-storage/asternal-button-texture_049e0e5b.png");
   --destructive: oklch(0.68 0.19 25);
   --destructive-foreground: oklch(0.12 0.025 258);
   --success: oklch(0.75 0.14 165);
@@ -172,6 +173,7 @@
   --input: oklch(0.29 0.032 258 / 0.95);
   --ring: oklch(0.72 0.15 266 / 0.55);
   --grid: oklch(0.42 0.035 258 / 0.34);
+  --global-button-texture: url("/manus-storage/asternal-button-texture_049e0e5b.png");
   --destructive: oklch(0.68 0.19 25);
   --destructive-foreground: oklch(0.12 0.025 258);
   --success: oklch(0.75 0.14 165);
@@ -338,6 +340,19 @@
 }
 .press:active {
   transform: scale(0.97);
+}
+
+/* Textura global de Manus: se aplica a cada botón y control accionable, incluidos
+   los iconos, sin sustituir las etiquetas, el foco ni el estado disabled. */
+button, [role="button"] {
+  background-image: var(--global-button-texture) !important;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+button:disabled, [role="button"][aria-disabled="true"] {
+  filter: saturate(0.72);
 }
 
 /* ============ Compat: utilidades previas (se mantienen) ============ */

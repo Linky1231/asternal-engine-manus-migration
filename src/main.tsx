@@ -5,6 +5,9 @@ import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import "./styles.css";
 import "./glass-intensity.css";
+import { hydrateGlobalTexture } from "./lib/global-textures";
+
+void hydrateGlobalTexture();
 
 // Initialize the router with query client
 const router = getRouter();

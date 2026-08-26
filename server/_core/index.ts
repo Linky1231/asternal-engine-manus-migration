@@ -7,6 +7,8 @@ import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, r
 import { sdk } from "./sdk";
 import { registerOAuthRoutes } from "./oauth";
 import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile } from "./supabase-admin-fetch";
+import { ENV } from "./env";
+import { publishGlobalTexture, readGlobalTextureManifest } from "../global-textures";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -76,6 +78,24 @@ app.post("/api/supabase/link-manus", async (req, res) => {
   } catch (error) {
     console.error("[Supabase] Manus multimodal link failed", error);
     res.status(401).json({ error: error instanceof Error ? error.message : "No se pudo vincular la cuenta." });
+  }
+});
+
+app.get("/api/textures/catalog", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await readGlobalTextureManifest());
+});
+
+app.post("/api/textures/publish", express.raw({ type: ["image/png", "image/jpeg", "image/webp"], limit: "5mb" }), async (req, res) => {
+  try {
+    const manusUser = await sdk.authenticateRequest(req);
+    if (!ENV.ownerOpenId || manusUser.openId !== ENV.ownerOpenId) return res.status(403).json({ error: "Solo el responsable de Asternal puede publicar texturas globales." });
+    const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body ?? []);
+    const mimeType = String(req.header("content-type") ?? "").split(";", 1)[0];
+    const manifest = await publishGlobalTexture({ bytes, mimeType, name: String(req.header("x-texture-name") ?? "texture") });
+    res.json(manifest);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo publicar la textura." });
   }
 });
 
