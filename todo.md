@@ -1490,3 +1490,8 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Retirar el botón Login multimodal de Perfil sin dejar duplicados.
 - [x] Integrar el botón destacado dentro de la pestaña «Log in» de autenticación.
 - [x] Mantener el OAuth oficial de Manus, la vinculación Supabase y validar pruebas, responsive y checkpoint.
+
+# Presentación del botón Google
+
+- [x] Cambiar únicamente el texto, icono y estilos visibles del botón OAuth a «Continuar con Google».
+- [x] Verificar que el handler OAuth existente no cambió y guardar checkpoint.

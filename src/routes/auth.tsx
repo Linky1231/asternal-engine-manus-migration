@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase, clearSupabaseCredentials } from "@/integrations/supabase/client";
 import {
   Gamepad2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2,
-  Check, AlertCircle, Sparkles, RefreshCw, Link2, ShieldCheck,
+  Check, AlertCircle, Sparkles, RefreshCw,
 } from "lucide-react";
 import { IDEA_HERO_COPY } from "@/lib/auth/idea-hero";
 import {
@@ -553,21 +553,20 @@ function AuthPage() {
                     </div>
 
                     {mode === "signin" && (
-                      <section className="relative mb-4 overflow-hidden rounded-2xl border-2 border-primary/35 bg-[radial-gradient(circle_at_92%_8%,rgba(91,142,255,0.24),transparent_34%),linear-gradient(135deg,rgba(23,42,88,0.96),rgba(9,22,48,0.96))] p-4 shadow-[0_16px_42px_rgba(40,120,210,0.2)]" aria-label="Login multimodal con Manus">
-                        <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
-                        <div className="relative flex items-start gap-3">
-                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-cyan-300 text-slate-950 shadow-[0_8px_24px_rgba(62,177,255,0.3)]"><Link2 size={19} /></span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2"><h3 className="font-display text-sm font-semibold text-white">Login multimodal</h3><ShieldCheck size={14} className="text-cyan-300" /><span className="rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2 py-0.5 text-[9px] font-mono tracking-[0.12em] text-cyan-100">MANUS OFICIAL</span></div>
-                            <p className="mt-1 text-[10px] leading-relaxed text-slate-200/75">Accede con Manus y sincroniza tu cuenta Asternal de forma segura.</p>
-                            <button type="button" aria-label="Login multimodal con Manus" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-400 via-blue-500 to-cyan-300 px-4 text-[10px] font-display font-bold tracking-[0.1em] text-slate-950 shadow-[0_9px_24px_rgba(45,140,240,0.34)] transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70">
-                              {multimodalState === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                              {multimodalState === "loading" ? "SINCRONIZANDO…" : "LOGIN MULTIMODAL"}
-                            </button>
-                            {multimodalMessage && <p className={`mt-2 text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
-                          </div>
-                        </div>
-                      </section>
+                      <div className="mb-4">
+                        <button type="button" aria-label="Continuar con Google" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-slate-300/30 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70">
+                          {multimodalState === "loading" ? <Loader2 size={18} className="animate-spin text-slate-500" /> : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                              <path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.4-.18-2.06H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.23Z" />
+                              <path fill="#34A853" d="M12 21.72c2.63 0 4.84-.87 6.45-2.37l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.72Z" />
+                              <path fill="#FBBC05" d="M6.54 13.79a5.85 5.85 0 0 1 0-3.58V7.68H3.3a9.73 9.73 0 0 0 0 8.64l3.24-2.53Z" />
+                              <path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.25 14.63 2.28 12 2.28a9.74 9.74 0 0 0-8.7 5.4l3.24 2.53C7.31 7.9 9.46 6.18 12 6.18Z" />
+                            </svg>
+                          )}
+                          {multimodalState === "loading" ? "Conectando…" : "Continuar con Google"}
+                        </button>
+                        {multimodalMessage && <p className={`mt-2 text-center text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
+                      </div>
                     )}
 
                     {/* Form */}

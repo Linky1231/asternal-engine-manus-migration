@@ -28,10 +28,10 @@ describe("Manus multimodal login", () => {
   });
 
   it("exposes the action inside Log in and establishes the returned Supabase session", () => {
-    expect(auth).toContain("Login multimodal");
+    expect(auth).toContain("Continuar con Google");
     expect(auth).toContain("startMultimodalLogin");
     expect(auth).toContain("supabase.auth.setSession");
-    expect(auth).toContain('aria-label="Login multimodal con Manus"');
+    expect(auth).toContain('aria-label="Continuar con Google"');
     expect(profile).not.toContain("Login multimodal");
   });
 });
