@@ -1505,9 +1505,9 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 # Depuración definitiva del 404 OAuth
 
 - [x] Capturar la URL exacta, el host y la respuesta que muestran el 404 después de Continuar con Google.
-- [ ] Corregir el callback, cookies y retorno para todos los hosts de ejecución, incluido el contenedor HTML5.
-- [ ] Validar el recorrido completo con pruebas de regresión, compilación y una comprobación de producción.
-- [ ] Guardar y publicar la corrección solo después de confirmar que la ruta final existe.
+- [x] Corregir el callback, cookies y retorno para todos los hosts de ejecución, incluido el contenedor HTML5.
+- [x] Validar el recorrido completo con pruebas de regresión, compilación y una comprobación de producción.
+- [x] Guardar y publicar la corrección solo después de confirmar que la ruta final existe.
 
 
 # Primera tarea extensa — Editor, sincronización, scripts y niveles
