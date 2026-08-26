@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   listProjects,
   createProject,
@@ -16,7 +16,7 @@ import {
 import type { Project } from "@/lib/engine/core";
 import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
 import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
-import { syncAllProjects } from "@/lib/engine/cloud-sync";
+import { syncAllProjects, withCloudTimeout } from "@/lib/engine/cloud-sync";
 import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 
@@ -48,27 +48,30 @@ export function ProjectManager({
   const [syncing, setSyncing] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
+  const autoSyncStarted = useRef(false);
 
   const refresh = () => setItems(listProjects());
   const refreshCloud = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withCloudTimeout(supabase.auth.getSession(), "La sesión de nube no respondió a tiempo");
       setSignedIn(!!session);
       if (!session) { setCloudList([]); return; }
-      setCloudList(await cloudListProjects());
+      setCloudList(await withCloudTimeout(cloudListProjects(), "La lista de proyectos no respondió a tiempo"));
     } catch (e) { setCloudErr((e as Error).message); }
   };
 
   /** Sincronización automática al abrir: sube lo local sin respaldo y descarga lo de la nube. */
   const runAutoSync = async () => {
+    if (autoSyncStarted.current) return;
+    autoSyncStarted.current = true;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withCloudTimeout(supabase.auth.getSession(), "La sesión de nube no respondió a tiempo");
       setSignedIn(!!session);
       if (!session) return;
       setSyncing(true); setCloudErr(null);
       const r = await syncAllProjects();
       refresh();
-      setCloudList(await cloudListProjects());
+      setCloudList(await withCloudTimeout(cloudListProjects(), "La lista de proyectos no respondió a tiempo"));
       setSyncNote(r.pushed > 0 || r.imported > 0
         ? `${r.pushed} subido${r.pushed === 1 ? "" : "s"} · ${r.imported} descargado${r.imported === 1 ? "" : "s"}`
         : null);

@@ -15,6 +15,17 @@ import type { Project } from "./core";
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
+export const CLOUD_SYNC_TIMEOUT_MS = 12_000;
+
+/** Convierte cualquier operación de nube en una operación acotada y recuperable. */
+export function withCloudTimeout<T>(promise: Promise<T>, label = "La sincronización tardó demasiado", timeoutMs = CLOUD_SYNC_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(label)), timeoutMs);
+    promise.then(value => { clearTimeout(timer); resolve(value); }, error => { clearTimeout(timer); reject(error); });
+  });
+}
+
+
 /** Debounced push of a locally-saved project to the cloud (fire & forget). */
 export function schedulePushToCloud(localId: string, project: Project) {
   if (typeof window === "undefined") return;
@@ -165,7 +176,7 @@ export async function pullAssetLibraryFromCloud(): Promise<AssetLibraryItem[] | 
  * Devuelve cuántos se subieron y cuántos se importaron.
  */
 export async function syncAllProjects(): Promise<{ pushed: number; imported: number }> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await withCloudTimeout(supabase.auth.getUser(), "La sesión de nube no respondió a tiempo");
   if (!user) return { pushed: 0, imported: 0 };
 
   // 1) Leer primero la nube para comparar las copias ya vinculadas.
@@ -174,7 +185,7 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
   let pushed = 0;
   let imported = 0;
   let remoteList: CloudProject[] = [];
-  try { remoteList = await cloudListProjects(); } catch { remoteList = []; }
+  try { remoteList = await withCloudTimeout(cloudListProjects(), "La nube no respondió a tiempo"); } catch { remoteList = []; }
   const remoteById = new Map(remoteList.map(c => [c.id, c]));
 
   for (const m of listProjects()) {
@@ -185,7 +196,7 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
     if (!cloudId) {
       if (isPristineDefault(p)) continue;
       try {
-        const saved = await cloudSaveProject({ id: undefined, name: p.name || m.name, data: p });
+        const saved = await withCloudTimeout(cloudSaveProject({ id: undefined, name: p.name || m.name, data: p }), "No se pudo guardar el proyecto a tiempo");
         setProjectCloudId(m.id, saved.id, toMillis(saved.updated_at));
         pushed++;
       } catch { /* sigue con los demás proyectos */ }
@@ -202,7 +213,7 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
     }
     if (localMs > remoteMs + 1000) {
       try {
-        const saved = await cloudSaveProject({ id: cloudId, name: p.name || m.name, data: p });
+        const saved = await withCloudTimeout(cloudSaveProject({ id: cloudId, name: p.name || m.name, data: p }), "No se pudo actualizar el proyecto a tiempo");
         setProjectCloudId(m.id, saved.id, toMillis(saved.updated_at));
         pushed++;
       } catch { /* conserva la copia local para el siguiente intento */ }

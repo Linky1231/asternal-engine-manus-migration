@@ -1523,3 +1523,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Implementar construcción de niveles con tiles en cuadrícula sin eliminar el sistema 9-slicing existente.
 - [x] Integrar tiles de cuadrícula y 9-slicing como modos multimodales coexistentes.
 - [x] Validar datos reales, responsive, compilación, pruebas, rutas y publicación; documentar la entrega.
+
+
+# Corrección: sincronización atascada
+
+- [x] Reproducir el estado «sincronizando» y rastrear la promesa que no termina.
+- [x] Corregir estados de carga, manejo de errores, sesión y timeout de sincronización.
+- [x] Añadir regresiones para éxito, usuario no autenticado, fallo de red y recuperación del botón.
+- [x] Validar en preview y producción, guardar checkpoint y publicar.
