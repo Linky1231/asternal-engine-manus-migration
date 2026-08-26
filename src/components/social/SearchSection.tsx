@@ -52,7 +52,7 @@ function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: s
     <div className="flex items-center gap-2 pt-5 pb-2.5 first:pt-0">
       <span className="text-primary shrink-0">{icon}</span>
       <span className="font-display text-[13px] font-bold text-foreground tracking-tight">{label}</span>
-      <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-mono font-semibold">{count}</span>
+      <span className="min-w-4 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-glow text-[10px] font-mono font-semibold tabular-nums text-center">{count}</span>
       <div className="flex-1 h-px bg-border/30" />
     </div>
   );
@@ -86,7 +86,7 @@ function UserRow({ user, query }: { user: Profile; query: string }) {
         )}
       </div>
       {typeof user.orbes === "number" && user.show_orbes !== false && (
-        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/8 text-primary text-[10px] font-mono shrink-0 border border-primary/10">
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/12 text-primary-glow text-[10px] font-mono font-semibold tabular-nums shrink-0 border border-primary/20">
           <Sparkles size={8} fill="currentColor" /> {user.orbes}
         </div>
       )}
@@ -119,11 +119,11 @@ function GameRow({ post, query }: { post: PostWithMeta; query: string }) {
         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground/50">
           <span className="font-mono">@{post.author?.username ?? "jugador"}</span>
           <span className="text-border/60">·</span>
-          <span className="flex items-center gap-0.5"><Heart size={8} /> {post.likes}</span>
+          <span className="flex items-center gap-0.5 tabular-nums text-foreground/80"><Heart size={8} /> {post.likes}</span>
           {post.comments_count > 0 && (
             <>
               <span className="text-border/60">·</span>
-              <span className="flex items-center gap-0.5"><MessageCircle size={8} /> {post.comments_count}</span>
+              <span className="flex items-center gap-0.5 tabular-nums text-foreground/80"><MessageCircle size={8} /> {post.comments_count}</span>
             </>
           )}
         </div>
@@ -153,8 +153,8 @@ function PostRow({ post, query }: { post: PostWithMeta; query: string }) {
           {highlightMatch(post.content, query)}
         </p>
         <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground/40">
-          {post.likes > 0 && <span className="flex items-center gap-0.5"><Heart size={9} /> {post.likes}</span>}
-          {post.comments_count > 0 && <span className="flex items-center gap-0.5"><MessageCircle size={9} /> {post.comments_count}</span>}
+          {post.likes > 0 && <span className="flex items-center gap-0.5 tabular-nums text-foreground/80"><Heart size={9} /> {post.likes}</span>}
+          {post.comments_count > 0 && <span className="flex items-center gap-0.5 tabular-nums text-foreground/80"><MessageCircle size={9} /> {post.comments_count}</span>}
           {post.media_type === "image" && <Image size={9} className="text-primary/40" />}
           {post.media_type === "video" && <Film size={9} className="text-primary/40" />}
         </div>
@@ -187,7 +187,7 @@ function GalleryRow({ post, query }: { post: PostWithMeta; query: string }) {
         <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground/50">
           <span className="font-mono">@{post.author?.username}</span>
           <span className="text-border/60">·</span>
-          <span className="flex items-center gap-0.5"><Heart size={8} /> {post.likes}</span>
+          <span className="flex items-center gap-0.5 tabular-nums text-foreground/80"><Heart size={8} /> {post.likes}</span>
           {post.media_type === "image" && <Image size={8} className="text-primary/40" />}
         </div>
       </div>
@@ -311,8 +311,8 @@ export function SearchSection() {
           >
             {t.icon} {t.label}
             {t.count > 0 && (
-              <span className={`ml-0.5 px-1 py-0 rounded text-[8px] font-mono font-bold ${
-                tab === t.id ? "bg-white/20" : "bg-muted/50 text-muted-foreground/50"
+              <span className={`ml-0.5 min-w-4 px-1 py-0 rounded text-[9px] font-mono font-bold tabular-nums text-center ${
+                tab === t.id ? "bg-white/25 text-primary-foreground" : "bg-muted/70 text-foreground/80"
               }`}>
                 {t.count}
               </span>

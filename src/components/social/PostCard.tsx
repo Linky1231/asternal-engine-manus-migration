@@ -265,7 +265,7 @@ export const PostCard = memo(function PostCard({
   return (
     <article className={`group panel overflow-hidden rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
       {/* Hairline degradado superior */}
-      <div aria-hidden="true" className="h-px w-full grad-brand-fade opacity-35 pointer-fine:group-hover:opacity-50 transition-opacity duration-200" />
+      <div aria-hidden="true" className="mx-3 h-px grad-brand-fade opacity-35 pointer-fine:group-hover:opacity-50 transition-opacity duration-200" />
 
       <div className="p-3 space-y-3">
         <header className="flex items-center gap-2.5">

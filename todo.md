@@ -1447,3 +1447,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Aplicar la paleta global en tema, componentes compartidos, pantallas y estados sin romper la funcionalidad.
 - [x] Revisar cada pantalla disponible en escritorio y móvil para corregir contraste, legibilidad, overflow y coherencia visual.
 - [x] Ejecutar pruebas, compilación y validaciones visuales; guardar checkpoint final con los pendientes documentados si existe alguna limitación de acceso.
+
+# Correcciones de publicación, botones, números y Plus
+
+- [x] Localizar y corregir la línea que se sale del área de una publicación.
+- [x] Unificar el botón «Jugar» de Juego destacado, Más jugado y vista interna del juego.
+- [x] Auditar y corregir la legibilidad de todos los números del Buscador, incluido el valor 4.
+- [x] Mejorar el contraste y la jerarquía de botones y textos del apartado Plus, especialmente redes sociales.
+- [x] Normalizar botones y elementos relacionados con Twitter/X y revisar consistencia transversal.
+- [x] Auditar cada pantalla, panel, overlay y estado responsive; ejecutar pruebas, compilación y guardar checkpoint.

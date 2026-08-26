@@ -172,10 +172,11 @@ function PlusPage() {
         <FeatureCard icon={<Star size={18} fill="currentColor" />} title="Insignia Plus"
           desc="Muestra tu insignia junto a tu nombre." locked={!isPlus}>
           <button disabled={!isPlus} onClick={toggleBadge}
-            className="w-full h-10 rounded-xl text-sm font-display tracking-widest border transition active:scale-[0.98] disabled:opacity-40"
+            className="w-full h-10 rounded-xl text-sm font-display tracking-widest border bg-surface-2 text-foreground transition active:scale-[0.98] disabled:opacity-40"
             style={{
               borderColor: "var(--primary)",
-              color: me?.show_plus_badge ? "white" : "var(--primary)",
+              color: me?.show_plus_badge ? "var(--primary-foreground)" : "var(--primary)",
+              background: me?.show_plus_badge ? "var(--gradient-asternal)" : "var(--surface-2)",
             }}>
             {me?.show_plus_badge ? "✓ VISIBLE" : "OCULTA"}
           </button>
@@ -229,6 +230,8 @@ function PlusPage() {
               value={socials.youtube ?? ""} onChange={v => setSocials({ ...socials, youtube: v })} disabled={!isPlus} />
             <SocialInput icon={<Music2 size={14} />} placeholder="URL de TikTok"
               value={socials.tiktok ?? ""} onChange={v => setSocials({ ...socials, tiktok: v })} disabled={!isPlus} />
+            <SocialInput icon={<span className="font-bold text-[12px] leading-none">𝕏</span>} placeholder="URL de X / Twitter"
+              value={socials.twitter ?? ""} onChange={v => setSocials({ ...socials, twitter: v })} disabled={!isPlus} />
             <SocialInput icon={<Instagram size={14} />} placeholder="URL de Instagram"
               value={socials.instagram ?? ""} onChange={v => setSocials({ ...socials, instagram: v })} disabled={!isPlus} />
             <SocialInput icon={<Globe size={14} />} placeholder="Sitio web"
@@ -291,10 +294,10 @@ function SocialInput({ icon, placeholder, value, onChange, disabled }: {
   icon: React.ReactNode; placeholder: string; value: string; onChange: (v: string) => void; disabled?: boolean;
 }) {
   return (
-    <div className="plus-social-input flex items-center gap-2 bg-input/40 rounded-xl px-3 py-2">
-      <span className="text-muted-foreground">{icon}</span>
+    <div className="plus-social-input flex items-center gap-2 rounded-xl px-3 py-2">
+      <span className="text-primary shrink-0" aria-hidden="true">{icon}</span>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
-        className="flex-1 bg-transparent text-xs outline-none disabled:opacity-50" />
+        className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/80 caret-primary outline-none disabled:opacity-60" />
     </div>
   );
 }

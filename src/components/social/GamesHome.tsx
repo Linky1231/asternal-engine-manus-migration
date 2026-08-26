@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play, Flame, Rocket, Heart, Sparkles as SparklesIcon, Sparkles, Users, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Compass } from "lucide-react";
+import { Flame, Rocket, Heart, Sparkles as SparklesIcon, Sparkles, Users, Gamepad2, Trophy, Joystick, Crown, CloudOff, Loader2, CheckCircle2, Compass } from "lucide-react";
 import { FaGamepad } from "react-icons/fa";
 import type { PostWithMeta } from "@/lib/social/api";
 import { fetchGamePlayCounts24h } from "@/lib/social/api";
@@ -9,6 +9,7 @@ import { GameIcon, GameIconPlaceholder } from "./GameIcon";
 import { GameCard } from "./GameCard";
 import { coverFrameFromPreset, coverFrameStyle } from "@/lib/social/cover-frame";
 import { mobileCarouselScrollClassName } from "@/lib/social/carousel-scroll";
+import { PlayButton } from "./PlayButton";
 
 function extractTitle(content: string): string {
   const line = content.split("\n")[0] || "Juego";
@@ -532,12 +533,12 @@ function FeaturedBanner({ post, plays24, onPlay }: { post: PostWithMeta; plays24
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <PlayButton
             onClick={onPlay}
-            className={`flex-1 h-11 rounded-xl ${hasVisual ? "bg-white text-primary" : "grad-brand text-primary-foreground"} font-display tracking-widest text-xs flex items-center justify-center gap-2 transition`}
-          >
-            <Play size={16} fill="currentColor" /> JUGAR
-          </button>
+            label="JUGAR"
+            compact
+            className="flex-1"
+          />
         </div>
         <div className={`flex items-center gap-3 ${hasVisual ? "text-white/90" : "text-muted-foreground"} text-[11px]`}>
           <span className="flex items-center gap-1">

@@ -359,7 +359,7 @@ export function ProfilePanel({
               {editing ? (
                 <div className="space-y-2">
                   <input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={40} placeholder="Nombre"
-                    className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
+                    className="w-full bg-input/50 text-foreground placeholder:text-muted-foreground/75 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40" />
                   <input value={username} onChange={e => setUsername(e.target.value)} maxLength={24} placeholder="usuario"
                     className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/40" />
                 </div>
@@ -519,7 +519,7 @@ export function ProfilePanel({
                     <div>
                       <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1"><Cake size={10}/>Cumpleaños</div>
                       <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}
-                        className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
+                        className="w-full bg-input/50 text-foreground placeholder:text-muted-foreground/75 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
                     </div>
                   </EditSection>
 
@@ -1171,7 +1171,7 @@ function LabeledInput({ label, value, onChange, placeholder, max, icon }: {
     <div>
       <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1">{icon}{label}</div>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={max}
-        className="w-full bg-input/50 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
+        className="w-full bg-input/50 text-foreground placeholder:text-muted-foreground/75 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"/>
     </div>
   );
 }
@@ -1198,7 +1198,8 @@ function frameCss(id: string): string {
 function SocialLinksRow({ links }: { links: import("@/lib/social/api").SocialLinks }) {
   const items: { key: string; url: string | undefined; icon: React.ReactNode; color: string; label: string }[] = [
     { key: "youtube", url: links.youtube, icon: <Youtube size={14} />, color: "#FF0033", label: "YouTube" },
-    { key: "tiktok", url: links.tiktok, icon: <TikTokIcon />, color: "#000", label: "TikTok" },
+    { key: "tiktok", url: links.tiktok, icon: <TikTokIcon />, color: "#7dd3fc", label: "TikTok" },
+    { key: "twitter", url: links.twitter, icon: <span className="font-bold text-[12px] leading-none">𝕏</span>, color: "#7dd3fc", label: "X / Twitter" },
     { key: "instagram", url: links.instagram, icon: <Instagram size={14} />, color: "#E1306C", label: "Instagram" },
     { key: "website", url: links.website, icon: <Globe size={14} />, color: "var(--primary)", label: "Web" },
   ].filter(x => !!x.url && String(x.url).trim().length > 0) as never;
@@ -1208,7 +1209,7 @@ function SocialLinksRow({ links }: { links: import("@/lib/social/api").SocialLin
       {items.map(it => (
         <a key={it.key} href={/^https?:\/\//.test(it.url!) ? it.url! : `https://${it.url}`}
           target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] border border-border/60 bg-muted/30 active:scale-95 transition"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] border border-border/60 bg-surface-2 text-foreground active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           style={{ color: it.color }}>
           {it.icon}<span className="text-foreground">{it.label}</span>
         </a>

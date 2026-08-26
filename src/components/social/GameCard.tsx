@@ -7,6 +7,7 @@ import { coverFrameFromPreset, coverFrameStyle } from "@/lib/social/cover-frame"
 import { logPlaySession } from "@/lib/social/history";
 import type { Project, Scene } from "@/lib/engine/core";
 import { GameRuntime } from "@/components/engine/GameRuntime";
+import { PlayButton } from "./PlayButton";
 import { CommentSection } from "./CommentSection";
 import { createProject, saveProjectById, setProjectCloudId, setCurrentProjectId } from "@/lib/engine/storage";
 import { GameIconPlaceholder } from "./GameIcon";
@@ -227,15 +228,14 @@ export function GameCard({
             </span>
           </div>
         </div>
-        <button
+        <PlayButton
           onClick={play}
-          disabled={loading}
-          className="mt-3 h-12 w-full rounded-xl grad-brand text-primary-foreground font-display tracking-widest text-xs flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98] disabled:opacity-70"
+          loading={loading}
+          locked={needsPurchase}
+          label={needsPurchase ? `COMPRAR · ${price} ORBES` : "JUGAR"}
           aria-label={needsPurchase ? `Comprar ${title} y jugar` : `Jugar ${title}`}
-        >
-          {loading ? <Loader2 size={18} className="animate-spin" /> : needsPurchase ? <Lock size={17} /> : <Play size={17} fill="currentColor" />}
-          {loading ? "ABRIENDO" : needsPurchase ? `COMPRAR · ${price} ORBES` : "JUGAR AHORA"}
-        </button>
+          className="mt-3"
+        />
       </div>
 
       {/* Galería de capturas */}
