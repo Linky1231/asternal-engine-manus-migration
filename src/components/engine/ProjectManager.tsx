@@ -10,13 +10,14 @@ import {
   saveProjectById,
   setProjectCloudId,
   getProjectCloudId,
+  deduplicateExactLocalProjects,
   initializeStorageOwner,
   type ProjectMeta,
 } from "@/lib/engine/storage";
 import type { Project } from "@/lib/engine/core";
 import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
 import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
-import { syncAllProjects, withCloudTimeout } from "@/lib/engine/cloud-sync";
+import { syncAllProjects, withCloudTimeout, deduplicateExactCloudProjects } from "@/lib/engine/cloud-sync";
 import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 
@@ -97,7 +98,7 @@ export function ProjectManager({
     try {
       const p = loadProjectById(m.id); if (!p) return;
       const cloudId = getProjectCloudId(m.id);
-      const saved = await cloudSaveProject({ id: cloudId, name: p.name || m.name, data: p });
+      const saved = await cloudSaveProject({ id: cloudId, name: p.name || m.name, data: { ...p, __asternalProjectId: m.id } });
       if (!cloudId) setProjectCloudId(m.id, saved.id);
       await refreshCloud();
     } catch (e) { setCloudErr((e as Error).message); }
@@ -118,11 +119,25 @@ export function ProjectManager({
 
   const removeCloud = async (c: CloudProject) => {
     if (!confirm(`¿Borrar "${c.name}" de la nube? Tu copia local no se borra.`)) return;
-    setCloudBusy(c.id);
+    setCloudBusy(c.id); setCloudErr(null);
     try { await cloudDeleteProject(c.id); await refreshCloud(); }
+    catch (e) { setCloudErr((e as Error).message); }
     finally { setCloudBusy(null); }
   };
 
+  const handleCleanupDuplicates = async () => {
+    if (!confirm("Se eliminarán únicamente copias con el mismo nombre y contenido exacto; se conservará la versión más reciente. ¿Continuar?")) return;
+    setCloudBusy("cleanup"); setCloudErr(null); setSyncNote(null);
+    try {
+      const localRemoved = deduplicateExactLocalProjects();
+      let cloudRemoved = 0;
+      if (signedIn) cloudRemoved = await withCloudTimeout(deduplicateExactCloudProjects(), "La limpieza cloud tardó demasiado");
+      refresh();
+      await refreshCloud();
+      setSyncNote(`${localRemoved + cloudRemoved} duplicado${localRemoved + cloudRemoved === 1 ? "" : "s"} eliminado${localRemoved + cloudRemoved === 1 ? "" : "s"}`);
+    } catch (e) { setCloudErr((e as Error).message); }
+    finally { setCloudBusy(null); }
+  };
 
   const handleNew = () => {
     const name = prompt("Nombre del nuevo proyecto:", "Nuevo Juego");
@@ -320,6 +335,12 @@ export function ProjectManager({
                 <Cloud size={14} className="text-primary" />
                 <span className="section-label">Asternal Sync · nube</span>
                 <span className="ml-auto text-xs font-mono text-muted-foreground tabular-nums">{cloudList.length}</span>
+                <button
+                  onClick={handleCleanupDuplicates}
+                  disabled={cloudBusy === "cleanup" || syncing}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+                  title="Eliminar únicamente duplicados exactos"
+                >{cloudBusy === "cleanup" ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Limpiar duplicados</button>
               </div>
               {(syncNote || syncing) && (
                 <div className="flex items-center gap-1.5 text-xs text-primary px-1">

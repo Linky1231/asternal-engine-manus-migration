@@ -1540,3 +1540,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Corregir estados de carga, carreras de autenticación y mensaje de sincronización pendiente.
 - [x] Añadir regresiones del enlace seguro y validar el flujo en preview/producción.
 - [x] Guardar checkpoint y publicar la corrección del login.
+
+
+# Corrección: autosave crea proyectos duplicados
+
+- [x] Rastrear el ciclo de autosave y localizar dónde se pierde el identificador del proyecto activo.
+- [x] Hacer que el autosave actualice por `projectId`, con debounce y protección contra carreras.
+- [x] Deduplicar copias generadas por autosave sin borrar proyectos reales ni datos del usuario.
+- [x] Añadir pruebas de creación, actualización, autosave repetido, sincronización y limpieza segura.
+- [x] Validar lag, lista de proyectos y producción; guardar checkpoint y publicar.

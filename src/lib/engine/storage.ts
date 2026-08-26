@@ -266,6 +266,25 @@ export function createProject(name?: string): string {
   return id;
 }
 
+export function deduplicateExactLocalProjects(): number {
+  if (typeof window === "undefined") return 0;
+  const index = readIndex();
+  const seen = new Map<string, ProjectMeta>();
+  const removeIds = new Set<string>();
+  for (const meta of [...index].sort((a, b) => b.updatedAt - a.updatedAt)) {
+    const project = loadProjectById(meta.id);
+    if (!project) continue;
+    const signature = `${meta.name}\u0000${JSON.stringify(project)}`;
+    if (seen.has(signature)) removeIds.add(meta.id);
+    else seen.set(signature, meta);
+  }
+  if (!removeIds.size) return 0;
+  for (const id of removeIds) localStorage.removeItem(itemKey(id));
+  writeIndex(index.filter(meta => !removeIds.has(meta.id)));
+  ensureAtLeastOne();
+  return removeIds.size;
+}
+
 export function deleteProjectById(id: string) {
   if (typeof window === "undefined") return;
   localStorage.removeItem(itemKey(id));

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { cloudSaveProject, cloudListProjects, type CloudProject } from "@/lib/social/api";
+import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
 import {
   saveProjectById,
   setProjectCloudId,
@@ -13,9 +13,21 @@ import {
 } from "./storage";
 import type { Project } from "./core";
 
-let pushTimer: ReturnType<typeof setTimeout> | null = null;
+const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingPushes = new Map<string, Project>();
+const activePushes = new Map<string, Promise<void>>();
+const PROJECT_ID_FIELD = "__asternalProjectId";
 
 export const CLOUD_SYNC_TIMEOUT_MS = 12_000;
+
+function cloudProjectData(localId: string, project: Project): Project & { __asternalProjectId: string } {
+  return { ...project, [PROJECT_ID_FIELD]: localId };
+}
+
+function cloudProjectLocalId(project: CloudProject): string | null {
+  const value = (project.data as { __asternalProjectId?: unknown } | null)?.[PROJECT_ID_FIELD];
+  return typeof value === "string" && value ? value : null;
+}
 
 /** Convierte cualquier operación de nube en una operación acotada y recuperable. */
 export function withCloudTimeout<T>(promise: Promise<T>, label = "La sincronización tardó demasiado", timeoutMs = CLOUD_SYNC_TIMEOUT_MS): Promise<T> {
@@ -26,20 +38,40 @@ export function withCloudTimeout<T>(promise: Promise<T>, label = "La sincronizac
 }
 
 
-/** Debounced push of a locally-saved project to the cloud (fire & forget). */
+/** Debounce por proyecto: cada autosave reemplaza el payload pendiente y nunca abre un insert paralelo. */
 export function schedulePushToCloud(localId: string, project: Project) {
-  if (typeof window === "undefined") return;
-  if (pushTimer) clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const cloudId = getProjectCloudId(localId);
-      const saved = await cloudSaveProject({ id: cloudId, name: project.name || "Untitled Game", data: project });
-      const remoteMs = Date.parse(saved.updated_at);
-      setProjectCloudId(localId, saved.id, Number.isFinite(remoteMs) ? remoteMs : Date.now());
-    } catch { /* silent */ }
-  }, 1500);
+  if (typeof window === "undefined" || !localId) return;
+  pendingPushes.set(localId, project);
+  const previousTimer = pushTimers.get(localId);
+  if (previousTimer) clearTimeout(previousTimer);
+  pushTimers.set(localId, setTimeout(() => {
+    pushTimers.delete(localId);
+    void flushProjectPush(localId);
+  }, 1500));
+}
+
+async function flushProjectPush(localId: string): Promise<void> {
+  if (activePushes.has(localId)) return activePushes.get(localId);
+  const run = (async () => {
+    while (pendingPushes.has(localId)) {
+      const project = pendingPushes.get(localId);
+      pendingPushes.delete(localId);
+      if (!project) continue;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const cloudId = getProjectCloudId(localId);
+        const saved = await cloudSaveProject({ id: cloudId, name: project.name || "Untitled Game", data: cloudProjectData(localId, project) });
+        const remoteMs = Date.parse(saved.updated_at);
+        setProjectCloudId(localId, saved.id, Number.isFinite(remoteMs) ? remoteMs : Date.now());
+      } catch { /* el siguiente cambio reintentará sin duplicar filas */ }
+    }
+  })().finally(() => {
+    activePushes.delete(localId);
+    if (pendingPushes.has(localId)) void flushProjectPush(localId);
+  });
+  activePushes.set(localId, run);
+  return run;
 }
 
 /** Import all cloud projects that are not present locally. Returns newly created local ids. */
@@ -112,6 +144,23 @@ export async function activateCloudProjectIfBlank(): Promise<string | null> {
 
 export async function fetchCloudProjects(): Promise<CloudProject[]> {
   return cloudListProjects();
+}
+
+/**
+ * Elimina únicamente duplicados remotos exactos. No agrupa por nombre solo:
+ * compara también el JSON del proyecto y conserva la fila más reciente.
+ */
+export async function deduplicateExactCloudProjects(): Promise<number> {
+  const projects = await cloudListProjects();
+  const seen = new Set<string>();
+  const remove: CloudProject[] = [];
+  for (const project of projects) {
+    const signature = `${project.name}\u0000${JSON.stringify(project.data)}`;
+    if (seen.has(signature)) remove.push(project);
+    else seen.add(signature);
+  }
+  for (const project of remove) await cloudDeleteProject(project.id);
+  return remove.length;
 }
 
 // ───── Biblioteca de assets (imágenes/prefabs del editor) ─────
@@ -187,16 +236,25 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
   let remoteList: CloudProject[] = [];
   try { remoteList = await withCloudTimeout(cloudListProjects(), "La nube no respondió a tiempo"); } catch { remoteList = []; }
   const remoteById = new Map(remoteList.map(c => [c.id, c]));
+  const remoteByLocalId = new Map(remoteList.map(c => [cloudProjectLocalId(c), c]).filter(([id]) => Boolean(id)) as Array<[string, CloudProject]>);
 
   for (const m of listProjects()) {
     const p = loadProjectById(m.id);
     if (!p) continue;
-    const cloudId = getProjectCloudId(m.id);
-    const remote = cloudId ? remoteById.get(cloudId) : undefined;
+    let cloudId = getProjectCloudId(m.id);
+    let remote = cloudId ? remoteById.get(cloudId) : undefined;
+    if (!cloudId) {
+      const identifiedRemote = remoteByLocalId.get(m.id);
+      if (identifiedRemote) {
+        cloudId = identifiedRemote.id;
+        remote = identifiedRemote;
+        setProjectCloudId(m.id, cloudId, toMillis(identifiedRemote.updated_at));
+      }
+    }
     if (!cloudId) {
       if (isPristineDefault(p)) continue;
       try {
-        const saved = await withCloudTimeout(cloudSaveProject({ id: undefined, name: p.name || m.name, data: p }), "No se pudo guardar el proyecto a tiempo");
+        const saved = await withCloudTimeout(cloudSaveProject({ id: undefined, name: p.name || m.name, data: cloudProjectData(m.id, p) }), "No se pudo guardar el proyecto a tiempo");
         setProjectCloudId(m.id, saved.id, toMillis(saved.updated_at));
         pushed++;
       } catch { /* sigue con los demás proyectos */ }
@@ -213,7 +271,7 @@ export async function syncAllProjects(): Promise<{ pushed: number; imported: num
     }
     if (localMs > remoteMs + 1000) {
       try {
-        const saved = await withCloudTimeout(cloudSaveProject({ id: cloudId, name: p.name || m.name, data: p }), "No se pudo actualizar el proyecto a tiempo");
+        const saved = await withCloudTimeout(cloudSaveProject({ id: cloudId, name: p.name || m.name, data: cloudProjectData(m.id, p) }), "No se pudo actualizar el proyecto a tiempo");
         setProjectCloudId(m.id, saved.id, toMillis(saved.updated_at));
         pushed++;
       } catch { /* conserva la copia local para el siguiente intento */ }
