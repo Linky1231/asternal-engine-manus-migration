@@ -142,7 +142,7 @@ function PlusPage() {
 
       <main className="flex-1 max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto w-full px-3 py-5 pb-24 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Hero */}
-        <section className="plus-glass-hero relative overflow-hidden rounded-3xl p-6 shadow-lg border">
+        <section className="plus-glass-hero ui-panel relative overflow-hidden rounded-3xl p-6">
           <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full blur-3xl opacity-30 bg-primary/30" />
           <div className="relative">
             <div className="btn-grad inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-display tracking-[0.2em] uppercase text-white">
@@ -252,7 +252,7 @@ function PlusPage() {
           </div>
         </FeatureCard>
 
-        <section className="plus-glass-note relative overflow-hidden rounded-2xl border-2 p-5 space-y-3">
+        <section className="plus-glass-note ui-panel relative overflow-hidden rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2.5">
             <Gift size={18} style={{ color: "var(--plus)" }} />
             <div>
@@ -274,9 +274,9 @@ function FeatureCard({ icon, title, desc, locked, children }: {
   icon: React.ReactNode; title: string; desc: string; locked: boolean; children: React.ReactNode;
 }) {
   return (
-    <section className="plus-glass-card rounded-2xl border border-border/70 bg-surface p-4 space-y-3 relative">
+    <section className="plus-glass-card ui-panel rounded-2xl p-4 space-y-3 relative">
       <div className="flex items-start gap-3">
-        <div className="btn-grad w-10 h-10 rounded-xl grid place-items-center shrink-0 text-white">{icon}</div>
+        <div className="btn-grad w-10 h-10 rounded-xl grid place-items-center shrink-0 text-white shadow-none">{icon}</div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold flex items-center gap-2">
             {title}

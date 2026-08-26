@@ -203,8 +203,9 @@
 
   body {
     background:
-      radial-gradient(circle at 4% -12%, oklch(0.72 0.08 236 / 0.12), transparent 31rem),
-      radial-gradient(circle at 96% 4%, oklch(0.55 0.15 262 / 0.08), transparent 28rem),
+      radial-gradient(circle at 8% -10%, oklch(0.72 0.08 236 / 0.14), transparent 30rem),
+      radial-gradient(circle at 92% 8%, oklch(0.55 0.15 262 / 0.11), transparent 28rem),
+      radial-gradient(circle at 50% 110%, oklch(0.34 0.11 270 / 0.09), transparent 34rem),
       var(--canvas);
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -573,7 +574,33 @@
 }
 .glass-ghost:hover { background: var(--glass-fill-soft); border-color: var(--glass-edge-muted); }
 
-.app-header {   box-shadow: 0 1px 0 oklch(0.48 0.04 258 / 0.72); }
+.app-header {
+  box-shadow: 0 1px 0 oklch(0.48 0.04 258 / 0.72), 0 14px 30px -28px oklch(0.02 0.02 258 / 0.8);
+}
+
+/* Superficies compartidas: profundidad sobria y lectura estable. */
+.ui-panel {
+  background: linear-gradient(145deg, oklch(0.235 0.034 258 / 0.96), oklch(0.19 0.028 258 / 0.94));
+  border: 1px solid oklch(0.52 0.055 258 / 0.44);
+  box-shadow: 0 18px 38px -28px oklch(0.02 0.02 258 / 0.82), inset 0 1px 0 oklch(0.98 0.02 252 / 0.08);
+}
+
+.ui-icon-tile {
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--primary) 13%, var(--surface-2));
+  border: 1px solid color-mix(in oklab, var(--primary) 28%, transparent);
+  color: var(--primary-glow);
+}
+
+.ui-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(0.62 0.08 258 / 0.42), transparent);
+}
+
+@media (max-width: 640px) {
+  .ui-panel { box-shadow: 0 14px 28px -25px oklch(0.02 0.02 258 / 0.78), inset 0 1px 0 oklch(0.98 0.02 252 / 0.07); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .glass-control, .glass-btn, .neu-btn, .btn-grad, .glass-ghost, .banner-shine, .badge-glow { transition-duration: 0ms; animation: none !important; }

@@ -11,6 +11,9 @@ const plus = readFileSync(resolve(root, "src/routes/plus.tsx"), "utf8");
 const glass = readFileSync(resolve(root, "src/glass-intensity.css"), "utf8");
 const search = readFileSync(resolve(root, "src/components/social/SearchSection.tsx"), "utf8");
 const profile = readFileSync(resolve(root, "src/components/social/ProfilePanel.tsx"), "utf8");
+const styles = readFileSync(resolve(root, "src/styles.css"), "utf8");
+const subPageHeader = readFileSync(resolve(root, "src/components/social/SubPageHeader.tsx"), "utf8");
+const button = readFileSync(resolve(root, "client/src/components/ui/button.tsx"), "utf8");
 
 describe("UI contrast and consistency", () => {
   it("uses one PlayButton in Home and the internal game card", () => {
@@ -39,5 +42,15 @@ describe("UI contrast and consistency", () => {
     expect(search).toContain("tabular-nums text-center");
     expect(search).toContain('bg-muted/70 text-foreground/80');
     expect(search).toContain("text-primary-glow");
+  });
+
+  it("keeps the global visual system and shared controls coherent", () => {
+    expect(styles).toContain(".ui-panel {");
+    expect(styles).toContain("radial-gradient(circle at 50% 110%");
+    expect(subPageHeader).toContain("ui-icon-tile");
+    expect(button).toContain("transition-[background-color,border-color,box-shadow,color,transform]");
+    expect(postCard).toContain("ui-panel");
+    expect(postCard).not.toContain("bg-violet-500");
+    expect(postCard).not.toContain("bg-rose-500");
   });
 });

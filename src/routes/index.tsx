@@ -265,10 +265,10 @@ function HomePage() {
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground">
       {/* Header */}
       {/* Material de vidrio contenido: blur moderado para mantener el scroll fluido. */}
-      <header className="app-header glass-header sticky top-0 z-20 border-b">
-        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
+      <header className="app-header glass-header sticky top-0 z-30 border-b border-white/[0.08]">
+        <div className={`max-w-2xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 ${inPreview ? "pt-14 pb-3" : "py-2.5"}`}>
           <button onClick={() => navigate({ to: "/profile" })} title="Mi perfil"
-            className="glass-control w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden active:scale-95 shrink-0">
+            className="glass-control ui-icon-tile w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden active:scale-95 shrink-0">
             <Avatar p={me} className="w-full h-full" />
           </button>
           <div className="flex-1 min-w-0 header-name">
@@ -278,7 +278,7 @@ function HomePage() {
           {typeof me?.orbes === "number" && me?.show_orbes !== false && (
             <div
               title={`${me.orbes} orbes`}
-              className="flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/15 shrink-0 select-none"
+              className="flex items-center gap-1.5 h-9 px-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0 select-none"
             >
               <Sparkles size={12} className="text-primary shrink-0" fill="currentColor" />
               <span className="text-[11px] sm:text-xs font-display font-semibold tabular-nums">{me.orbes}</span>
@@ -286,7 +286,7 @@ function HomePage() {
           )}
           <NotificationBell />
           <button onClick={() => setMenuOpen(true)} title="Menú"
-            className="glass-control w-9 h-9 rounded-lg text-ink-2 grid place-items-center hover:text-foreground active:scale-95 shrink-0">
+            className="glass-control ui-icon-tile w-10 h-10 rounded-xl active:scale-95 shrink-0">
             <Menu size={16} />
           </button>
         </div>

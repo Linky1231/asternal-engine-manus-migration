@@ -197,13 +197,13 @@ export const PostCard = memo(function PostCard({
 
   const postType = (post as Record<string, unknown>).post_type as string | undefined;
   const postTypeLabels: Record<string, { label: string; color: string }> = {
-    update: { label: "Actualización", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-    progress: { label: "Progreso", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-    tutorial: { label: "Tutorial", color: "bg-violet-500/10 text-violet-600 border-violet-500/20" },
-    question: { label: "Pregunta", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-    resource: { label: "Recurso", color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20" },
-    achievement: { label: "Logro", color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
-    announcement: { label: "Anuncio", color: "bg-rose-500/10 text-rose-600 border-rose-500/20" },
+    update: { label: "Actualización", color: "bg-primary/10 text-primary-glow border-primary/20" },
+    progress: { label: "Progreso", color: "bg-success/10 text-success border-success/20" },
+    tutorial: { label: "Tutorial", color: "bg-primary/10 text-primary border-primary/20" },
+    question: { label: "Pregunta", color: "bg-warn/10 text-warn border-warn/20" },
+    resource: { label: "Recurso", color: "bg-accent/10 text-accent border-accent/20" },
+    achievement: { label: "Logro", color: "bg-warn/10 text-warn border-warn/20" },
+    announcement: { label: "Anuncio", color: "bg-destructive/10 text-destructive border-destructive/20" },
   };
   const postTypeInfo = postType && postType !== "general" ? postTypeLabels[postType] : null;
   const postTypeLabel = postTypeInfo ? (
@@ -263,7 +263,7 @@ export const PostCard = memo(function PostCard({
   };
 
   return (
-    <article className={`group panel overflow-hidden rounded-2xl border border-border/60 transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/30 pointer-fine:hover:shadow-sm ${entranceClass}`}>
+    <article className={`group ui-panel overflow-hidden rounded-2xl transition-[border-color,box-shadow] duration-200 ease-out pointer-fine:hover:border-primary/45 pointer-fine:hover:shadow-md ${entranceClass}`}>
       {/* Hairline degradado superior */}
       <div aria-hidden="true" className="mx-3 h-px grad-brand-fade opacity-35 pointer-fine:group-hover:opacity-50 transition-opacity duration-200" />
 
@@ -462,7 +462,7 @@ export const PostCard = memo(function PostCard({
         )}
       </div>
 
-      <footer className="flex items-center border-t border-border/50 bg-muted/15 px-1 py-0.5 text-[11px] text-muted-foreground">
+      <footer className="flex items-center border-t border-border/35 bg-black/10 px-1 py-1 text-[11px] text-muted-foreground">
         <button type="button" onClick={() => { chooseFooterAction("like"); void react("like"); }}
           aria-pressed={interactions.liked}
           className={`flex-1 flex items-center justify-center gap-1.5 px-1 py-2 rounded-lg border transition-[transform,color,border-color] duration-150 ease-out active:scale-[0.93] ${socialActionStateClass(postFooterActionIsActive("like", { ...interactions, commentsOpen: openComments }))}`}>

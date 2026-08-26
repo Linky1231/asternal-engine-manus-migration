@@ -196,7 +196,7 @@ export function GameCard({
   }
 
   return (
-    <article className="panel rounded-2xl overflow-hidden border border-border/50 shadow-sm">
+    <article className="ui-panel rounded-2xl overflow-hidden">
       <div className="p-3 pb-0">
         <div className={`relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-muted/20 ${hasCover ? "" : "tile-blueprint"}`}>
         {hasCover ? (
@@ -221,9 +221,9 @@ export function GameCard({
               </Link>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 shadow-sm border border-primary/20 shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 shrink-0">
             <Sparkles size={12} className={price === 0 || owned ? "text-emerald-500" : "text-primary"} fill="currentColor" />
-            <span className={`text-[10px] font-display font-semibold tracking-wide ${price === 0 ? "text-emerald-600" : "text-foreground"}`}>
+            <span className={`text-[10px] font-display font-semibold tracking-wide ${price === 0 ? "text-success" : "text-foreground"}`}>
               {price === 0 ? "GRATIS" : owned ? "TUYO" : `${price} ORBES`}
             </span>
           </div>
@@ -271,21 +271,21 @@ export function GameCard({
         </div>
       )}
 
-      <footer className="flex items-center gap-1 px-2 py-1.5 text-[11px] text-muted-foreground">
-        <button onClick={like} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${post.my_like ? "text-primary-glow" : ""}`}>
+      <footer className="flex items-center gap-1 px-2 py-1.5 border-t border-border/35 bg-black/10 text-[11px] text-muted-foreground">
+        <button onClick={like} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-primary/10 hover:text-primary-glow active:scale-95 transition-colors ${post.my_like ? "text-primary-glow" : ""}`}>
           <Heart size={15} fill={post.my_like ? "currentColor" : "none"} /> {post.likes}
         </button>
-        <button onClick={() => setOpenComments(o => !o)} className="flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition">
+        <button onClick={() => setOpenComments(o => !o)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-primary/10 hover:text-primary-glow active:scale-95 transition-colors">
           <MessageCircle size={15} /> {post.comments_count}
         </button>
         {canRemix && !mine && (
           <button onClick={doRemix} disabled={remixing} title="Hacer remix"
-            className="flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ml-auto text-primary-glow disabled:opacity-60">
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-primary/10 active:scale-95 transition-colors ml-auto text-primary-glow disabled:opacity-60">
             {remixing ? <Loader2 size={14} className="animate-spin" /> : <GitFork size={14} />}
             <span className="text-[10px] font-display tracking-widest">REMIX</span>
           </button>
         )}
-        <button onClick={share} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg active:scale-95 transition ${canRemix && !mine ? "" : "ml-auto"}`}>
+        <button onClick={share} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-primary/10 hover:text-primary-glow active:scale-95 transition-colors ${canRemix && !mine ? "" : "ml-auto"}`}>
           <Share2 size={15} />
         </button>
       </footer>

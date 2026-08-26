@@ -49,7 +49,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 /* ═══════════ SECTION HEADER ═══════════ */
 function SectionHeader({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
   return (
-    <div className="flex items-center gap-2 pt-5 pb-2.5 first:pt-0">
+    <div className="flex items-center gap-2 pt-6 pb-3 first:pt-0">
       <span className="text-primary shrink-0">{icon}</span>
       <span className="font-display text-[13px] font-bold text-foreground tracking-tight">{label}</span>
       <span className="min-w-4 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-glow text-[10px] font-mono font-semibold tabular-nums text-center">{count}</span>
@@ -285,12 +285,12 @@ export function SearchSection() {
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="Buscar usuarios, juegos, publicaciones, arte…"
-          className="w-full h-12 pl-11 pr-11 rounded-xl bg-card border border-border/50 text-sm outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground/35"
+          className="glass-control w-full h-[52px] pl-11 pr-11 rounded-2xl text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15 transition-[border-color,box-shadow] placeholder:text-muted-foreground/45"
         />
         {q && (
           <button
             onClick={() => { setQ(""); inputRef.current?.focus(); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-muted/50 grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            className="glass-control absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg grid place-items-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <X size={13} />
           </button>
@@ -298,15 +298,15 @@ export function SearchSection() {
       </div>
 
       {/* Category tabs */}
-      <div className="flex flex-wrap gap-1.5 -mx-1 px-1 pb-1">
+      <div className="flex flex-wrap gap-2 -mx-1 px-1 pb-1">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1 px-2.5 sm:gap-1.5 sm:px-3.5 h-8 rounded-lg text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap transition-all duration-200 shrink-0 ${
+            className={`flex items-center gap-1 px-3 sm:gap-1.5 sm:px-3.5 h-9 rounded-xl text-[10px] sm:text-[11px] font-semibold tracking-wide whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform] duration-150 shrink-0 ${
               tab === t.id
                 ? "grad-brand text-primary-foreground"
-                : "bg-card border border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/20"
+                : "bg-card/70 border border-border/45 text-muted-foreground hover:text-foreground hover:border-primary/35 hover:bg-card"
             }`}
           >
             {t.icon} {t.label}
@@ -325,13 +325,13 @@ export function SearchSection() {
       {loading && (
         <div className="flex items-center justify-center gap-2.5 py-10">
           <Loader2 size={18} className="animate-spin text-primary/40" />
-          <span className="text-[12px] text-muted-foreground/50 font-medium">Buscando…</span>
+          <span className="text-[11px] text-muted-foreground/60 font-medium">Buscando…</span>
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !searched && (
-        <div className="text-center py-16 space-y-4">
+        <div className="ui-panel text-center py-16 px-5 rounded-2xl space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-border/30 grid place-items-center">
             <Search size={26} className="text-primary/45" />
           </div>
@@ -346,8 +346,8 @@ export function SearchSection() {
 
       {/* No results */}
       {!loading && searched && !hasAny && (
-        <div className="text-center py-16 space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-muted/30 border border-border/30 grid place-items-center">
+        <div className="ui-panel text-center py-16 px-5 rounded-2xl space-y-3">
+          <div className="ui-icon-tile w-14 h-14 mx-auto rounded-2xl">
             <Search size={20} className="text-muted-foreground/45" />
           </div>
           <div>

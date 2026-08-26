@@ -22,7 +22,7 @@ describe("dark reference palette", () => {
   });
 
   it("keeps mobile search categories visible without horizontal clipping", () => {
-    expect(search).toContain('className="flex flex-wrap gap-1.5 -mx-1 px-1 pb-1"');
+    expect(search).toContain('className="flex flex-wrap gap-2 -mx-1 px-1 pb-1"');
     expect(search).toContain("text-muted-foreground/65");
   });
 

@@ -1570,3 +1570,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Limpiar el acabado visual de botones e iconos: eliminar overlays, desenfoque y sombras acumuladas sin alterar la identidad oscura de Asternal
 - [x] Normalizar botones inline e icon-only para compartir estados, contraste y foco accesible
 - [x] Ejecutar revisión visual, build y pruebas de regresión después de la limpieza
+
+
+# Mejora visual integral de la aplicación
+- [x] Auditar todas las pantallas, shells, paneles, tarjetas, formularios, iconos y estados responsive
+- [x] Refinar tokens globales, superficies, tipografía, espaciado, navegación y jerarquía visual
+- [x] Mejorar pantallas y componentes prioritarios sin cambiar la lógica funcional
+- [x] Validar contraste, foco, responsive, tests, build y regresiones visuales
+- [x] Actualizar la regresión de Buscar para reflejar el nuevo espaciado visual de sus pestañas

@@ -47,13 +47,13 @@ function StatCard({ icon, label, value, sub, tone }: {
     : tone === "emerald" ? "bg-success/10 text-success"
     : "bg-destructive/10 text-destructive";
   return (
-    <div className="rounded-lg border border-border/70 bg-surface p-2.5 flex flex-col gap-1 min-w-0">
-      <div className={`w-7 h-7 rounded-lg grid place-items-center ${toneCls}`}>
+    <div className="ui-panel rounded-xl p-3 flex flex-col gap-1.5 min-w-0">
+      <div className={`ui-icon-tile w-8 h-8 rounded-lg ${toneCls}`}>
         {icon}
       </div>
       <div className="text-sm font-semibold font-display leading-tight truncate">{value}</div>
-      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider truncate">{label}</div>
-      {sub && <div className="text-[9px] text-muted-foreground/60 truncate">{sub}</div>}
+      <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider leading-[1.2] min-h-[22px]">{label}</div>
+      {sub && <div className="text-[9px] text-muted-foreground/60 leading-[1.2] min-h-[11px]">{sub}</div>}
     </div>
   );
 }
@@ -117,9 +117,9 @@ export function HistorySection() {
       className="space-y-4"
     >
       {/* Header */}
-      <div className="rounded-lg border border-border/70 bg-surface p-4">
+      <div className="ui-panel rounded-2xl p-4">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center">
+          <div className="ui-icon-tile w-11 h-11 rounded-2xl">
             <BarChart3 size={18} />
           </div>
           <div>
@@ -196,7 +196,7 @@ export function HistorySection() {
           {topGame && (
             <div className="shrink-0 max-w-[38%]">
               <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Más jugado</div>
-              <div className="rounded-lg border border-border/70 bg-surface px-2.5 py-2 flex items-center gap-2">
+              <div className="ui-panel rounded-xl px-2.5 py-2 flex items-center gap-2">
                 <PlayedGameThumbnail src={topGame.coverUrl} title={topGame.title} size="sm" />
                 <div className="min-w-0">
                   <div className="text-[11px] font-medium truncate">{topGame.title}</div>
@@ -249,7 +249,7 @@ export function HistorySection() {
                 <span className="text-xs">Cargando historial…</span>
               </div>
             ) : sortedGames.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+              <div className="ui-panel rounded-2xl border-dashed p-10 text-center">
                 <Gamepad2 size={24} className="mx-auto mb-2 text-muted-foreground/40" />
                 <div className="text-sm text-muted-foreground">Aún no has jugado ningún juego</div>
                 <div className="text-[11px] text-muted-foreground/60 mt-1">
@@ -263,7 +263,7 @@ export function HistorySection() {
                   initial={{ opacity: 0, y: 12, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.25, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                  className="panel rounded-2xl border border-border/50 overflow-hidden hover:border-primary/30 transition-colors"
+                  className="ui-panel rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                 >
                   <div className="flex items-center gap-3 p-3">
                     {/* Cover thumbnail */}
@@ -317,7 +317,7 @@ export function HistorySection() {
                 <span className="text-xs">Cargando likes…</span>
               </div>
             ) : likedPosts.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
+              <div className="ui-panel rounded-2xl border-dashed p-10 text-center">
                 <Heart size={24} className="mx-auto mb-2 text-muted-foreground/40" />
                 <div className="text-sm text-muted-foreground">No has dado like a ninguna publicación</div>
                 <div className="text-[11px] text-muted-foreground/60 mt-1">
@@ -331,7 +331,7 @@ export function HistorySection() {
                   initial={{ opacity: 0, y: 12, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.25, delay: i * 0.03, ease: [0.22, 1, 0.36, 1] }}
-                  className="panel rounded-2xl border border-border/50 overflow-hidden hover:border-primary/30 transition-colors"
+                  className="ui-panel rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                 >
                   <div className="flex items-start gap-3 p-3">
                     {/* Author avatar */}
