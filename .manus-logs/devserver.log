@@ -2356,3 +2356,6 @@
 [2026-08-26T20:16:30.601Z] VITE v7.3.6  ready in 254 ms
 [2026-08-26T20:16:30.601Z] ➜  Local:   http://localhost:5173/
 [2026-08-26T20:16:30.601Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-26T20:22:42.352Z] 8:22:42 PM [vite] (client) hmr update /src/routes/auth.tsx, /src/styles.css
+[2026-08-26T20:22:54.157Z] 8:22:54 PM [vite] (client) hmr update /src/routes/auth.tsx, /src/styles.css
+[2026-08-26T20:24:00.002Z] 8:24:00 PM [vite] (client) hmr update /src/routes/profile.tsx, /src/styles.css

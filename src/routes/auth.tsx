@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase, clearSupabaseCredentials } from "@/integrations/supabase/client";
 import {
   Gamepad2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2,
-  Check, AlertCircle, Sparkles, RefreshCw,
+  Check, AlertCircle, Sparkles, RefreshCw, Link2, ShieldCheck,
 } from "lucide-react";
 import { IDEA_HERO_COPY } from "@/lib/auth/idea-hero";
 import {
@@ -12,6 +12,7 @@ import {
   AUTH_FIELD_INPUT_FOCUS_CLASS,
 } from "@/lib/auth/field-focus";
 import { friendlyAuthError } from "@/lib/auth/friendly-error";
+import { startMultimodalLogin } from "@/lib/auth/manus";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -297,6 +298,8 @@ function AuthPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const [showPw, setShowPw] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [multimodalState, setMultimodalState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [multimodalMessage, setMultimodalMessage] = useState("");
   const [loaded, setLoaded] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -308,6 +311,40 @@ function AuthPage() {
     });
     requestAnimationFrame(() => setLoaded(true));
   }, [navigate]);
+
+  useEffect(() => {
+    if (!window.location.search.includes("multimodal=1")) return;
+    let active = true;
+    setMultimodalState("loading");
+    void (async () => {
+      try {
+        const response = await fetch("/api/supabase/link-manus", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({}) });
+        const payload = await response.json() as { error?: string; session?: Record<string, unknown>; username?: string };
+        if (!response.ok || !payload.session) throw new Error(payload.error || "No se pudo sincronizar la cuenta.");
+        const { error } = await supabase.auth.setSession(payload.session as never);
+        if (error) throw error;
+        if (!active) return;
+        setMultimodalState("success");
+        setMultimodalMessage(`Cuenta sincronizada como @${payload.username || "tu perfil"}.`);
+        window.history.replaceState({}, "", "/auth");
+      } catch (error) {
+        if (!active) return;
+        setMultimodalState("error");
+        setMultimodalMessage(error instanceof Error ? error.message : "No se pudo completar la sincronización.");
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const launchMultimodalLogin = () => {
+    setMultimodalState("loading");
+    setMultimodalMessage("Abriendo el acceso seguro de Manus…");
+    try { startMultimodalLogin(); }
+    catch (error) {
+      setMultimodalState("error");
+      setMultimodalMessage(error instanceof Error ? error.message : "No se pudo abrir Manus.");
+    }
+  };
 
   const clearErrors = () => { setErr(null); setFieldErrors({}); };
 
@@ -514,6 +551,24 @@ function AuthPage() {
                         </button>
                       ))}
                     </div>
+
+                    {mode === "signin" && (
+                      <section className="relative mb-4 overflow-hidden rounded-2xl border-2 border-primary/35 bg-[radial-gradient(circle_at_92%_8%,rgba(91,142,255,0.24),transparent_34%),linear-gradient(135deg,rgba(23,42,88,0.96),rgba(9,22,48,0.96))] p-4 shadow-[0_16px_42px_rgba(40,120,210,0.2)]" aria-label="Login multimodal con Manus">
+                        <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
+                        <div className="relative flex items-start gap-3">
+                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-cyan-300 text-slate-950 shadow-[0_8px_24px_rgba(62,177,255,0.3)]"><Link2 size={19} /></span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2"><h3 className="font-display text-sm font-semibold text-white">Login multimodal</h3><ShieldCheck size={14} className="text-cyan-300" /><span className="rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2 py-0.5 text-[9px] font-mono tracking-[0.12em] text-cyan-100">MANUS OFICIAL</span></div>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-200/75">Accede con Manus y sincroniza tu cuenta Asternal de forma segura.</p>
+                            <button type="button" aria-label="Login multimodal con Manus" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-400 via-blue-500 to-cyan-300 px-4 text-[10px] font-display font-bold tracking-[0.1em] text-slate-950 shadow-[0_9px_24px_rgba(45,140,240,0.34)] transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70">
+                              {multimodalState === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+                              {multimodalState === "loading" ? "SINCRONIZANDO…" : "LOGIN MULTIMODAL"}
+                            </button>
+                            {multimodalMessage && <p className={`mt-2 text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
+                          </div>
+                        </div>
+                      </section>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={onSubmit} className="space-y-3">

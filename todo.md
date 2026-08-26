@@ -1484,3 +1484,9 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Rediseñar el bloque de Login multimodal como acción visible, decorada y coherente con la paleta actual.
 - [x] Confirmar que el clic usa el OAuth oficial de Manus y que el retorno completa la vinculación Supabase.
 - [x] Validar despliegue, estados de carga/error, responsive, pruebas y checkpoint.
+
+# Ubicación de Login multimodal en autenticación
+
+- [x] Retirar el botón Login multimodal de Perfil sin dejar duplicados.
+- [x] Integrar el botón destacado dentro de la pestaña «Log in» de autenticación.
+- [x] Mantener el OAuth oficial de Manus, la vinculación Supabase y validar pruebas, responsive y checkpoint.

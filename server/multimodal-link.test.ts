@@ -6,6 +6,7 @@ const root = resolve(import.meta.dirname, "..");
 const server = readFileSync(resolve(root, "server/_core/index.ts"), "utf8");
 const oauth = readFileSync(resolve(root, "server/_core/oauth.ts"), "utf8");
 const profile = readFileSync(resolve(root, "src/routes/profile.tsx"), "utf8");
+const auth = readFileSync(resolve(root, "src/routes/auth.tsx"), "utf8");
 const helper = readFileSync(resolve(root, "src/lib/auth/manus.ts"), "utf8");
 
 describe("Manus multimodal login", () => {
@@ -21,15 +22,16 @@ describe("Manus multimodal login", () => {
 
   it("returns to profile only for the one-time multimodal intent", () => {
     expect(oauth).toContain("MULTIMODAL_LINK_COOKIE");
-    expect(oauth).toContain('/profile?multimodal=1');
+    expect(oauth).toContain('/auth?multimodal=1');
     expect(helper).toContain("OAUTH_STATE_COOKIE");
     expect(helper).toContain("crypto.randomUUID()");
   });
 
-  it("exposes an accessible profile action and establishes the returned Supabase session", () => {
-    expect(profile).toContain("Login multimodal");
-    expect(profile).toContain("startMultimodalLogin");
-    expect(profile).toContain("supabase.auth.setSession");
-    expect(profile).toContain('aria');
+  it("exposes the action inside Log in and establishes the returned Supabase session", () => {
+    expect(auth).toContain("Login multimodal");
+    expect(auth).toContain("startMultimodalLogin");
+    expect(auth).toContain("supabase.auth.setSession");
+    expect(auth).toContain('aria-label="Login multimodal con Manus"');
+    expect(profile).not.toContain("Login multimodal");
   });
 });
