@@ -1495,3 +1495,9 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 
 - [x] Cambiar únicamente el texto, icono y estilos visibles del botón OAuth a «Continuar con Google».
 - [x] Verificar que el handler OAuth existente no cambió y guardar checkpoint.
+
+# Corrección del retorno Google/Manus
+
+- [x] Diagnosticar la URL final, callback OAuth y ruta que produce el 404 en producción.
+- [x] Corregir el retorno para llegar a una ruta válida y completar la sincronización.
+- [x] Validar login, rutas de producción, estados de error, pruebas, compilación y checkpoint.

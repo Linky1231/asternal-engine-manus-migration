@@ -25,6 +25,8 @@ describe("Manus multimodal login", () => {
     expect(oauth).toContain('/auth?multimodal=1');
     expect(helper).toContain("OAUTH_STATE_COOKIE");
     expect(helper).toContain("crypto.randomUUID()");
+    expect(helper).toContain("asternaleng-ceskknda.manus.space");
+    expect(helper).toContain("isAsternalRuntime");
   });
 
   it("exposes the action inside Log in and establishes the returned Supabase session", () => {
