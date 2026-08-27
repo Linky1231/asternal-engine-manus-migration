@@ -14,9 +14,9 @@ Scripts manuales permanecerá únicamente en **Inspección**. Su contenido se ad
 
 | Contexto de Inspección | Nombre visible | Alcance de la petición | Resultado esperado |
 | --- | --- | --- | --- |
-| Sin objeto seleccionado | **Scripts manuales del proyecto** | Mapas, escenas, sistemas completos, datos de juego y cambios de editor solicitados para ese proyecto. | Cambios de escena, módulos, archivos fuente y/o interfaz propia de ese proyecto. |
-| Objeto seleccionado | **Scripts manuales del objeto** | Comportamiento, colisiones, controles, apariencia o UI vinculada a la entidad. | Script editable y, si hace falta, modificaciones de código compatibles con ese objeto. |
-| Elemento de UI seleccionado | **Scripts manuales de interfaz** | Interacciones, flujos de pantalla y controles del juego o del editor del creador. | Lógica de UI y, si la petición lo exige, cambios de componentes en la versión aislada del editor. |
+| Sin objeto seleccionado | **Scripts manuales del proyecto** | Mapas, escenas, sistemas completos, datos de juego y cambios de editor solicitados para ese proyecto. | Cambios directos de escena, archivos fuente y/o interfaz propia de ese proyecto. |
+| Objeto seleccionado | **Scripts manuales del objeto** | Comportamiento, colisiones, controles, apariencia o UI vinculada a la entidad. | Cambios directos al código de la versión aislada, con el objeto seleccionado como contexto. |
+| Elemento de UI seleccionado | **Scripts manuales de interfaz** | Interacciones, flujos de pantalla y controles del juego o del editor del creador. | Cambios de componentes y runtime en la versión aislada del editor. |
 
 La primera vista contiene solo un campo de descripción y el historial de resultados. Tras enviar la descripción, el sistema muestra una propuesta clara: qué se construyó, qué archivos cambia, qué pruebas realizó y si quedó activa. En vez de pedir al creador que comprenda la infraestructura, presenta acciones legibles: **Ver cambios**, **Probar**, **Usar esta versión** y **Restaurar versión anterior**.
 
@@ -29,10 +29,10 @@ La vista no será un nuevo espacio global ni una copia visible del repositorio c
 ## Flujo solicitado
 
 1. El creador abre **Inspección**, selecciona el proyecto, una escena, un objeto o una interfaz y describe lo que necesita.
-2. Scripts manuales determina si la petición se resuelve con un script existente o si necesita modificar código fuente de esa versión de Asternal.
-3. El sistema crea el cambio, guarda una versión aislada y ejecuta sus comprobaciones.
+2. Scripts manuales identifica los archivos fuente reales que necesita modificar en esa versión aislada de Asternal.
+3. El sistema crea una propuesta de cambio de código, guarda una versión aislada candidata y ejecuta sus comprobaciones.
 4. Si la comprobación termina correctamente, el creador puede probar de inmediato su versión; si no, verá los errores y conservará intacta la versión anterior.
-5. Cada resultado sigue siendo editable: el creador puede ajustar los scripts, editar los archivos o describir una modificación adicional.
+5. Cada resultado sigue siendo editable: el creador puede editar los archivos o describir una modificación adicional.
 6. Cuando una versión deja de servir, **Restaurar versión anterior** vuelve al último estado confirmado de ese mismo proyecto sin afectar a otras cuentas.
 
 ## Límites de producto que permanecen claros
@@ -48,7 +48,7 @@ El sistema trabajará sobre archivos fuente reales de Asternal; no sobre una rep
 | Área | Archivos actuales | Función real | Edición en la versión del creador |
 | --- | --- | --- | --- |
 | Modelo y simulación | `src/lib/engine/core.ts` | Define `Project`, `Scene`, `Entity`, físicas AABB, cámara, capas, jerarquía y el paso de escena. | **Permitida**, con migración y pruebas de compatibilidad obligatorias. |
-| Scripts y eventos | `src/lib/engine/scripts.ts`, `src/lib/engine/manual-scripts.ts` | Define eventos, bloques, intérprete y creación de scripts desde una descripción. | **Permitida** para ampliar el lenguaje y su ejecución. |
+| Sustitución de scripts | `src/lib/engine/scripts.ts`, `src/lib/engine/manual-scripts.ts` | Implementan los bloques y el intérprete que se retirarán. | **Se eliminan** al migrar al flujo de cambios directos de código. |
 | Ejecución del juego | `src/components/engine/GameRuntime.tsx`, `src/lib/engine/sfx.ts`, `src/lib/engine/images.ts`, `src/lib/engine/animations.ts` | Ejecuta Play, render Canvas 2D, entrada, audio, animaciones y UI de juego. | **Permitida**, con prueba en Play y compilación requerida. |
 | Interfaz de autoría | `src/components/engine/AsternalEditor.tsx`, `SceneEditor.tsx`, `UIEditor.tsx`, `AnimationEditor.tsx`, `PaintEditor.tsx`, `TilemapEditor.tsx`, `ProjectManager.tsx` | Implementa Construir, Inspección, UI, Escenas, Assets y Ajustes. | **Permitida** cuando el creador solicite un cambio de su editor. |
 | Recursos y persistencia de proyecto | `src/lib/engine/storage.ts`, `cloud-sync.ts`, `tilemap.ts` | Normaliza proyectos, conserva ID/escenas/scripts, separa claves locales por cuenta y sincroniza proyectos. | **Permitida con revisión reforzada**; debe preservar los formatos existentes. |
@@ -136,8 +136,8 @@ La clasificación no reduce la libertad para cambiar el editor; define qué copi
 
 | Petición del creador | Alcance que se crea | Archivos probables | Efecto en otras cuentas |
 | --- | --- | --- | --- |
-| «Cuando consiga una moneda, suma puntos» | Objeto | Datos de script del proyecto. | Ninguno. |
-| «Crea un mapa de tres zonas con llaves y puertas» | Escena/proyecto | Escenas, entidades, scripts y, si falta una capacidad, código de runtime del proyecto. | Ninguno. |
+| «Cuando consiga una moneda, suma puntos» | Objeto | Código de comportamiento del proyecto y, si hace falta, runtime de su versión. | Ninguno. |
+| «Crea un mapa de tres zonas con llaves y puertas» | Escena/proyecto | Escenas, entidades, código de comportamiento y, si falta una capacidad, runtime del proyecto. | Ninguno. |
 | «Añade un ranking semanal para mi juego» | Proyecto | Lógica de runtime, servicios de datos propios del juego, UI de juego y pruebas. | Ninguno. |
 | «Quiero un selector de equipos en el inspector» | Fork de cuenta | `AsternalEditor.tsx`, modelos, persistencia y pruebas de esa cuenta. | Ninguno. |
 | «Modifica cómo se dibujan las plataformas de mi editor» | Fork de cuenta o proyecto, según se indique | Renderizador de entidades, runtime y/o editor. | Ninguno. |
@@ -169,7 +169,7 @@ Este control no convierte el código en una maqueta: los cambios se aplican sobr
 
 ### Comprobaciones obligatorias
 
-Cada versión candidata atraviesa las siguientes capas antes de activarse. Para cambios de objeto puramente declarativos pueden ejecutarse menos verificaciones, pero toda modificación de archivos fuente de motor, runtime o editor debe ejecutar la secuencia completa.
+Cada versión candidata atraviesa las siguientes capas antes de activarse. Como Scripts manuales siempre modifica código fuente interno, no existen excepciones de objeto declarativas ni rutas alternativas de ejecución: toda petición ejecuta la secuencia completa.
 
 | Capa | Comprobación | Aplica a | Resultado de fallo |
 | --- | --- | --- | --- |
@@ -200,7 +200,7 @@ La primera versión debe demostrar la modificación real de código fuente y el 
 | 2. Visor de código en Inspección | Árbol de archivos, lector, diff, historial y restauración. | Se integra en Scripts manuales del proyecto o editor de este proyecto; usa la versión fuente de su dueño. | Un creador ve su árbol real, sus versiones y puede restaurar una anterior. |
 | 3. Edición manual de fuente | Editor de texto, guardado como versión candidata y validación de hashes. | Permite modificar archivos permitidos de motor, runtime e interfaz dentro del fork. | Un cambio manual no activa una versión si sus pruebas/build fallan y nunca afecta a otra cuenta. |
 | 4. Build aislado | Workspace desechable, tests, bundle, logs y artefacto inmutable. | Se incorpora el runner que parte de una versión exacta, ejecuta la comprobación y guarda los resultados. | `pnpm test` y `pnpm build` se ejecutan fuera del servidor público; la versión activa solo apunta a bundles aprobados. |
-| 5. Cambios desde una descripción | Propuesta estructurada, diff, creación de archivo y modificación de fuente. | Scripts manuales usa el contexto mínimo de proyecto/código y propone/aplica un parche en su fork. | Una petición de mapa, sistema o cambio de interfaz genera un diff revisable, pruebas y una versión aislada. |
+| 5. Cambios desde una descripción | Propuesta estructurada, diff, creación de archivo y modificación de fuente. | Scripts manuales usa el contexto mínimo de proyecto/código y propone/aplica exclusivamente un parche en su fork. | Una petición de mapa, sistema o cambio de interfaz genera cambios internos, un diff revisable, pruebas y una versión aislada. |
 | 6. Capacidades complejas | Cambios de datos, UI de editor, runtime y nuevas extensiones. | Se habilitan patrones de ranking, inventario, nuevas herramientas de inspección y sistemas de juego. | Cada capacidad define sus archivos, datos, pruebas, permiso y ruta de restauración. |
 
 La primera entrega no instalará paquetes, no ejecutará comandos elegidos por el usuario y no permitirá modificaciones del código de plataforma. Esas decisiones pueden reconsiderarse después, pero solo mediante una aprobación concreta por dependencia o nueva capacidad de infraestructura. El alcance sí incluye los archivos fuente reales de Asternal que implementan el motor, el runtime y el editor de la versión del creador.
@@ -225,7 +225,7 @@ La implementación se considerará correcta únicamente cuando todos estos resul
 
 1. **Código real por cuenta.** El creador puede ver y editar los archivos fuente de su versión de Asternal dentro de Inspección, incluidos motor, runtime e interfaz cuando el alcance sea proyecto o editor de ese creador.
 2. **Aislamiento verificable.** Las pruebas demuestran que una cuenta no puede leer, modificar, compilar, activar ni restaurar el fork de otra cuenta, incluso manipulando identificadores de URL o solicitudes.
-3. **Compatibilidad de proyectos.** Un proyecto existente conserva sus identificadores, escenas, dimensiones, scripts de bloques, entidades y guardados tras asociarse a una versión de fuente.
+3. **Compatibilidad de proyectos.** Un proyecto existente conserva sus identificadores, escenas, dimensiones, entidades y guardados tras asociarse a una versión de fuente; sus bloques anteriores se archivan únicamente dentro de una versión histórica recuperable y no se ejecutan en la arquitectura nueva.
 4. **Cambio desde descripción.** Una petición de mapa, mecánica, ranking o herramienta del editor produce una propuesta con resumen, archivos afectados, diff y pruebas asociadas.
 5. **Cambio de interfaz por cuenta.** Una modificación de `AsternalEditor.tsx` o `UIEditor.tsx` en el fork de una cuenta es visible para esa cuenta y no altera el editor de las demás.
 6. **No activar ante fallos.** Un error de validación, pruebas, build o ejecución contextual mantiene activa la versión previa y muestra detalles del fallo solo a su propietario.
@@ -237,6 +237,109 @@ La implementación se considerará correcta únicamente cuando todos estos resul
 La recomendación es implementar las seis fases en orden, con **build aislado y artefactos inmutables por versión**. Este diseño cumple la intención de editar directamente el código de Asternal, incluso su interfaz, sin convertir cambios experimentales de una cuenta en cambios globales.
 
 Para iniciar la fase 1 de implementación harán falta dos decisiones prácticas: autorizar el almacenamiento interno de artefactos y proporcionar una credencial de servidor con permisos mínimos para el repositorio de servicio o confirmar que los forks se mantendrán solo en almacenamiento privado hasta una fase posterior. No se solicitará ninguna credencial durante esta etapa de planificación.
+
+## Cambio estructural solicitado: sin scripts por bloques
+
+La solicitud actual sustituye por completo el modelo anterior. **Scripts manuales no debe crear, mostrar ni ejecutar scripts de bloques.** Una descripción como «haz un sistema de ranking» o «construye este mapa» deberá producir siempre una modificación del código interno real de la versión aislada del creador. Los cambios pueden alcanzar el motor, el runtime, el editor o sus servicios propios, según lo exija la petición.
+
+### Inventario de retirada
+
+| Dependencia actual | Responsabilidad del sistema anterior | Acción de sustitución |
+| --- | --- | --- |
+| `src/lib/engine/core.ts` | Declara `Entity.scripts?: Script[]` y conecta las entidades con el lenguaje de bloques. | Retirar el campo y su importación después de migrar los proyectos existentes al formato de versiones de fuente. |
+| `src/lib/engine/scripts.ts` | Contiene eventos, bloques, etiquetas, intérprete y `createScriptRunner`. | Eliminar el archivo y sus pruebas de comportamiento tras reemplazarlo por el cargador de versión de código aislada. |
+| `src/components/engine/GameRuntime.tsx` | Crea el runner de bloques y lo invoca en el ciclo de Play. | Cargar y ejecutar el runtime compilado de la versión activa del proyecto; dejar de invocar `createScriptRunner`. |
+| `src/components/engine/ScriptEditor.tsx` | Muestra eventos, bloques, controles de edición y scripts vacíos. | Reemplazarlo por el panel de descripción, árbol de código, diff, resultados de build e historial de versiones. |
+| `src/lib/engine/manual-scripts.ts` | Envía una descripción para recibir un borrador de bloques. | Reemplazarlo por una solicitud estructurada de cambio de archivos y una lectura de resultados por versión. |
+| `server/manual-scripts.ts` | Traduce una descripción a eventos y bloques permitidos. | Sustituirlo por un servicio que genera un `SourceChangeProposal`, con parche, hashes, pruebas y alcance de fork. |
+| `server/_core/index.ts` y `vite.config.ts` | Registran la ruta de creación de scripts de bloque en producción y desarrollo. | Cambiar la ruta interna para crear, consultar, probar y restaurar versiones de fuente. |
+| `server/engine-scripts.test.ts`, `server/manual-scripts.test.ts`, `server/manual-scripts-ui.test.ts` | Garantizan el intérprete, borradores de bloques y su interfaz. | Retirar o reescribir como pruebas de aislamiento, propuestas de archivos, versiones, builds y restauración. |
+| `src/lib/engine/storage.ts` y sincronización de proyectos | Conservan los datos `scripts` serializados dentro de entidades. | Aplicar una migración que retire los scripts activos y conserve una copia histórica sólo dentro de la versión anterior recuperable. |
+
+El único contenido visible de Scripts manuales después de la sustitución será: descripción de la necesidad, alcance escogido o detectado, archivos afectados, diff, estado de pruebas/build, historial y restauración. No habrá editor de bloques, selector de eventos, lista de acciones, scripts vacíos ni intérprete asociado en el runtime.
+
+La retirada se realizará como una migración de versiones, no como un borrado inmediato de datos en los proyectos. Antes de remover `Entity.scripts`, cada proyecto recibirá una versión base compatible de fuente y un snapshot restaurable de su estado previo. Al abrir la nueva versión, los arreglos de bloques dejan de ejecutarse y se eliminan del proyecto normalizado; si un creador necesita recuperar una lógica anterior durante la transición, puede restaurar la versión previa del proyecto, pero esa versión no se mezcla con la nueva arquitectura.
+
+### Contrato de cambio interno de código
+
+El servicio que hoy produce un objeto `ManualScriptDraft` dejará de devolver eventos o bloques. Recibirá el contexto real que el creador abrió en Inspección y devolverá siempre un `SourceChangeProposal`. Un objeto seleccionado no cambia este principio: aporta identificadores, propiedades y escena al contexto del cambio, pero el resultado sigue siendo un parche de archivos fuente.
+
+```ts
+type SourceChangeRequest = {
+  ownerId: string;
+  forkId: string;
+  baseVersionId: string;
+  target: {
+    kind: "project" | "scene" | "entity" | "game-ui" | "editor-ui";
+    projectId: string;
+    sceneId?: string;
+    entityId?: string;
+    uiElementId?: string;
+  };
+  description: string;
+};
+
+type SourceChangeProposal = {
+  summary: string;
+  scope: "project" | "account-editor";
+  affectedFiles: Array<{
+    path: string;
+    beforeSha256: string | null;
+    operation: "create" | "update" | "delete";
+    patch: string;
+  }>;
+  requiredTests: Array<"pnpm test" | "pnpm build" | "play-context">;
+  warnings: string[];
+};
+```
+
+Las siguientes reglas son obligatorias para el reemplazo:
+
+| Regla | Consecuencia técnica |
+| --- | --- |
+| Cada petición modifica código | La propuesta debe incluir al menos un archivo TypeScript, TSX o un archivo fuente permitido. Una propuesta sin archivos se rechaza. |
+| No se generan bloques | El contrato no contiene `event`, `blocks`, `BlockKind`, `Script` ni objetos equivalentes. |
+| El código es el comportamiento | El runtime de la versión activa se construye desde los archivos del fork; no consulta `Entity.scripts` ni inicializa un intérprete paralelo. |
+| El creador puede inspeccionarlo | Cada archivo propuesto se muestra con su diff antes y después de aplicar; el creador puede editar el mismo archivo directamente. |
+| La versión previa sigue disponible | Ningún parche modifica la versión activa. Cada parche crea una versión candidata inmutable y restaurable. |
+| El cambio se aísla | El servicio exige que `ownerId`, `forkId` y `baseVersionId` pertenezcan a la misma cuenta antes de obtener el árbol fuente. |
+
+Así, una petición de ranking creará o modificará por ejemplo un servicio de puntuaciones, el runtime del juego y la interfaz correspondiente dentro del fork. Una petición de mapa modificará el código que materializa su mapa y las reglas de la escena dentro de esa misma versión. La aplicación no intentará traducir ninguna de esas peticiones a las acciones limitadas del intérprete que se retira.
+
+### Migración de proyectos sin bloques activos
+
+La retirada de los bloques debe ser compatible con los proyectos existentes, pero esa compatibilidad no significa seguir ejecutándolos. La migración preserva el proyecto y su contexto en una versión histórica sellada, crea una versión de fuente aislada para el nuevo sistema y elimina todos los scripts activos de la representación que abre el nuevo editor.
+
+| Paso | Acción de migración | Conserva | No conserva como funcional |
+| --- | --- | --- | --- |
+| 1. Detectar | Se identifica un proyecto que no tenga una vinculación de fuente (`sourceBinding`). | ID de proyecto, `ownerId`, escenas, entidades, dimensiones, UI, assets, variables, capas, grupos y configuración. | Ninguna ejecución nueva. |
+| 2. Sellar historial | Se guarda un snapshot completo del proyecto anterior y se vincula a la revisión canónica que lo originó. | El JSON original, incluidos sus antiguos datos `scripts`, para recuperación administrativa/versionada. | El snapshot no se carga en el runtime nuevo. |
+| 3. Crear base de fuente | Se crea el fork de proyecto desde la revisión canónica o desde el fork de cuenta ya activo. | El árbol real del motor, runtime y editor que utilizará el creador. | Ninguna referencia al intérprete de bloques. |
+| 4. Normalizar | Se crea la versión de datos actual eliminando `Entity.scripts` y cualquier metadato exclusivo de bloques. | Todos los demás campos y relaciones de cada entidad/escena. | Eventos, bloques y scripts vacíos. |
+| 5. Reemplazar interfaz y runtime | El proyecto abre el nuevo panel de Scripts manuales y carga el bundle de su versión de fuente. | Inspección, Construir, UI, Escenas, Assets, Ajustes y Play. | `ScriptEditor`, selector de eventos y `createScriptRunner`. |
+| 6. Validar y activar | Se comparan los identificadores y conteos antes/después, se compila la versión y se activa el fork. | Compatibilidad de datos y una ruta para restaurar una versión aprobada. | Posibilidad de reactivar bloques dentro de la arquitectura nueva. |
+
+La normalización deberá ser idempotente. Si un proyecto ya tiene `sourceBinding` y una versión activa válida, no vuelve a crear una segunda copia ni cambia sus identificadores. La prueba de migración usa proyectos con escenas múltiples, jerarquías, UI, cámaras, variables tipadas, assets y entidades que contengan scripts previos; debe demostrar que el resultado conserva todo salvo las propiedades exclusivas del modelo retirado.
+
+El orden técnico de retirada será el siguiente:
+
+1. Crear el almacenamiento de snapshots y las vinculaciones de fuente por cuenta/proyecto.
+2. Ejecutar y comprobar la migración de datos de proyecto en modo no destructivo.
+3. Sustituir `ScriptEditor.tsx` y `manual-scripts.ts` por el panel de código, propuesta y versiones.
+4. Reemplazar `server/manual-scripts.ts` y sus rutas por el servicio de cambios de fuente.
+5. Modificar `GameRuntime.tsx` para cargar el runtime compilado de la versión activa y retirar `createScriptRunner`.
+6. Retirar el campo `scripts` de `Entity`, las importaciones de tipos y `src/lib/engine/scripts.ts`.
+7. Reescribir las pruebas de bloques como pruebas de migración, aislamiento, propuestas, builds y restauración.
+
+El rollback de un fork nuevo apunta a su versión anterior de fuente y datos aprobados; nunca reactiva fragmentos de bloques dentro del runtime nuevo. El respaldo sellado anterior sólo protege la recuperación controlada durante la migración y permite comprobar que ninguna escena o entidad se perdió al retirar el sistema.
+
+## Aprobación de implementación solicitada
+
+La especificación queda actualizada con esta decisión estructural: **se elimina el sistema de scripts por bloques en su totalidad**. Scripts manuales conservará su nombre y su ubicación exclusiva en Inspección, pero su única salida será una modificación interna de código fuente perteneciente a la versión aislada del creador.
+
+Al autorizar la implementación, el trabajo comenzará por el registro de forks y snapshots, continuará con la retirada del intérprete, tipos, panel y rutas de bloques, y terminará con el visor de código, diffs, build aislado y restauración. El sistema no volverá a traducir solicitudes a eventos o bloques. Una petición válida deberá crear cambios de archivos de motor, runtime, editor o servicios del proyecto dentro de su fork.
+
+Antes de la fase de commits/build externo se solicitará la credencial de servidor que corresponda. Hasta entonces no se modificarán la versión compartida de Asternal, los proyectos existentes ni el sistema de bloques actualmente publicado.
 
 ## Referencias
 

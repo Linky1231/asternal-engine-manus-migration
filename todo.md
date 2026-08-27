@@ -1685,3 +1685,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Sustituir en la interfaz las menciones visibles al asistente de scripting por «Scripts manuales»
 - [x] Mantener el acceso a Scripts manuales solo dentro de Inspección y sustituir la descripción actual
 - [x] Añadir o actualizar pruebas de regresión para las nuevas etiquetas y el acceso desde Inspección
+
+# Sustitución de bloques por cambios internos de código
+
+- [x] Auditar todos los usos de scripts, bloques e intérprete que deben retirarse
+- [x] Diseñar Scripts manuales para crear exclusivamente cambios directos de código fuente por versión aislada
+- [x] Definir migración de proyectos existentes sin scripts de bloque ni pérdida de escenas, entidades o IDs
+- [x] Actualizar la especificación y solicitar aprobación antes de implementar la retirada estructural
