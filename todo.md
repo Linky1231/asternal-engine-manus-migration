@@ -1668,17 +1668,17 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 
 # Planificación de forks de motor por usuario
 
-- [ ] Auditar viabilidad de almacenamiento, builds y publicación aislada para código por usuario
-- [ ] Definir forks por cuenta, versiones, permisos, límites y modelo de datos
-- [ ] Diseñar el flujo de Orión para cambios de motor, runtime e interfaz por fork
-- [ ] Documentar la hoja de ruta y los criterios de aceptación de la implementación
+- [x] Auditar viabilidad de almacenamiento, builds y publicación aislada para código por usuario
+- [x] Definir forks por cuenta, versiones, permisos, límites y modelo de datos
+- [x] Diseñar el flujo de Orión para cambios de motor, runtime e interfaz por fork
+- [x] Documentar la hoja de ruta y los criterios de aceptación de la implementación
 
 # Especificación de Orión como editor directo de Asternal
 
-- [ ] Definir el flujo desde una petición de mapa o mecánica hasta la modificación de motor, runtime e interfaz
-- [ ] Inventariar el código fuente que Orión debe leer y las acciones de edición necesarias
-- [ ] Diseñar generación de cambios, pruebas, publicación y restauración del código fuente
-- [ ] Entregar la especificación final para aprobación antes de implementar
+- [x] Definir el flujo desde una petición de mapa o mecánica hasta la modificación de motor, runtime e interfaz
+- [x] Inventariar el código fuente que Orión debe leer y las acciones de edición necesarias
+- [x] Diseñar generación de cambios, pruebas, publicación y restauración del código fuente
+- [x] Entregar la especificación final para aprobación antes de implementar
 
 # Presentación de Scripts manuales
 
