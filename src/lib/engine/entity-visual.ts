@@ -86,9 +86,6 @@ export function drawEntityFallback(ctx: CanvasRenderingContext2D, entity: Entity
     const radius = Math.min(w, h) * 0.18;
     fillRounded(ctx, x, y + h * 0.12, w, h * 0.78, radius, color);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,255,255,0.3)";
-    roundedRect(ctx, x + w * 0.13, y + h * 0.2, w * 0.44, Math.max(2, h * 0.1), radius / 2);
-    ctx.fill();
     ctx.fillStyle = "#161b3a";
     ctx.beginPath();
     ctx.arc(x + w * 0.32, y + h * 0.49, Math.max(2, w * 0.1), 0, Math.PI * 2);
@@ -101,15 +98,6 @@ export function drawEntityFallback(ctx: CanvasRenderingContext2D, entity: Entity
     ctx.moveTo(x + w * 0.34, y + h * 0.7);
     ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.8, x + w * 0.66, y + h * 0.7);
     ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.58)";
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.18, y + h * 0.12);
-    ctx.lineTo(x + w * 0.3, y);
-    ctx.lineTo(x + w * 0.4, y + h * 0.12);
-    ctx.moveTo(x + w * 0.6, y + h * 0.12);
-    ctx.lineTo(x + w * 0.7, y);
-    ctx.lineTo(x + w * 0.82, y + h * 0.12);
-    ctx.fill();
   } else if (kind === "platform") {
     // Bloque continuo: bordes mínimos para que piezas contiguas se unan visualmente.
     const radius = Math.min(5, Math.max(2, h * 0.12));
@@ -131,8 +119,6 @@ export function drawEntityFallback(ctx: CanvasRenderingContext2D, entity: Entity
 
     // Cara superior ancha: la iluminación ocupa la superficie y conecta con el bloque vecino.
     fillRounded(ctx, x, y, w, capH, radius, "rgba(109, 196, 255, 0.96)");
-    fillRounded(ctx, x + w * 0.08, y + h * 0.1, w * 0.84, Math.max(3, capH * 0.46), Math.min(4, radius), "rgba(224, 248, 255, 0.58)");
-    fillRounded(ctx, x + w * 0.17, y + h * 0.25, w * 0.66, Math.max(2, capH * 0.18), 2, "rgba(255,255,255,0.3)");
 
     // Remaches internos, alejados de las uniones para no dibujar falsas grietas.
     ctx.fillStyle = "rgba(225,248,255,0.5)";

@@ -174,15 +174,8 @@ export function GameRuntime({
 
       // (parallax bands removed — scene now uses real Z-ordered layers)
 
-      ctx.strokeStyle = "rgba(56,189,248,0.10)";
-      ctx.lineWidth = 1;
-      const off = -state.cameraX * 0.4;
-      ctx.beginPath();
-      for (let x = (off % 40); x < W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
-      for (let y = 0; y < H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
-      ctx.stroke();
+      // Fixed-size camera: calculate it before drawing any camera-relative layer.
 
-      // Fixed-size camera: the view does NOT shrink when the map grows.
       const VIEW_H = 700;
       const scale = H / VIEW_H;
       const viewW = W / scale;
@@ -197,8 +190,21 @@ export function GameRuntime({
         else camX = (work.width - viewW) / 2;
         if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
         else camY = (work.height - viewH) / 2;
+        // Keep camera motion aligned to rendered pixels; this removes subpixel grid jitter.
+        camX = Math.round(camX * scale) / scale;
+        camY = Math.round(camY * scale) / scale;
         state.cameraX = camX;
       }
+
+      // Stable grid: uses the same camera value as the world render, avoiding one-frame lag.
+      ctx.strokeStyle = "rgba(56,189,248,0.10)";
+      ctx.lineWidth = 1;
+      const off = -camX * 0.4;
+      ctx.beginPath();
+      for (let x = (off % 40); x < W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      for (let y = 0; y < H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.stroke();
+
       const sx = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;
       const sy = shake.time > 0 ? (Math.random() - 0.5) * shake.intensity : 0;
       ctx.save();
@@ -418,10 +424,11 @@ export function GameRuntime({
     const nx = len > max ? (dx / len) * max : dx;
     const ny = len > max ? (dy / len) * max : dy;
     joyKnobs.current.set(id, { dx: nx, dy: ny });
-    const ax = nx / max;
+    const deadzone = Math.max(8, max * 0.18);
+    const ax = Math.abs(nx) < deadzone ? 0 : nx / max;
     void ny;
-    joySrc.current.left = ax < -0.25;
-    joySrc.current.right = ax > 0.25;
+    joySrc.current.left = ax < -0.3;
+    joySrc.current.right = ax > 0.3;
     // Joystick is for movement only — jumping is bound to the JUMP button.
     recomputeInput();
   };

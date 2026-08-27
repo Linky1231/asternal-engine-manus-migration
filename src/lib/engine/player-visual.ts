@@ -38,17 +38,15 @@ export function drawPlayerPill(
     ctx.shadowColor = "rgba(86, 173, 255, 0.72)";
     ctx.shadowBlur = 10 + movement * 5;
   }
-  const body = ctx.createLinearGradient(x, bodyY, x + w, bodyY + bodyH);
-  body.addColorStop(0, "#8ca4ff");
-  body.addColorStop(0.52, "#62baff");
-  body.addColorStop(1, "#44e0e3");
-  ctx.fillStyle = body;
+  // Superficie sólida con halo: sin raya aislada en la cabeza.
+  ctx.fillStyle = "#5fb8ee";
   roundedRect(ctx, x, bodyY, w, bodyH, r);
   ctx.fill();
 
+  // Luz amplia y suave integrada en el volumen superior.
   ctx.shadowBlur = 0;
-  ctx.fillStyle = "rgba(255,255,255,0.42)";
-  roundedRect(ctx, x + w * 0.16, bodyY + bodyH * 0.12, w * 0.5, Math.max(2, bodyH * 0.10), Math.min(6, bodyH * 0.05));
+  ctx.fillStyle = "rgba(224,248,255,0.13)";
+  roundedRect(ctx, x + w * 0.12, bodyY + bodyH * 0.08, w * 0.76, bodyH * 0.32, Math.min(10, r));
   ctx.fill();
 
   const blinkCycle = (time % 4.2);

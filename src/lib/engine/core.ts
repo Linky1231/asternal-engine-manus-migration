@@ -492,6 +492,26 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
     }
   }
 
+  const solids = scene.entities.filter((e) => e.solid);
+  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble);
+
+  // Stabilize a player that starts exactly on a platform before input is applied.
+  // This prevents the first joystick sample from combining with a tiny gravity overlap.
+  for (const e of scene.entities) {
+    if (!e.controllable || e.vy < 0) continue;
+    const support = solids.find(o =>
+      o !== e && o.solid &&
+      e.x + e.w > o.x + 0.5 && e.x < o.x + o.w - 0.5 &&
+      e.y + e.h >= o.y - 6 && e.y + e.h <= o.y + 2
+    );
+    if (support) {
+      e.y = support.y - e.h;
+      e.vy = 0;
+      (e as Entity & { _grounded?: boolean })._grounded = true;
+      (e as Entity & { _floor?: Entity })._floor = support;
+    }
+  }
+
   // Player input — smooth accel & friction for game-feel.
   const speedMul = state.speedT > 0 ? 1.6 : 1;
   const TERMINAL = 1200;
@@ -521,9 +541,6 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
       e.facing = e.vx > 0 ? 1 : -1;
     }
   }
-  const solids = scene.entities.filter((e) => e.solid);
-  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble);
-
   // Predictive ledge detection for enemies (before moving)
   for (const e of scene.entities) {
     if (e.kind !== "enemy" || Math.abs(e.vx) <= 0.1) continue;
@@ -773,8 +790,6 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         }
       }
     }
-    // camera follow
-    state.cameraX = Math.max(0, Math.min(scene.width - 360, e.x - 160));
   }
 
   state.jumpPrev = input.jump;

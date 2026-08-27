@@ -1624,3 +1624,13 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Persistir rotación, reflejarla en editor y Play, y conservar colisiones compatibles
 - [x] Validar móvil, interacción, pruebas y build
 - [x] Actualizar la aserción de plataforma para reflejar el nombre actual de la iluminación volumétrica
+
+
+# Corrección de brillo, fondo y colisión inicial
+- [x] Auditar los trazos de brillo, el desplazamiento del fondo/cámara y el primer contacto del jugador
+- [x] Eliminar líneas de brillo aisladas de píldora y objetos manteniendo volumen suave
+- [x] Estabilizar el fondo y el desplazamiento para evitar tambaleo durante el movimiento
+- [x] Corregir el primer contacto del joystick con plataformas y otras colisiones
+- [x] Validar movimiento, colisiones, responsive, pruebas y build
+- [x] Corregir el orden de inicialización de solids en la estabilización del jugador
+- [x] Ajustar la prueba de spawn estable para aceptar el epsilon físico de resolución de colisiones
