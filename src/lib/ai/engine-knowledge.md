@@ -1,3 +1,15 @@
+========================================================
+MOTOR DE JUEGOS DE ASTERNAL — CONOCIMIENTO COMPLETO PARA ORIÓN
+========================================================
+
+Este es el código fuente del motor de juegos de Asternal. Úsalo para
+explicar cómo funciona el motor, ayudar a crear juegos, depurar y dar
+consejos profesionales de desarrollo de videojuegos.
+
+--------------------------------------------------------
+MÓDULO: core.ts (el motor principal — código completo)
+--------------------------------------------------------
+```ts
 // Asternal Engine core: ECS-lite + loop + physics + scenes + input
 import type { AnimationClip } from "./animations";
 import type { Script } from "./scripts";
@@ -27,18 +39,6 @@ export interface SpriteAsset {
   frames: SpriteFrame[];
 }
 
-export interface AudioAsset {
-  id: string;
-  name: string;
-  mimeType: string;
-  dataUrl: string;
-  duration?: number;
-  /** Ganancia propia del recurso, multiplicada por el volumen global. */
-  volume?: number;
-  /** Permite que el clip se use en repetición desde los bloques de audio. */
-  loop?: boolean;
-}
-
 export interface Hitbox {
   x: number; // offset relative to entity x
   y: number;
@@ -47,9 +47,6 @@ export interface Hitbox {
 }
 
 export type PowerupKind = "speed" | "djump" | "invuln";
-export type VariableType = "number" | "text" | "boolean";
-export type BodyType = "static" | "dynamic" | "kinematic";
-export type CollisionShape = "rectangle" | "circle";
 
 export interface MovingSpec { axis: "x" | "y"; range: number; speed: number; _origin?: number; _dir?: number }
 export interface CrumbleSpec { delay: number; respawn: number; _t?: number; _state?: "idle" | "break" | "gone"; _rt?: number }
@@ -86,12 +83,6 @@ export interface DialogSpec {
 export interface Entity {
   id: string;
   kind: EntityKind;
-  /** Nombre legible, independiente de la clase de objeto. */
-  name?: string;
-  /** Grupo autoral al que pertenece el objeto; no altera física ni render. */
-  parentGroupId?: string | null;
-  /** Orden dentro del grupo para navegación y automatización del editor. */
-  hierarchyOrder?: number;
   x: number;
   y: number;
   w: number;
@@ -111,30 +102,7 @@ export interface Entity {
   texture?: string | null;
   animations?: AnimationClip[];
   scripts?: Script[];
-  /** Datos de autoría libres para que los scripts no dependan de casos por tipo. */
-  variables?: Record<string, string | number | boolean>;
-  /** Esquema persistente de variables iniciales; saves previos infieren el tipo del valor. */
-  variableTypes?: Record<string, VariableType>;
-  tags?: string[];
   hitbox?: Hitbox | null;
-  /** Escala relativa al tamaño guardado. El valor 1 conserva el comportamiento existente. */
-  scaleX?: number;
-  scaleY?: number;
-  /** Cuerpo estático, dinámico con gravedad o cinemático controlado por scripts/behaviors. */
-  bodyType?: BodyType;
-  /** Masa relativa usada al recibir impulsos. */
-  mass?: number;
-  /** Fricción normalizada 0..1 aplicada sobre una superficie. */
-  friction?: number;
-  /** Rebote normalizado 0..1 aplicado al impacto con sólidos. */
-  restitution?: number;
-  /** Forma de contacto; la resolución conserva AABB para estabilidad. */
-  collisionShape?: CollisionShape;
-  /** Bit de capa y máscara que filtran contactos físicos. */
-  collisionLayer?: number;
-  collisionMask?: number;
-  /** Detecta solapamiento sin aplicar empuje. */
-  isTrigger?: boolean;
   // advanced behaviors
   value?: number;
   moving?: MovingSpec | null;
@@ -175,20 +143,6 @@ export interface SceneLayer {
   opacity?: number; // 0..1
 }
 
-/** Carpeta/nodo semántico del editor que puede contener objetos y otros grupos. */
-export interface SceneGroup {
-  id: string;
-  name: string;
-  parentId?: string | null;
-  order?: number;
-  collapsed?: boolean;
-}
-
-/** Árbol de autoría de una escena, separado de física y orden de render. */
-export interface SceneHierarchy {
-  groups: SceneGroup[];
-}
-
 // ---- UI Overlay ----
 export type UIElementKind = "button" | "label" | "image" | "panel" | "bar" | "joystick";
 export type UIAnchor = "tl" | "tc" | "tr" | "cl" | "c" | "cr" | "bl" | "bc" | "br";
@@ -216,42 +170,24 @@ export interface UIElement {
   eventName?: string;
   bind?: UIBind;
   max?: number;
-  /** Valor de la barra cuando no está ligada a un estado del runtime. */
-  initialValue?: number;
   visible?: boolean;
 }
 
-export interface Tilemap {
-  tileSize: number;
-  cols: number;
-  rows: number;
-  cells: (string | null)[];
-}
 export interface Scene {
   id: string;
   name: string;
   bg: string;
   bgImage?: string | null;       // dataURL or CDN URL
-  bgImageMode?: "cover" | "contain" | "stretch" | "tile" | "nine-slice";
-  bgNineSlice?: { left: number; right: number; top: number; bottom: number };
+  bgImageMode?: "cover" | "contain" | "stretch" | "tile";
   gravity: number;
   width: number;
   height: number;
   entities: Entity[];
-  /** Estado compartido por escena, accesible desde los bloques visuales. */
-  variables?: Record<string, string | number | boolean>;
-  variableTypes?: Record<string, VariableType>;
   timeLimit?: number;            // seconds; 0 = no limit
   parallax?: ParallaxLayer[];    // deprecated — ignored at runtime, kept for older saves
   layers?: SceneLayer[];         // Z-ordered scene layers
   startLives?: number;
   ui?: UIElement[];
-  /** Capa de tiles opcional; se renderiza debajo de entidades y convive con bgImageMode 9-slicing. */
-  tilemap?: Tilemap;
-  /** Cámara por escena: seguimiento existente o posición fija. */
-  camera?: { mode?: "follow-player" | "fixed"; x?: number; y?: number; deadZone?: number };
-  /** Jerarquía de grupos disponible para el editor y futuras automatizaciones. */
-  hierarchy?: SceneHierarchy;
 }
 
 export const DEFAULT_LAYER_ID = "default";
@@ -303,34 +239,19 @@ export interface ProjectSettings {
   music?: boolean;
   musicUrl?: string | null;       // dataURL or URL to custom audio file
   musicName?: string | null;      // display name of the uploaded track
-  musicLoop?: boolean;
   touchControls?: boolean;
   autoPause?: boolean;
   showHitboxes?: boolean;
   language?: "es" | "en" | "pt" | "fr" | "de";
   perfOptimized?: boolean;
   fpsDefault60Applied?: boolean;
-  inputMap?: Partial<Record<RuntimeAction, InputBinding>>;
 }
-
-export type RuntimeAction = "left" | "right" | "jump";
-export interface InputBinding {
-  keyboard?: string[];
-  gamepadButtons?: number[];
-  touch?: boolean;
-}
-
-export const DEFAULT_INPUT_MAP: Record<RuntimeAction, Required<InputBinding>> = {
-  left: { keyboard: ["ArrowLeft", "a", "A"], gamepadButtons: [14], touch: true },
-  right: { keyboard: ["ArrowRight", "d", "D"], gamepadButtons: [15], touch: true },
-  jump: { keyboard: ["ArrowUp", "w", "W", " "], gamepadButtons: [0], touch: true },
-};
 
 export interface Project {
   name: string;
   scenes: Scene[];
   activeSceneId: string;
-  assets?: { sprites: SpriteAsset[]; sounds?: AudioAsset[] };
+  assets?: { sprites: SpriteAsset[] };
   settings: ProjectSettings;
 }
 
@@ -344,19 +265,18 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   volume: 0.8,
   muted: false,
   music: false,
-  musicLoop: true,
   touchControls: true,
   autoPause: true,
   showHitboxes: false,
 };
 
 export const KIND_PRESETS: Record<EntityKind, Omit<Entity, "id" | "x" | "y">> = {
-  player: { kind: "player", name: "Jugador", w: 40, h: 56, vx: 0, vy: 0, color: "#38bdf8", solid: true, gravity: true, controllable: true, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "dynamic", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
-  platform: { kind: "platform", name: "Plataforma", w: 40, h: 40, vx: 0, vy: 0, color: "#1e3a8a", solid: true, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
-  enemy: { kind: "enemy", name: "Enemigo", w: 40, h: 40, vx: 60, vy: 0, color: "#f43f5e", solid: false, gravity: true, controllable: false, collectible: false, hazard: true, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "dynamic", mass: 1, friction: 0.6, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
-  coin: { kind: "coin", name: "Moneda", w: 22, h: 22, vx: 0, vy: 0, color: "#fbbf24", solid: false, gravity: false, controllable: false, collectible: true, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "circle", collisionLayer: 1, collisionMask: 15, isTrigger: true },
-  goal: { kind: "goal", name: "Meta", w: 36, h: 64, vx: 0, vy: 0, color: "#7dd3fc", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: true, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: true },
-  decor: { kind: "decor", name: "Decoración", w: 64, h: 64, vx: 0, vy: 0, color: "#a78bfa", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, z: -1, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
+  player: { kind: "player", w: 40, h: 56, vx: 0, vy: 0, color: "#38bdf8", solid: true, gravity: true, controllable: true, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
+  platform: { kind: "platform", w: 40, h: 40, vx: 0, vy: 0, color: "#1e3a8a", solid: true, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
+  enemy: { kind: "enemy", w: 40, h: 40, vx: 60, vy: 0, color: "#f43f5e", solid: false, gravity: true, controllable: false, collectible: false, hazard: true, goal: false, visible: true, opacity: 1, texture: null },
+  coin: { kind: "coin", w: 22, h: 22, vx: 0, vy: 0, color: "#fbbf24", solid: false, gravity: false, controllable: false, collectible: true, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
+  goal: { kind: "goal", w: 36, h: 64, vx: 0, vy: 0, color: "#7dd3fc", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: true, visible: true, opacity: 1, texture: null },
+  decor: { kind: "decor", w: 64, h: 64, vx: 0, vy: 0, color: "#a78bfa", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, z: -1 },
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -397,34 +317,13 @@ export function newProject(): Project {
 // --- Physics: AABB ---
 export function aabb(e: Entity) {
   const hb = e.hitbox;
-  const source = hb ? { x: e.x + hb.x, y: e.y + hb.y, w: hb.w, h: hb.h } : { x: e.x, y: e.y, w: e.w, h: e.h };
-  const sx = Math.max(0.1, e.scaleX ?? 1), sy = Math.max(0.1, e.scaleY ?? 1);
-  return { x: source.x + (source.w - source.w * sx) / 2, y: source.y + (source.h - source.h * sy) / 2, w: source.w * sx, h: source.h * sy };
+  if (hb) return { x: e.x + hb.x, y: e.y + hb.y, w: hb.w, h: hb.h };
+  return { x: e.x, y: e.y, w: e.w, h: e.h };
 }
 
 export function intersects(a: Entity, b: Entity) {
   const A = aabb(a), B = aabb(b);
-  if (a.collisionShape === "circle" || b.collisionShape === "circle") {
-    const circle = a.collisionShape === "circle" ? A : B;
-    const rect = a.collisionShape === "circle" ? B : A;
-    const radius = Math.min(circle.w, circle.h) / 2;
-    const cx = circle.x + circle.w / 2, cy = circle.y + circle.h / 2;
-    const nearestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
-    const nearestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
-    return (cx - nearestX) ** 2 + (cy - nearestY) ** 2 < radius ** 2;
-  }
   return A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y;
-}
-
-export function collidesByLayer(a: Entity, b: Entity) {
-  const aLayer = a.collisionLayer ?? 1, bLayer = b.collisionLayer ?? 1;
-  const aMask = a.collisionMask ?? 15, bMask = b.collisionMask ?? 15;
-  return (aMask & bLayer) !== 0 && (bMask & aLayer) !== 0;
-}
-
-function resolvedBodyType(e: Entity): BodyType {
-  if (e.bodyType) return e.bodyType;
-  return e.gravity || e.controllable || e.kind === "enemy" ? "dynamic" : "static";
 }
 
 export interface RuntimeInput {
@@ -583,26 +482,6 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
     }
   }
 
-  const solids = scene.entities.filter((e) => e.solid && !e.isTrigger);
-  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble || e.isTrigger);
-
-  // Stabilize a player that starts exactly on a platform before input is applied.
-  // This prevents the first joystick sample from combining with a tiny gravity overlap.
-  for (const e of scene.entities) {
-    if (!e.controllable || e.vy < 0) continue;
-    const support = solids.find(o =>
-      o !== e && o.solid &&
-      e.x + e.w > o.x + 0.5 && e.x < o.x + o.w - 0.5 &&
-      e.y + e.h >= o.y - 6 && e.y + e.h <= o.y + 2
-    );
-    if (support) {
-      e.y = support.y - e.h;
-      e.vy = 0;
-      (e as Entity & { _grounded?: boolean })._grounded = true;
-      (e as Entity & { _floor?: Entity })._floor = support;
-    }
-  }
-
   // Player input — smooth accel & friction for game-feel.
   const speedMul = state.speedT > 0 ? 1.6 : 1;
   const TERMINAL = 1200;
@@ -613,17 +492,17 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
       // Ground = snappy, air = floaty. Slippery overrides ground accel.
       const floorEnt = (e as Entity & { _floor?: Entity })._floor;
       const slippery = !!(floorEnt && floorEnt.slippery);
-      const groundAccel = slippery ? 6 : 8 + (floorEnt?.friction ?? 0.8) * 18;
+      const groundAccel = slippery ? 6 : 22;
       const airAccel = 10;
       const accel = wasGrounded ? groundAccel : airAccel;
       e.vx += (target - e.vx) * Math.min(1, accel * dt);
       // friction when no input and grounded
       if (wasGrounded && !input.left && !input.right && !slippery) {
-        e.vx *= Math.max(0, 1 - (4 + (floorEnt?.friction ?? 0.8) * 18) * dt);
+        e.vx *= Math.max(0, 1 - 18 * dt);
         if (Math.abs(e.vx) < 4) e.vx = 0;
       }
     }
-    if (e.gravity && resolvedBodyType(e) === "dynamic") {
+    if (e.gravity) {
       e.vy += scene.gravity * dt;
       if (e.vy > TERMINAL) e.vy = TERMINAL;
     }
@@ -632,6 +511,9 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
       e.facing = e.vx > 0 ? 1 : -1;
     }
   }
+  const solids = scene.entities.filter((e) => e.solid);
+  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble);
+
   // Predictive ledge detection for enemies (before moving)
   for (const e of scene.entities) {
     if (e.kind !== "enemy" || Math.abs(e.vx) <= 0.1) continue;
@@ -664,7 +546,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
   const EPS = 0.001;
 
   for (const e of scene.entities) {
-    if (resolvedBodyType(e) === "static") continue;
+    if (e.kind === "platform") continue;
     e.x += e.vx * dt;
     e.y += e.vy * dt;
   }
@@ -673,7 +555,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
   // controllable (player). Pickups (coin/goal) and hazard enemies w/o gravity
   // are skipped so they remain in place for the interaction loop.
   const collidesWithSolids = (e: Entity) =>
-    resolvedBodyType(e) !== "static" && (e.gravity || e.controllable || e.kind === "enemy" || resolvedBodyType(e) === "dynamic");
+    e.kind !== "platform" && (e.gravity || e.controllable || e.kind === "enemy");
 
   for (let iter = 0; iter < 4; iter++) {
     let anyHit = false;
@@ -683,7 +565,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         if (o === e || !o.solid) continue;
         // Hazards never push the player physically — interaction loop handles damage.
         // (But enemy-vs-platform must still resolve so enemies don't fall through.)
-        if ((o.hazard && e.controllable) || (e.hazard && o.controllable) || !collidesByLayer(e, o)) continue;
+        if ((o.hazard && e.controllable) || (e.hazard && o.controllable)) continue;
         if (!intersects(e, o)) continue;
         anyHit = true;
         const A = aabb(e), B = aabb(o);
@@ -706,7 +588,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
             if (o.spring) {
               e.vy = -(o.spring.force || 720);
             } else {
-              if (e.vy > 0) e.vy = e.restitution && e.restitution > 0 ? -e.vy * e.restitution : 0;
+              if (e.vy > 0) e.vy = 0;
               grounded.add(e.id);
               groundedOn.set(e.id, o);
             }
@@ -718,11 +600,11 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
           if (pushLeft <= pushRight) {
             e.x -= pushLeft + EPS;
             if (e.kind === "enemy") e.vx = -Math.abs(e.vx || 60);
-            else if (e.vx > 0) e.vx = e.restitution && e.restitution > 0 ? -e.vx * e.restitution : 0;
+            else if (e.vx > 0) e.vx = 0;
           } else {
             e.x += pushRight + EPS;
             if (e.kind === "enemy") e.vx = Math.abs(e.vx || 60);
-            else if (e.vx < 0) e.vx = e.restitution && e.restitution > 0 ? -e.vx * e.restitution : 0;
+            else if (e.vx < 0) e.vx = 0;
           }
         }
       }
@@ -821,7 +703,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         if (!o.dialog || o === e) continue;
         if (o.dialog.once && o._dialogPlayed) continue;
         if (o.dialog.trigger !== "touch" && o.dialog.trigger !== "interact") continue;
-        if (!intersects(e, o) || !collidesByLayer(e, o)) continue;
+        if (!intersects(e, o)) continue;
         if (o.dialog.trigger === "interact" && !jumpEdge) continue;
         startDialog(state, o);
         break;
@@ -855,9 +737,8 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
           // Knockback player away from hazard so they don't get stuck inside
           const A = aabb(e), B = aabb(o);
           const dirX = (A.x + A.w / 2) < (B.x + B.w / 2) ? -1 : 1;
-          const impulse = 1 / Math.max(0.1, e.mass ?? 1);
-          e.vx = dirX * 260 * impulse;
-          e.vy = -320 * impulse;
+          e.vx = dirX * 260;
+          e.vy = -320;
           if (state.lives > 1) { state.lives -= 1; state.invulnT = 1.2; if (state.checkpoint) { e.x = state.checkpoint.x; e.y = state.checkpoint.y; e.vx = 0; e.vy = 0; } }
           else state.dead = true;
         }
@@ -882,6 +763,8 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         }
       }
     }
+    // camera follow
+    state.cameraX = Math.max(0, Math.min(scene.width - 360, e.x - 160));
   }
 
   state.jumpPrev = input.jump;
@@ -916,8 +799,572 @@ export function newUIElement(kind: UIElementKind): UIElement {
     case "panel":
       return { ...base, anchor: "tc", x: -120, y: 12, w: 240, h: 40, bg: "rgba(2,6,23,0.6)", border: "#7dd3fc", radius: 8 };
     case "bar":
-      return { ...base, anchor: "tl", x: 16, y: 52, w: 180, h: 14, bg: "rgba(2,6,23,0.6)", color: "#22c55e", border: "#7dd3fc", radius: 6, bind: "lives", max: 3, initialValue: 3 };
+      return { ...base, anchor: "tl", x: 16, y: 52, w: 180, h: 14, bg: "rgba(2,6,23,0.6)", color: "#22c55e", border: "#7dd3fc", radius: 6, bind: "lives", max: 3 };
     case "joystick":
       return { ...base, anchor: "bl", x: 24, y: -160, w: 140, h: 140, bg: "rgba(2,6,23,0.4)", border: "#7dd3fc", color: "#7dd3fc", radius: 999 };
   }
 }
+
+```
+
+--------------------------------------------------------
+MÓDULO: scripts.ts (sistema de scripting — código completo)
+--------------------------------------------------------
+```ts
+// Block-based scripting (events + actions) for Asternal Engine
+import type { Entity, EntityKind, RuntimeInput, RuntimeState, Scene } from "./core";
+import { intersects, KIND_PRESETS, uid as makeId } from "./core";
+import { playSound, vibrate, type SoundName, SOUND_NAMES } from "./sfx";
+
+export type EventType =
+  | "onStart"
+  | "onCreate"
+  | "onUpdate"
+  | "onCollide"
+  | "onKeyDown"
+  | "onScoreReach"
+  | "onDestroyed"
+  | "onDestroy"
+  | "onTimer"
+  | "onLeaveScreen"
+  | "onLand"
+  | "onWin"
+  | "onLose";
+
+export type BlockKind =
+  // existing
+  | "jump"
+  | "setVx"
+  | "setVy"
+  | "addScore"
+  | "destroySelf"
+  | "destroyOther"
+  | "win"
+  | "lose"
+  | "teleport"
+  | "log"
+  | "playSound"
+  | "vibrate"
+  | "shake"
+  | "setColor"
+  | "setSize"
+  | "setGravity"
+  | "setControllable"
+  | "impulse"
+  | "setVisible"
+  | "restartScene"
+  | "setBg"
+  | "if"
+  // 30 new
+  | "setX"
+  | "setY"
+  | "moveX"
+  | "moveY"
+  | "flipVx"
+  | "flipVy"
+  | "bounceY"
+  | "stop"
+  | "setSpeed"
+  | "setOpacity"
+  | "setHazard"
+  | "setSolid"
+  | "setCollectible"
+  | "setGoalFlag"
+  | "addLives"
+  | "setLives"
+  | "setScore"
+  | "resetScore"
+  | "spawnEntity"
+  | "cloneSelf"
+  | "setSceneGravity"
+  | "playRandomSound"
+  | "wrapScreen"
+  | "faceTarget"
+  | "chase"
+  | "setHitbox"
+  | "clearHitbox"
+  | "removeAllOf"
+  | "comment"
+  | "hurtPlayer"
+  | "wait"
+  | "setFacing"
+  | "knockback"
+  | "pushAway";
+
+export interface Block {
+  id: string;
+  kind: BlockKind;
+  value?: number;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  text?: string;
+  sound?: SoundName;
+  color?: string;
+  bool?: boolean;
+  cond?: "scoreGte" | "scoreLte";
+  thenBlocks?: Block[];
+}
+
+export interface Script {
+  id: string;
+  event: EventType;
+  withKind?: EntityKind | "any";          // onCollide
+  key?: "left" | "right" | "jump";        // onKeyDown
+  threshold?: number;                     // onScoreReach
+  interval?: number;                      // onTimer (ms)
+  blocks: Block[];
+}
+
+export const EVENT_LABELS: Record<EventType, string> = {
+  onStart: "On Start",
+  onCreate: "On Create",
+  onUpdate: "On Update",
+  onCollide: "On Collide",
+  onKeyDown: "On Key Press",
+  onScoreReach: "On Score Reach",
+  onDestroyed: "On Destroyed",
+  onDestroy: "On Destroy",
+  onTimer: "On Timer",
+  onLeaveScreen: "On Leave Screen",
+  onLand: "On Land",
+  onWin: "On Win",
+  onLose: "On Lose",
+};
+
+export const BLOCK_LABELS: Record<BlockKind, string> = {
+  jump: "Jump (force)",
+  setVx: "Set velocity X",
+  setVy: "Set velocity Y",
+  addScore: "Add score",
+  destroySelf: "Destroy self",
+  destroyOther: "Destroy other",
+  win: "Win level",
+  lose: "Game over",
+  teleport: "Teleport (x,y)",
+  log: "Log message",
+  playSound: "Play sound",
+  vibrate: "Vibrate (ms)",
+  shake: "Screen shake",
+  setColor: "Set color",
+  setSize: "Set size",
+  setGravity: "Enable gravity",
+  setControllable: "Player control",
+  impulse: "Impulse (x,y)",
+  setVisible: "Set visible",
+  restartScene: "Restart scene",
+  setBg: "Set background",
+  if: "If condition",
+  // new
+  setX: "Set X",
+  setY: "Set Y",
+  moveX: "Move X by",
+  moveY: "Move Y by",
+  flipVx: "Flip velocity X",
+  flipVy: "Flip velocity Y",
+  bounceY: "Bounce Y (%)",
+  stop: "Stop motion",
+  setSpeed: "Set speed",
+  setOpacity: "Set opacity %",
+  setHazard: "Set hazard",
+  setSolid: "Set solid",
+  setCollectible: "Set collectible",
+  setGoalFlag: "Set goal flag",
+  addLives: "Add lives",
+  setLives: "Set lives",
+  setScore: "Set score",
+  resetScore: "Reset score",
+  spawnEntity: "Spawn entity",
+  cloneSelf: "Clone self",
+  setSceneGravity: "Set scene gravity",
+  playRandomSound: "Random sound",
+  wrapScreen: "Wrap screen",
+  faceTarget: "Face target",
+  chase: "Chase target",
+  setHitbox: "Set hitbox",
+  clearHitbox: "Clear hitbox",
+  removeAllOf: "Remove all of kind",
+  comment: "Comment",
+  hurtPlayer: "Hurt player",
+  wait: "Wait (ms)",
+  setFacing: "Set facing (-1/1)",
+  knockback: "Knockback (x,y)",
+  pushAway: "Push away from player",
+};
+
+export const ALL_BLOCKS: BlockKind[] = [
+  "jump", "impulse", "setVx", "setVy", "setSpeed", "stop", "flipVx", "flipVy", "bounceY",
+  "setX", "setY", "moveX", "moveY", "teleport", "wrapScreen",
+  "addScore", "setScore", "resetScore", "addLives", "setLives",
+  "destroySelf", "destroyOther", "cloneSelf", "spawnEntity", "removeAllOf",
+  "win", "lose", "restartScene", "hurtPlayer",
+  "playSound", "playRandomSound", "vibrate", "shake",
+  "setColor", "setBg", "setVisible", "setOpacity", "setSize",
+  "setGravity", "setControllable", "setHazard", "setSolid", "setCollectible", "setGoalFlag",
+  "setSceneGravity", "setHitbox", "clearHitbox",
+  "faceTarget", "chase", "knockback", "setFacing", "pushAway",
+  "log", "comment", "if", "wait",
+];
+
+export interface RuntimeHooks {
+  shake: (intensity: number, duration: number) => void;
+  restart: () => void;
+}
+
+interface ExecCtx {
+  self: Entity;
+  other?: Entity;
+  scene: Scene;
+  state: RuntimeState;
+  hooks: RuntimeHooks;
+}
+
+function findFirstOfKind(scene: Scene, kind: EntityKind) {
+  for (const e of scene.entities) if (e.kind === kind && e.x > -9000) return e;
+  return null;
+}
+
+function execBlock(b: Block, ctx: ExecCtx) {
+  switch (b.kind) {
+    case "jump": ctx.self.vy = -(b.value ?? 520); break;
+    case "setVx": ctx.self.vx = b.value ?? 0; break;
+    case "setVy": ctx.self.vy = b.value ?? 0; break;
+    case "impulse":
+      ctx.self.vx += b.x ?? 0;
+      ctx.self.vy += b.y ?? 0;
+      break;
+    case "addScore": ctx.state.score += b.value ?? 1; break;
+    case "destroySelf": ctx.self.x = -99999; break;
+    case "destroyOther": if (ctx.other) ctx.other.x = -99999; break;
+    case "win": ctx.state.win = true; break;
+    case "lose": ctx.state.dead = true; break;
+    case "restartScene": ctx.hooks.restart(); break;
+    case "teleport":
+      ctx.self.x = b.x ?? ctx.self.x;
+      ctx.self.y = b.y ?? ctx.self.y;
+      break;
+    case "log": console.log("[script]", b.text ?? "", ctx.self.kind); break;
+    case "playSound": playSound((b.sound ?? "blip") as SoundName); break;
+    case "vibrate": vibrate(Math.max(1, b.value ?? 50)); break;
+    case "shake": ctx.hooks.shake(Math.max(1, b.value ?? 8), 0.3); break;
+    case "setColor": if (b.color) ctx.self.color = b.color; break;
+    case "setBg": if (b.color) ctx.scene.bg = b.color; break;
+    case "setVisible": ctx.self.visible = b.bool ?? !(ctx.self.visible ?? true); break;
+    case "setSize":
+      if (b.x) ctx.self.w = Math.max(4, b.x);
+      if (b.y) ctx.self.h = Math.max(4, b.y);
+      break;
+    case "setGravity": ctx.self.gravity = b.bool ?? !ctx.self.gravity; break;
+    case "setControllable": ctx.self.controllable = b.bool ?? !ctx.self.controllable; break;
+
+    // --- new ---
+    case "setX": ctx.self.x = b.value ?? ctx.self.x; break;
+    case "setY": ctx.self.y = b.value ?? ctx.self.y; break;
+    case "moveX": ctx.self.x += b.value ?? 0; break;
+    case "moveY": ctx.self.y += b.value ?? 0; break;
+    case "flipVx": ctx.self.vx = -ctx.self.vx; break;
+    case "flipVy": ctx.self.vy = -ctx.self.vy; break;
+    case "bounceY": ctx.self.vy = -ctx.self.vy * ((b.value ?? 80) / 100); break;
+    case "stop": ctx.self.vx = 0; ctx.self.vy = 0; break;
+    case "setSpeed": {
+      const s = b.value ?? 0;
+      const dir = ctx.self.vx === 0 ? 1 : Math.sign(ctx.self.vx);
+      ctx.self.vx = s * dir;
+      break;
+    }
+    case "setOpacity": ctx.self.opacity = Math.max(0, Math.min(1, (b.value ?? 100) / 100)); break;
+    case "setHazard": ctx.self.hazard = b.bool ?? !ctx.self.hazard; break;
+    case "setSolid": ctx.self.solid = b.bool ?? !ctx.self.solid; break;
+    case "setCollectible": ctx.self.collectible = b.bool ?? !ctx.self.collectible; break;
+    case "setGoalFlag": ctx.self.goal = b.bool ?? !ctx.self.goal; break;
+    case "addLives": ctx.state.lives += b.value ?? 1; break;
+    case "setLives": ctx.state.lives = b.value ?? 1; break;
+    case "setScore": ctx.state.score = b.value ?? 0; break;
+    case "resetScore": ctx.state.score = 0; break;
+    case "spawnEntity": {
+      const k = (b.text as EntityKind) || "coin";
+      const preset = KIND_PRESETS[k];
+      if (preset) {
+        ctx.scene.entities.push({
+          ...preset,
+          id: makeId(),
+          x: b.x ?? ctx.self.x,
+          y: b.y ?? ctx.self.y,
+        });
+      }
+      break;
+    }
+    case "cloneSelf": {
+      ctx.scene.entities.push({
+        ...ctx.self,
+        id: makeId(),
+        x: ctx.self.x + (b.x ?? 20),
+        y: ctx.self.y + (b.y ?? 0),
+        scripts: [], // no script inheritance to avoid runaway
+      });
+      break;
+    }
+    case "setSceneGravity": ctx.scene.gravity = Math.max(0, b.value ?? 1400); break;
+    case "playRandomSound": playSound(SOUND_NAMES[Math.floor(Math.random() * SOUND_NAMES.length)]); break;
+    case "wrapScreen": {
+      const e = ctx.self;
+      if (e.x + e.w < 0) e.x = ctx.scene.width;
+      else if (e.x > ctx.scene.width) e.x = -e.w;
+      if (e.y + e.h < 0) e.y = ctx.scene.height;
+      else if (e.y > ctx.scene.height) e.y = -e.h;
+      break;
+    }
+    case "faceTarget": {
+      const t = findFirstOfKind(ctx.scene, (b.text as EntityKind) || "player");
+      if (t) ctx.self.vx = Math.sign(t.x - ctx.self.x) * Math.abs(ctx.self.vx || 60);
+      break;
+    }
+    case "chase": {
+      const t = findFirstOfKind(ctx.scene, (b.text as EntityKind) || "player");
+      if (t) {
+        const sp = b.value ?? 80;
+        ctx.self.vx = Math.sign(t.x - ctx.self.x) * sp;
+      }
+      break;
+    }
+    case "setHitbox":
+      ctx.self.hitbox = { x: b.x ?? 0, y: b.y ?? 0, w: Math.max(1, b.w ?? ctx.self.w), h: Math.max(1, b.h ?? ctx.self.h) };
+      break;
+    case "clearHitbox": ctx.self.hitbox = null; break;
+    case "removeAllOf": {
+      const k = (b.text as EntityKind) || "coin";
+      for (const e of ctx.scene.entities) if (e.kind === k) e.x = -99999;
+      break;
+    }
+    case "comment": break;
+    case "hurtPlayer": ctx.state.dead = true; break;
+    case "wait": break; // no-op marker; sub-frame waits handled via onTimer
+    case "setFacing": {
+      const f = (b.value ?? 1) >= 0 ? 1 : -1;
+      ctx.self.facing = f;
+      ctx.self.flipX = f === -1;
+      break;
+    }
+    case "knockback": {
+      const target = ctx.other ?? ctx.self;
+      target.vx = b.x ?? 240;
+      target.vy = b.y ?? -320;
+      break;
+    }
+    case "pushAway": {
+      const p = findFirstOfKind(ctx.scene, "player");
+      if (p) {
+        const force = b.value ?? 280;
+        const dir = ctx.self.x < p.x ? -1 : 1;
+        ctx.self.vx = dir * force;
+        ctx.self.vy = -180;
+      }
+      break;
+    }
+
+    case "if": {
+      const v = b.value ?? 0;
+      const ok =
+        b.cond === "scoreGte" ? ctx.state.score >= v :
+        b.cond === "scoreLte" ? ctx.state.score <= v : false;
+      if (ok) for (const sub of b.thenBlocks ?? []) execBlock(sub, ctx);
+      break;
+    }
+  }
+}
+
+function runScript(s: Script, ctx: ExecCtx) {
+  for (const b of s.blocks) execBlock(b, ctx);
+}
+
+export interface ScriptRunner {
+  step: (scene: Scene, state: RuntimeState, input: RuntimeInput, hooks: RuntimeHooks, dt: number) => void;
+}
+
+export function createScriptRunner(): ScriptRunner {
+  const started = new Set<string>();
+  const destroyed = new Set<string>();
+  const left = new Set<string>();
+  const colliding = new Set<string>();
+  const prevVy = new Map<string, number>();
+  const timerAcc = new Map<string, number>();
+  let prevInput: RuntimeInput = { left: false, right: false, jump: false };
+  let prevScore = 0;
+  let prevWin = false;
+  let prevDead = false;
+
+  return {
+    step(scene, state, input, hooks, dt) {
+      const live = scene.entities;
+      const keyEdges = {
+        left: input.left && !prevInput.left,
+        right: input.right && !prevInput.right,
+        jump: input.jump && !prevInput.jump,
+      };
+
+      const winEdge = state.win && !prevWin;
+      const loseEdge = state.dead && !prevDead;
+
+      for (let i = 0; i < live.length; i++) {
+        const e = live[i];
+        const scripts = e.scripts ?? [];
+        if (!scripts.length) { prevVy.set(e.id, e.vy); continue; }
+
+        if (e.x < -9000 && !destroyed.has(e.id)) {
+          destroyed.add(e.id);
+          for (const s of scripts) if (s.event === "onDestroyed" || s.event === "onDestroy")
+            runScript(s, { self: e, scene, state, hooks });
+        }
+        if (e.x < -9000) continue;
+
+        const outside = e.x + e.w < 0 || e.x > scene.width || e.y > scene.height + 200 || e.y + e.h < -200;
+        if (outside && !left.has(e.id)) {
+          left.add(e.id);
+          for (const s of scripts) if (s.event === "onLeaveScreen")
+            runScript(s, { self: e, scene, state, hooks });
+        } else if (!outside) {
+          left.delete(e.id);
+        }
+
+        if (!started.has(e.id)) {
+          for (const s of scripts) if (s.event === "onStart" || s.event === "onCreate")
+            runScript(s, { self: e, scene, state, hooks });
+          started.add(e.id);
+        }
+
+        const pv = prevVy.get(e.id) ?? 0;
+        const landed = pv > 80 && e.vy === 0;
+
+        for (const s of scripts) {
+          if (s.event === "onUpdate") {
+            runScript(s, { self: e, scene, state, hooks });
+          } else if (s.event === "onKeyDown" && s.key && keyEdges[s.key]) {
+            runScript(s, { self: e, scene, state, hooks });
+          } else if (s.event === "onScoreReach") {
+            const t = s.threshold ?? 0;
+            if (prevScore < t && state.score >= t)
+              runScript(s, { self: e, scene, state, hooks });
+          } else if (s.event === "onTimer") {
+            const iv = Math.max(0.05, (s.interval ?? 1000) / 1000);
+            const acc = (timerAcc.get(s.id) ?? 0) + dt;
+            if (acc >= iv) { timerAcc.set(s.id, 0); runScript(s, { self: e, scene, state, hooks }); }
+            else timerAcc.set(s.id, acc);
+          } else if (s.event === "onLand" && landed) {
+            runScript(s, { self: e, scene, state, hooks });
+          } else if (s.event === "onWin" && winEdge) {
+            runScript(s, { self: e, scene, state, hooks });
+          } else if (s.event === "onLose" && loseEdge) {
+            runScript(s, { self: e, scene, state, hooks });
+          }
+        }
+
+        prevVy.set(e.id, e.vy);
+      }
+
+      // onCollide (edge-triggered)
+      const now = new Set<string>();
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        if (a.x < -9000) continue;
+        const aScripts = (a.scripts ?? []).filter(s => s.event === "onCollide");
+        if (!aScripts.length) continue;
+        for (let j = 0; j < live.length; j++) {
+          if (i === j) continue;
+          const b = live[j];
+          if (b.x < -9000) continue;
+          if (!intersects(a, b)) continue;
+          const key = `${a.id}|${b.id}`;
+          now.add(key);
+          if (colliding.has(key)) continue;
+          for (const s of aScripts) {
+            if (!s.withKind || s.withKind === "any" || s.withKind === b.kind) {
+              runScript(s, { self: a, other: b, scene, state, hooks });
+            }
+          }
+        }
+      }
+      colliding.clear();
+      now.forEach(k => colliding.add(k));
+
+      prevInput = { ...input };
+      prevScore = state.score;
+      prevWin = state.win;
+      prevDead = state.dead;
+    },
+  };
+}
+
+export const uid = () => Math.random().toString(36).slice(2, 10);
+
+```
+
+--------------------------------------------------------
+MÓDULO: storage.ts — firmas de la API
+--------------------------------------------------------
+```ts
+export interface ProjectMeta {
+export function setProjectCloudId(id: string, cloudId: string) {
+export function getProjectCloudId(id: string): string | undefined {
+export function listProjects(): ProjectMeta[] {
+export function getCurrentProjectId(): string {
+export function setCurrentProjectId(id: string) {
+export function loadProjectById(id: string): Project | null {
+export function loadProject(): Project {
+export function saveProject(p: Project) {
+export function saveProjectById(id: string, p: Project) {
+export function createProject(name?: string): string {
+export function deleteProjectById(id: string) {
+export function renameProject(id: string, name: string) {
+export function duplicateProject(id: string): string | null {
+```
+
+--------------------------------------------------------
+MÓDULO: animations.ts — firmas de la API
+--------------------------------------------------------
+```ts
+export type AnimState = "idle" | "walk" | "run" | "jump" | "fall" | "attack" | string
+export interface AnimationClip {
+export const DEFAULT_ANIM_NAMES: AnimState[] = ["idle", "walk", "run", "jump", "fall", "attack"];  /** Pick which animation should play for an entity right now. */
+export function pickAnimState(e: Entity): AnimState {
+export function findClip(e: Entity, state: AnimState): AnimationClip | null {
+export function currentFrameSrc(e: Entity, time: number, state?: AnimState): string | null {
+export function currentFrameImage(e: Entity, time: number, state?: AnimState): HTMLImageElement | null {
+export function currentFrameRenderable(e: Entity, time: number, state?: AnimState): HTMLImageElement | ImageBitmap | null {
+```
+
+--------------------------------------------------------
+MÓDULO: sfx.ts — firmas de la API
+--------------------------------------------------------
+```ts
+export function setVolume(v: number) { volume = Math.max(0, Math.min(1, v)); if (musicEl) musicEl.volume = volume; }
+export function setMuted(v: boolean) { muted = v; if (v) stopMusic(); }
+export type SoundName = "jump" | "coin" | "hit" | "win" | "lose" | "power" | "laser" | "blip" | "thud"
+export function playSound(name: SoundName) {
+export const SOUND_NAMES: SoundName[] = ["jump","coin","hit","win","lose","power","laser","blip","thud"]
+export function vibrate(ms: number) {
+export function startMusic(url?: string | null) {
+export function stopMusic() {
+```
+
+--------------------------------------------------------
+MÓDULO: images.ts — firmas de la API
+--------------------------------------------------------
+```ts
+export type RenderableImage = HTMLImageElement | ImageBitmap
+export function getImage(src: string): HTMLImageElement | null {
+export function getRenderableImage(src: string): RenderableImage | null {
+export function preloadImage(src: string): Promise<HTMLImageElement> {
+export async function fileToDataURL(file: File): Promise<string> {
+export function drawTransparencyGrid(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, cell = 12) {
+```
+
+--------------------------------------------------------
+MÓDULO: cloud-sync.ts — firmas de la API
+--------------------------------------------------------
+```ts
+export function schedulePushToCloud(localId: string, project: Project) {
+export async function importCloudMissing(): Promise<{ imported: number; total: number }> {
+export async function fetchCloudProjects(): Promise<CloudProject[]> {
+export async function syncAllProjects(): Promise<{ pushed: number; imported: number }> {
+```

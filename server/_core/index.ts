@@ -4,7 +4,6 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
-import { createAuthoringPlan } from "../editor-authoring-ai";
 import { sdk } from "./sdk";
 import { registerOAuthRoutes } from "./oauth";
 import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile, verifySupabaseProfile } from "./supabase-admin-fetch";
@@ -50,15 +49,6 @@ app.post("/api/orion/rank-feed", async (req, res) => {
     res.json(await rankCommunityFeed(req.body));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Orión no pudo ordenar el feed.";
-    res.status(400).json({ error: message });
-  }
-});
-
-app.post("/api/editor/authoring-plan", async (req, res) => {
-  try {
-    res.json(await createAuthoringPlan(req.body?.instruction, req.body?.context));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "La IA del editor no pudo preparar los cambios.";
     res.status(400).json({ error: message });
   }
 });

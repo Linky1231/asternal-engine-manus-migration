@@ -3,11 +3,11 @@ import type { AudioAsset, Entity, InputBinding, RuntimeInput, RuntimeState, Scen
 import { DEFAULT_INPUT_MAP, stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
 import { getRenderableImage, type RenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
+import { createScriptRunner } from "@/lib/engine/scripts";
 import { playAudioSource, startMusic, stopMusic, setVolume, setMuted } from "@/lib/engine/sfx";
 import { drawUIElement } from "./UIEditor";
 import { drawPlayerPill } from "@/lib/engine/player-visual";
 import { drawEntityFallback } from "@/lib/engine/entity-visual";
-import { stepGameplay } from "@/lib/engine/gameplay";
 
 interface Props {
   scene: Scene;
@@ -56,7 +56,7 @@ export function GameRuntime({
     let drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
     const state: RuntimeState = newRuntimeState(initial);
     stateRef.current = state;
-    const gameplayEvents: Parameters<typeof stepGameplay>[2] = [{ type: "scene_start" }];
+    let scripts = createScriptRunner();
     const shake = { intensity: 0, time: 0 };
     const hooks = {
       shake: (intensity: number, duration: number) => {
@@ -71,6 +71,7 @@ export function GameRuntime({
         work = JSON.parse(JSON.stringify(initial));
         drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
         Object.assign(state, newRuntimeState(initial));
+        scripts = createScriptRunner();
       },
     };
 
@@ -79,11 +80,6 @@ export function GameRuntime({
     document.addEventListener("visibilitychange", onVis);
     const onRestart = () => hooks.restart();
     window.addEventListener("asternal:restart", onRestart);
-    const onUIEvent = (event: Event) => {
-      const name = (event as CustomEvent<string>).detail;
-      if (typeof name === "string" && name.trim()) gameplayEvents.push({ type: "ui_event", name: name.trim() });
-    };
-    window.addEventListener("asternal:ui-event", onUIEvent);
 
     let raf = 0;
     let last = performance.now();
@@ -341,8 +337,8 @@ export function GameRuntime({
         let steps = 0;
         while (acc >= targetDt && steps < 5) {
           if (!state.win && !state.dead) {
-            stepScene(work, inputRef.current, state, targetDt, event => gameplayEvents.push(event));
-            stepGameplay(work, state, gameplayEvents.splice(0), { playSound: hooks.playProjectSound, restart: hooks.restart });
+            stepScene(work, inputRef.current, state, targetDt);
+            scripts.step(work, state, inputRef.current, hooks, targetDt);
             if (drawList.length !== work.entities.length) {
               drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
             }
@@ -384,7 +380,6 @@ export function GameRuntime({
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("asternal:restart", onRestart);
-      window.removeEventListener("asternal:ui-event", onUIEvent);
     };
   }, [scene, fpsCap, showHUD, autoPause, showHitboxes]);
 

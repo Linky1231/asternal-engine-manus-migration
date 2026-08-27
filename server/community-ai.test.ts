@@ -38,7 +38,7 @@ describe("decisiones comunitarias de Orión", () => {
   it("normaliza juegos para moderación sin serializar el proyecto ni aceptar vistas previas externas", () => {
     const game = normalizeCommunitySubmission({
       kind: "game", title: "Ruta orbital", description: "Explora una estación.", tags: ["aventura"],
-      project: { sceneCount: 2, entityCount: 20, uiElementCount: 4, textSamples: ["Bienvenido", "data:image/png;base64,fuera"] },
+      project: { sceneCount: 2, entityCount: 20, scriptCount: 3, uiElementCount: 4, textSamples: ["Bienvenido", "data:image/png;base64,fuera"] },
       previewImage: "https://untrusted.example/cover.png", likes: 900,
     });
     expect(game).toMatchObject({ kind: "game", title: "Ruta orbital", project: { sceneCount: 2, textSamples: ["Bienvenido", "data:image/png;base64,fuera"] } });

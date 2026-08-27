@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import { completeOrionChat } from "./server/orion";
-import { createAuthoringPlan } from "./server/editor-authoring-ai";
 
 function manusOrionDevEndpoint(): Plugin {
   return {
@@ -23,27 +22,6 @@ function manusOrionDevEndpoint(): Plugin {
               response.end(JSON.stringify(result));
             } catch (error) {
               const message = error instanceof Error ? error.message : "No se pudo consultar a Orión.";
-              response.statusCode = 400;
-              response.setHeader("Content-Type", "application/json");
-              response.end(JSON.stringify({ error: message }));
-            }
-          })();
-        });
-      });
-      server.middlewares.use("/api/editor/authoring-plan", (request, response, next) => {
-        if (request.method !== "POST") return next();
-        let raw = "";
-        request.on("data", chunk => { raw += String(chunk); });
-        request.on("error", next);
-        request.on("end", () => {
-          void (async () => {
-            try {
-              const body = JSON.parse(raw || "{}") as { instruction?: unknown; context?: unknown };
-              const result = await createAuthoringPlan(body.instruction, body.context);
-              response.setHeader("Content-Type", "application/json");
-              response.end(JSON.stringify(result));
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "La IA del editor no pudo preparar los cambios.";
               response.statusCode = 400;
               response.setHeader("Content-Type", "application/json");
               response.end(JSON.stringify({ error: message }));
