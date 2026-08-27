@@ -1595,3 +1595,13 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Aplicar suavidad y relieve sutil a botones y controles actuales con foco accesible
 - [x] Validar contraste, responsive, pruebas y build
 - [x] Actualizar la aserción heredada de Plus para reflejar la nueva superficie sólida sin degradado
+
+
+# Mejora integral de objetos predeterminados del editor
+
+- [x] Inventariar cada objeto predeterminado, su modelo visual, comportamiento y uso en runtime
+- [x] Definir un lenguaje visual común con geometría, materiales, detalles, animación y estados
+- [x] Mejorar cada preset sin romper IDs, datos guardados ni compatibilidad hacia atrás
+- [x] Integrar los presets refinados en editor, preview y runtime jugable
+- [x] Añadir pruebas de regresión y validar renderizado, persistencia, responsive y build
+- [x] Corregir la nueva prueba de arte de entidades para importar las funciones de Vitest explícitamente

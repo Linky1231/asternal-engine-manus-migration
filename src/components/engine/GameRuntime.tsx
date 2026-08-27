@@ -7,6 +7,7 @@ import { createScriptRunner } from "@/lib/engine/scripts";
 import { playAudioSource, startMusic, stopMusic, setVolume, setMuted } from "@/lib/engine/sfx";
 import { drawUIElement } from "./UIEditor";
 import { drawPlayerPill } from "@/lib/engine/player-visual";
+import { drawEntityFallback } from "@/lib/engine/entity-visual";
 
 interface Props {
   scene: Scene;
@@ -642,32 +643,10 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: numbe
     ctx.rotate(rot);
     ctx.translate(-cx, -cy);
   }
-  if (visualEffects) {
-    ctx.shadowColor = e.color;
-    ctx.shadowBlur = e.kind === "coin" ? 10 : e.kind === "goal" ? 12 : 4;
-  }
-  ctx.fillStyle = e.color;
-  if (e.kind === "coin") {
-    ctx.beginPath();
-    ctx.arc(e.x + e.w / 2, e.y + e.h / 2, e.w / 2, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (e.kind === "goal") {
-    ctx.fillStyle = "rgba(125,211,252,0.3)";
-    ctx.fillRect(e.x, e.y, e.w, e.h);
-    ctx.fillStyle = e.color;
-    ctx.fillRect(e.x + e.w / 2 - 2, e.y, 4, e.h);
-    ctx.beginPath();
-    ctx.moveTo(e.x + e.w / 2 + 2, e.y + 4);
-    ctx.lineTo(e.x + e.w / 2 + 22, e.y + 12);
-    ctx.lineTo(e.x + e.w / 2 + 2, e.y + 20);
-    ctx.closePath();
-    ctx.fill();
-  } else if (e.kind === "player") {
+  if (e.kind === "player") {
     drawPlayerPill(ctx, e.x, e.y, e.w, e.h, { time, speed: e.vx, facing: e.facing ?? 1, visualEffects });
   } else {
-    const r = e.kind === "platform" ? 4 : 6;
-    roundRect(ctx, e.x, e.y, e.w, e.h, r);
-    ctx.fill();
+    drawEntityFallback(ctx, e, { time, visualEffects });
   }
   ctx.restore();
 }

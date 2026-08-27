@@ -4,6 +4,7 @@ import { KIND_PRESETS, uid, sortedForRender, isOnHiddenLayer, layerOpacityFor } 
 import { getRenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
 import { drawPlayerPill } from "@/lib/engine/player-visual";
+import { drawEntityFallback } from "@/lib/engine/entity-visual";
 
 interface Props {
   scene: Scene;
@@ -291,40 +292,12 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
           if (img) drawFit(img);
           else { ctx.fillStyle = "rgba(56,189,248,0.15)"; ctx.fillRect(0, 0, e.w, e.h); }
         } else {
-          // Match GameRuntime fallback shapes so editor preview == PLAY preview
-          ctx.save();
-          ctx.shadowColor = e.color;
-          ctx.shadowBlur = e.kind === "coin" ? 10 : e.kind === "goal" ? 12 : 4;
-          ctx.fillStyle = e.color;
-          if (e.kind === "coin") {
-            ctx.beginPath();
-            ctx.arc(e.w / 2, e.h / 2, e.w / 2, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (e.kind === "goal") {
-            ctx.fillStyle = "rgba(125,211,252,0.3)";
-            ctx.fillRect(0, 0, e.w, e.h);
-            ctx.fillStyle = e.color;
-            ctx.fillRect(e.w / 2 - 2, 0, 4, e.h);
-            ctx.beginPath();
-            ctx.moveTo(e.w / 2 + 2, 4);
-            ctx.lineTo(e.w / 2 + 22, 12);
-            ctx.lineTo(e.w / 2 + 2, 20);
-            ctx.closePath();
-            ctx.fill();
-          } else if (e.kind === "player") {
+          // El editor y Play comparten exactamente el mismo arte fallback.
+          if (e.kind === "player") {
             drawPlayerPill(ctx, 0, 0, e.w, e.h, { time: tSec, speed: e.vx, facing: e.facing ?? 1, visualEffects: true });
           } else {
-            const r = e.kind === "platform" ? 4 : 6;
-            ctx.beginPath();
-            ctx.moveTo(r, 0);
-            ctx.arcTo(e.w, 0, e.w, e.h, r);
-            ctx.arcTo(e.w, e.h, 0, e.h, r);
-            ctx.arcTo(0, e.h, 0, 0, r);
-            ctx.arcTo(0, 0, e.w, 0, r);
-            ctx.closePath();
-            ctx.fill();
+            drawEntityFallback(ctx, { ...e, x: 0, y: 0 }, { time: tSec, visualEffects: true });
           }
-          ctx.restore();
         }
         ctx.restore();
       }
