@@ -1632,7 +1632,7 @@ function AuthoringAssistantButton({ scene, onChangeScene }: { scene: Scene; onCh
         onClick={() => setOpen(true)}
         className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
       >
-        <span>✦ IA DE AUTORÍA</span>
+        <span>✦ SCRIPTING AI</span>
         <span className="font-mono text-[10px] opacity-80">INSTRUCCIONES</span>
       </button>
       {open && (
@@ -1699,7 +1699,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           <li><span className="text-primary-glow">CONSTRUIR</span> · toca para colocar la herramienta, pellizca para zoom, desliza para mover.</li>
           <li><span className="text-primary-glow">SELECCIONAR</span> · toca una entidad y abre INSPECCIÓN para editarla.</li>
           <li><span className="text-primary-glow">ASSETS</span> · importa varios fotogramas para crear una animación.</li>
-          <li><span className="text-primary-glow">IA DE AUTORÍA</span> · describe el cambio de juego y revisa el plan antes de aplicarlo a la escena.</li>
+          <li><span className="text-primary-glow">SCRIPTING AI</span> · describe el cambio de juego y revisa el plan antes de aplicarlo a la escena.</li>
           <li><span className="text-primary-glow">ESCENAS</span> · renombra en línea, duplica con ⧉, escala ×N desde el inspector.</li>
           <li><span className="text-primary-glow">DATOS</span> · exporta/importa el proyecto como JSON. Guarda automáticamente.</li>
         </ul>

@@ -48,9 +48,14 @@ describe("autoría asistida del editor", () => {
   it("el editor y el runtime no importan ni ejecutan el intérprete de bloques", () => {
     const editor = readFileSync(new URL("../src/components/engine/AsternalEditor.tsx", import.meta.url), "utf8");
     const runtime = readFileSync(new URL("../src/components/engine/GameRuntime.tsx", import.meta.url), "utf8");
+    const assistant = readFileSync(new URL("../src/components/engine/EditorAuthoringAssistant.tsx", import.meta.url), "utf8");
     expect(editor).toContain("EditorAuthoringAssistant");
+    expect(editor).toContain("SCRIPTING AI");
     expect(editor).not.toContain("ScriptEditor");
     expect(runtime).not.toContain("createScriptRunner");
     expect(runtime).not.toContain("scripts.step");
+    expect(assistant).toContain("createPortal");
+    expect(assistant).toContain("z-[1000]");
+    expect(assistant).toContain("flex-col lg:grid");
   });
 });

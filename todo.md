@@ -1667,3 +1667,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Reemplazar la interfaz de scripts por el asistente conversacional y aplicar sus cambios aprobados
 - [x] Retirar el sistema de scripts legado y normalizar proyectos existentes sin perder escenas u objetos
 - [x] Añadir pruebas, validar IA/editor/persistencia/responsive, documentar y publicar
+
+# Corrección de interfaz móvil de Scripting AI
+
+- [x] Auditar los solapamientos, el fondo subyacente, la navegación y las etiquetas actuales del asistente
+- [x] Renombrar IA de autoría a Scripting AI en toda la interfaz y documentación pertinente
+- [x] Convertir el asistente en una vista aislada responsive sin cruces con inspector, compositor o navegación móvil
+- [x] Añadir regresiones, validar en móvil y escritorio, y publicar la corrección

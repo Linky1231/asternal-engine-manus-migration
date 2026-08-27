@@ -1,15 +1,15 @@
-# IA de autoría de Asternal
+# Scripting AI de Asternal
 
 **Autor:** Manus AI  
 **Estado:** asistente de autoría de escenas con planes revisables.
 
-La antigua interfaz e intérprete de scripts por bloques fue retirada. En su lugar, el inspector de cualquier objeto abre **IA de autoría**, una conversación que recibe instrucciones en lenguaje natural y analiza la escena activa antes de proponer cambios. El modelo opera en el servidor, por lo que sus credenciales no se exponen en el navegador.
+La antigua interfaz e intérprete de scripts por bloques fue retirada. En su lugar, el inspector de cualquier objeto abre **Scripting AI**, una conversación que recibe instrucciones en lenguaje natural y analiza la escena activa antes de proponer cambios. El modelo opera en el servidor, por lo que sus credenciales no se exponen en el navegador. En móvil se presenta como una vista aislada por encima de todo el editor, con zonas de conversación, plan y entrada separadas para evitar solapamientos.
 
 ## Flujo controlado
 
-La IA recibe una representación acotada de la escena: sus dimensiones, cámara, grupos y objetos con sus IDs, nombres, tipos, posiciones, dimensiones, etiquetas y flags. A partir de ello, devuelve un plan JSON con un resumen, supuestos y operaciones. El cliente valida y muestra esas operaciones; los cambios solo se aplican tras pulsar **Aplicar plan**. Cada aplicación conserva una instantánea para **Deshacer último cambio**.
+Scripting AI recibe una representación acotada de la escena: sus dimensiones, cámara, grupos y objetos con sus IDs, nombres, tipos, posiciones, dimensiones, etiquetas y flags. A partir de ello, devuelve un plan JSON con un resumen, supuestos y operaciones. El cliente valida y muestra esas operaciones; los cambios solo se aplican tras pulsar **Aplicar plan**. Cada aplicación conserva una instantánea para **Deshacer último cambio**.
 
-> La IA no ejecuta JavaScript, HTML, código arbitrario ni instrucciones del modelo directamente. Solo puede proponer operaciones declarativas incluidas en el contrato del motor.
+> Scripting AI no ejecuta JavaScript, HTML, código arbitrario ni instrucciones del modelo directamente. Solo puede proponer operaciones declarativas incluidas en el contrato del motor.
 
 | Área | Operaciones disponibles |
 |---|---|
