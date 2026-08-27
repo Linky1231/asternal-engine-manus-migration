@@ -1605,3 +1605,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Integrar los presets refinados en editor, preview y runtime jugable
 - [x] Añadir pruebas de regresión y validar renderizado, persistencia, responsive y build
 - [x] Corregir la nueva prueba de arte de entidades para importar las funciones de Vitest explícitamente
+
+
+# Corrección visual de plataformas predeterminadas
+
+- [x] Auditar la geometría actual de plataformas y compararla con la referencia proporcionada
+- [x] Rediseñar plataformas como bloques sólidos con cuerpo, borde y profundidad reconocibles
+- [x] Reemplazar la línea de brillo por iluminación volumétrica integrada y coherente
+- [x] Aplicar el mismo resultado en editor y runtime sin cambiar colisiones ni dimensiones
+- [x] Validar escena predeterminada, pruebas, responsive y build

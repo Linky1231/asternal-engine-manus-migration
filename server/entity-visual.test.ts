@@ -14,6 +14,8 @@ describe("default entity visual system", () => {
     expect(visual).toContain('kind === "goal"');
     expect(visual).toContain('kind === "enemy"');
     expect(visual).toContain('kind === "platform"');
+    expect(visual).toContain("Halo ancho");
+    expect(visual).toContain("const rivet");
     expect(visual).toContain('kind === "decor"');
     expect(visual).not.toMatch(/create(?:Linear|Radial|Conic)Gradient/);
   });

@@ -2469,3 +2469,4 @@
 [2026-08-27T01:29:36.310Z] 1:29:36 AM [vite] (client) hmr update /src/glass-intensity.css, /src/styles.css
 [2026-08-27T01:37:18.175Z] 1:37:18 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/SceneEditor.tsx
 [2026-08-27T01:37:25.765Z] 1:37:25 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/GameRuntime.tsx
+[2026-08-27T01:46:45.258Z] 1:46:45 AM [vite] (client) hmr update /src/components/engine/SceneEditor.tsx, /src/components/engine/GameRuntime.tsx, /src/styles.css

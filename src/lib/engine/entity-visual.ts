@@ -111,18 +111,40 @@ export function drawEntityFallback(ctx: CanvasRenderingContext2D, entity: Entity
     ctx.lineTo(x + w * 0.82, y + h * 0.12);
     ctx.fill();
   } else if (kind === "platform") {
-    const radius = Math.min(8, h * 0.25);
-    fillRounded(ctx, x, y, w, h, radius, color);
+    // Bloque modular: la cara superior y el cuerpo tienen volúmenes distintos.
+    const radius = Math.min(9, Math.max(3, h * 0.2));
+    const depth = Math.max(4, Math.min(12, h * 0.28));
+    const inset = Math.max(3, Math.min(10, h * 0.16));
+    const capH = Math.max(7, Math.min(18, h * 0.42));
+
+    // Halo ancho: ilumina la pieza completa, no una línea aislada.
+    if (visualEffects) {
+      ctx.shadowColor = "rgba(91, 183, 255, 0.82)";
+      ctx.shadowBlur = 15 + glow;
+    }
+    fillRounded(ctx, x, y + depth * 0.5, w, Math.max(4, h - depth * 0.5), radius, "rgba(8,25,64,0.7)");
     ctx.shadowBlur = 0;
-    fillRounded(ctx, x + w * 0.04, y + h * 0.12, w * 0.92, Math.max(2, h * 0.18), radius / 2, "rgba(255,255,255,0.2)");
-    ctx.fillStyle = "rgba(9,22,54,0.28)";
-    const notch = Math.max(2, Math.min(6, h * 0.18));
-    for (let px = x + w * 0.12; px < x + w * 0.92; px += Math.max(14, w * 0.2)) {
+
+    // Cuerpo principal y faldón inferior para que se lea como plataforma sólida.
+    fillRounded(ctx, x, y + depth, w, Math.max(4, h - depth), radius, color);
+    fillRounded(ctx, x + inset, y + depth + inset, Math.max(4, w - inset * 2), Math.max(3, h - depth - inset * 1.5), Math.max(2, radius - 2), "rgba(9,28,74,0.42)");
+
+    // Cara superior iluminada: una superficie amplia con dos niveles de luz.
+    fillRounded(ctx, x + 1, y, Math.max(2, w - 2), capH, radius, "rgba(109, 196, 255, 0.96)");
+    fillRounded(ctx, x + w * 0.08, y + h * 0.1, w * 0.84, Math.max(3, capH * 0.42), Math.min(5, radius), "rgba(224, 248, 255, 0.58)");
+    fillRounded(ctx, x + w * 0.16, y + h * 0.24, w * 0.68, Math.max(2, capH * 0.2), 3, "rgba(255,255,255,0.26)");
+
+    // Bisel inferior y remaches: detalles que refuerzan forma y escala.
+    ctx.fillStyle = "rgba(5,16,45,0.52)";
+    ctx.fillRect(x + inset, y + h - Math.max(3, h * 0.14), Math.max(4, w - inset * 2), Math.max(2, h * 0.08));
+    ctx.fillStyle = "rgba(225,248,255,0.55)";
+    const rivet = Math.max(1.5, Math.min(4, h * 0.1));
+    for (const px of [x + w * 0.13, x + w * 0.5, x + w * 0.87]) {
       ctx.beginPath();
-      ctx.arc(px, y + h * 0.72, notch, 0, Math.PI * 2);
+      ctx.arc(px, y + h * 0.67, rivet, 0, Math.PI * 2);
       ctx.fill();
     }
-    strokeRounded(ctx, x, y, w, h, radius, "rgba(255,255,255,0.22)");
+    strokeRounded(ctx, x, y, w, h, radius, "rgba(179,235,255,0.78)", Math.max(1, h * 0.045));
   } else if (kind === "decor") {
     const cx = x + w / 2;
     const cy = y + h / 2;
