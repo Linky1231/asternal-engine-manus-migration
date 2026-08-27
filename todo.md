@@ -1665,3 +1665,23 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Definir arquitectura de núcleo estable, API de extensiones y módulos de juego generados por IA
 - [x] Diseñar el flujo de ramas, diffs, validación, publicación y restauración de cambios generados
 - [x] Documentar la hoja de ruta, criterios de aceptación y fases de implementación
+
+# Planificación de forks de motor por usuario
+
+- [ ] Auditar viabilidad de almacenamiento, builds y publicación aislada para código por usuario
+- [ ] Definir forks por cuenta, versiones, permisos, límites y modelo de datos
+- [ ] Diseñar el flujo de Orión para cambios de motor, runtime e interfaz por fork
+- [ ] Documentar la hoja de ruta y los criterios de aceptación de la implementación
+
+# Especificación de Orión como editor directo de Asternal
+
+- [ ] Definir el flujo desde una petición de mapa o mecánica hasta la modificación de motor, runtime e interfaz
+- [ ] Inventariar el código fuente que Orión debe leer y las acciones de edición necesarias
+- [ ] Diseñar generación de cambios, pruebas, publicación y restauración del código fuente
+- [ ] Entregar la especificación final para aprobación antes de implementar
+
+# Presentación de Scripts manuales
+
+- [x] Sustituir en la interfaz las menciones visibles al asistente de scripting por «Scripts manuales»
+- [x] Mantener el acceso a Scripts manuales solo dentro de Inspección y sustituir la descripción actual
+- [x] Añadir o actualizar pruebas de regresión para las nuevas etiquetas y el acceso desde Inspección

@@ -1633,8 +1633,8 @@ function ScriptsButton({ entity, sounds, onUpdate }: { entity: Entity; sounds: i
         onClick={() => setOpen(true)}
         className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
       >
-        <span>◉ EVENTS · BLOCKS</span>
-        <span className="font-mono text-[10px] opacity-80">{count} SCRIPTS</span>
+        <span>◉ SCRIPTS MANUALES</span>
+        <span className="font-mono text-[10px] opacity-80">{count} GUARDADOS</span>
       </button>
       {open && (
         <ScriptEditor

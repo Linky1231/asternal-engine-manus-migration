@@ -5,6 +5,7 @@ import {
   ALL_BLOCKS, BLOCK_GROUPS, BLOCK_LABELS, EVENT_LABELS, uid,
 } from "@/lib/engine/scripts";
 import { SOUND_NAMES, type SoundName, playAudioSource, playSound } from "@/lib/engine/sfx";
+import { createManualScript } from "@/lib/engine/manual-scripts";
 
 const KIND_OPTIONS: (EntityKind | "any")[] = ["any", "player", "platform", "enemy", "coin", "goal"];
 const KIND_ONLY: EntityKind[] = ["player", "platform", "enemy", "coin", "goal"];
@@ -19,6 +20,10 @@ interface Props {
 export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) {
   const [scripts, setScripts] = useState<Script[]>(entity.scripts ?? []);
   const [openId, setOpenId] = useState<string | null>(scripts[0]?.id ?? null);
+  const [description, setDescription] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [creationSummary, setCreationSummary] = useState<string | null>(null);
 
   const commit = (next: Script[]) => {
     setScripts(next);
@@ -30,7 +35,29 @@ export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) 
     commit([...scripts, s]);
     setOpenId(s.id);
   };
-
+  const createFromDescription = async () => {
+    const request = description.trim();
+    if (!request || creating) return;
+    setCreating(true);
+    setCreationError(null);
+    try {
+      const draft = await createManualScript(request, entity.kind);
+      const script: Script = {
+        ...draft.script,
+        id: uid(),
+        blocks: draft.script.blocks.map(block => ({ ...block, id: uid() })),
+      };
+      commit([...scripts, script]);
+      setOpenId(script.id);
+      setDescription("");
+      setCreationSummary(draft.summary);
+    } catch (error) {
+      setCreationError(error instanceof Error ? error.message : "No se pudo crear el script.");
+    } finally {
+      setCreating(false);
+    }
+  };
+  
   const updateScript = (id: string, patch: Partial<Script>) =>
     commit(scripts.map(s => s.id === id ? { ...s, ...patch } : s));
   const removeScript = (id: string) => commit(scripts.filter(s => s.id !== id));
@@ -50,16 +77,38 @@ export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) 
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
       <header className="flex items-center justify-between px-4 py-3 panel border-b">
         <div>
-          <div className="font-display text-sm text-primary-glow glow-text">EVENTS · {entity.kind.toUpperCase()}</div>
-          <div className="text-[10px] font-mono text-muted-foreground">block-code scripting</div>
+          <div className="font-display text-sm text-primary-glow glow-text">SCRIPTS MANUALES · {entity.kind.toUpperCase()}</div>
+          <div className="text-[10px] font-mono text-muted-foreground">Describe el comportamiento y ajusta el resultado cuando lo necesites.</div>
         </div>
-        <button onClick={onClose} className="px-3 py-1.5 rounded-md panel glow-border text-xs font-display">CLOSE</button>
+        <button onClick={onClose} className="px-3 py-1.5 rounded-md panel glow-border text-xs font-display">CERRAR</button>
       </header>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
+        <section className="panel rounded-lg border border-primary/30 p-3 space-y-2.5">
+          <div>
+            <div className="text-[10px] font-display tracking-widest text-primary-glow">DESCRIBE EL COMPORTAMIENTO</div>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Por ejemplo: «cuando choque con una moneda, suma 10 puntos y reproduce un sonido».</p>
+          </div>
+          <textarea
+            value={description}
+            onChange={event => setDescription(event.target.value.slice(0, 1200))}
+            placeholder="Escribe lo que debe hacer este objeto…"
+            rows={3}
+            disabled={creating}
+            className="w-full resize-y rounded-md border border-border bg-input/60 px-2.5 py-2 text-xs font-mono text-foreground outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/15 disabled:opacity-60"
+          />
+          {creationError && <p role="alert" className="text-[11px] text-destructive">{creationError}</p>}
+          {creationSummary && <p className="text-[11px] text-muted-foreground">{creationSummary}</p>}
+          <button
+            type="button"
+            onClick={() => void createFromDescription()}
+            disabled={!description.trim() || creating}
+            className="w-full rounded-md bg-primary px-3 py-2.5 text-xs font-display tracking-widest text-primary-foreground shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55"
+          >{creating ? "CREANDO SCRIPT…" : "CREAR SCRIPT"}</button>
+        </section>
         {scripts.length === 0 && (
           <div className="text-center text-xs text-muted-foreground py-10">
-            No scripts yet. Tap <span className="text-primary-glow">+ NEW SCRIPT</span> to start.
+            Describe el comportamiento para crear el primer script, o añade uno vacío para editarlo manualmente.
           </div>
         )}
 
@@ -160,7 +209,7 @@ export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) 
                   <button
                     onClick={() => removeScript(s.id)}
                     className="w-full mt-1 py-1.5 rounded-md bg-destructive/15 border border-destructive/40 text-destructive font-display text-[10px] tracking-widest"
-                  >DELETE SCRIPT</button>
+                  >ELIMINAR SCRIPT</button>
                 </div>
               )}
             </div>
@@ -172,7 +221,7 @@ export function ScriptEditor({ entity, sounds = [], onChange, onClose }: Props) 
         <button
           onClick={addScript}
           className="w-full py-3 rounded-lg grad-brand text-primary-foreground font-display tracking-widest text-sm glow-border"
-        >+ NEW SCRIPT</button>
+        >+ NUEVO SCRIPT VACÍO</button>
       </div>
     </div>
   );
@@ -492,13 +541,13 @@ function AddBlock({ onAdd }: { onAdd: (k: BlockKind) => void }) {
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full py-2 rounded-md border border-dashed border-primary/40 text-primary-glow font-display text-xs tracking-widest"
-      >+ ADD BLOCK</button>
+      >+ AGREGAR BLOQUE</button>
       {open && (
         <div className="mt-1.5 space-y-1.5">
           <input
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            placeholder="search blocks…"
+            placeholder="Buscar bloques…"
             className="w-full bg-input/60 border border-border rounded px-2 py-1 text-xs font-mono"
           />
           <div className="space-y-3 max-h-80 overflow-auto">

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import { completeOrionChat } from "./server/orion";
+import { createManualScript } from "./server/manual-scripts";
 
 function manusOrionDevEndpoint(): Plugin {
   return {
@@ -22,6 +23,27 @@ function manusOrionDevEndpoint(): Plugin {
               response.end(JSON.stringify(result));
             } catch (error) {
               const message = error instanceof Error ? error.message : "No se pudo consultar a Orión.";
+              response.statusCode = 400;
+              response.setHeader("Content-Type", "application/json");
+              response.end(JSON.stringify({ error: message }));
+            }
+          })();
+        });
+      });
+      server.middlewares.use("/api/orion/manual-script", (request, response, next) => {
+        if (request.method !== "POST") return next();
+        let raw = "";
+        request.on("data", chunk => { raw += String(chunk); });
+        request.on("error", next);
+        request.on("end", () => {
+          void (async () => {
+            try {
+              const body = JSON.parse(raw || "{}") as { description?: unknown; entityKind?: unknown };
+              const result = await createManualScript(body.description, body.entityKind);
+              response.setHeader("Content-Type", "application/json");
+              response.end(JSON.stringify(result));
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "No se pudo crear el script.";
               response.statusCode = 400;
               response.setHeader("Content-Type", "application/json");
               response.end(JSON.stringify({ error: message }));

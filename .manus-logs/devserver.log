@@ -2549,3 +2549,17 @@
 [2026-08-27T19:35:52.713Z] VITE v7.3.6  ready in 218 ms
 [2026-08-27T19:35:52.714Z] ➜  Local:   http://localhost:5173/
 [2026-08-27T19:35:52.714Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-27T19:55:59.964Z] 7:55:59 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx
+[2026-08-27T19:56:16.208Z] 7:56:16 PM [vite] (client) hmr update /src/styles.css, /src/components/engine/ScriptEditor.tsx
+[2026-08-27T19:56:16.262Z] 7:56:16 PM [vite] (client) hmr update /src/styles.css
+[2026-08-27T20:04:42.706Z] 8:04:42 PM [vite] vite.config.ts changed, restarting server...
+[2026-08-27T20:04:42.736Z] 8:04:42 PM [vite] server restarted.
+[2026-08-27T20:04:49.586Z] [ELIFECYCLE] Command failed.
+[2026-08-27T20:04:49.601Z] Dev server exited with code -1
+[2026-08-27T20:04:50.680Z] Starting dev server with command: pnpm run dev
+[2026-08-27T20:04:50.954Z] $ vite --host
+[2026-08-27T20:04:51.178Z] VITE v7.3.6  ready in 198 ms
+[2026-08-27T20:04:51.178Z] ➜  Local:   http://localhost:5173/
+[2026-08-27T20:04:51.178Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-27T20:11:36.968Z] 8:11:36 PM [vite] server/manual-scripts.ts changed, restarting server...
+[2026-08-27T20:11:36.997Z] 8:11:36 PM [vite] server restarted.

@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
+import { createManualScript } from "../manual-scripts";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
 import { sdk } from "./sdk";
 import { registerOAuthRoutes } from "./oauth";
@@ -19,6 +20,15 @@ app.post("/api/orion/chat", async (req, res) => {
     res.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo consultar a Orión.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/orion/manual-script", async (req, res) => {
+  try {
+    res.json(await createManualScript(req.body?.description, req.body?.entityKind));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo crear el script.";
     res.status(400).json({ error: message });
   }
 });
