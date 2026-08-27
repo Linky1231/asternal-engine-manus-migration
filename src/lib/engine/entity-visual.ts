@@ -111,40 +111,38 @@ export function drawEntityFallback(ctx: CanvasRenderingContext2D, entity: Entity
     ctx.lineTo(x + w * 0.82, y + h * 0.12);
     ctx.fill();
   } else if (kind === "platform") {
-    // Bloque modular: la cara superior y el cuerpo tienen volúmenes distintos.
-    const radius = Math.min(9, Math.max(3, h * 0.2));
-    const depth = Math.max(4, Math.min(12, h * 0.28));
-    const inset = Math.max(3, Math.min(10, h * 0.16));
-    const capH = Math.max(7, Math.min(18, h * 0.42));
+    // Bloque continuo: bordes mínimos para que piezas contiguas se unan visualmente.
+    const radius = Math.min(5, Math.max(2, h * 0.12));
+    const depth = Math.max(3, Math.min(8, h * 0.2));
+    const capH = Math.max(6, Math.min(15, h * 0.36));
 
-    // Halo ancho: ilumina la pieza completa, no una línea aislada.
+    // Halo volumétrico alrededor del cuerpo completo, nunca una raya aislada.
     if (visualEffects) {
-      ctx.shadowColor = "rgba(91, 183, 255, 0.82)";
-      ctx.shadowBlur = 15 + glow;
+      ctx.shadowColor = "rgba(91, 183, 255, 0.88)";
+      ctx.shadowBlur = 16 + glow;
     }
-    fillRounded(ctx, x, y + depth * 0.5, w, Math.max(4, h - depth * 0.5), radius, "rgba(8,25,64,0.7)");
+    fillRounded(ctx, x, y + depth * 0.55, w, Math.max(4, h - depth * 0.2), radius, "rgba(8,25,64,0.78)");
     ctx.shadowBlur = 0;
 
-    // Cuerpo principal y faldón inferior para que se lea como plataforma sólida.
+    // Cuerpo compacto con faldón inferior, sin panel interior que cree separaciones.
     fillRounded(ctx, x, y + depth, w, Math.max(4, h - depth), radius, color);
-    fillRounded(ctx, x + inset, y + depth + inset, Math.max(4, w - inset * 2), Math.max(3, h - depth - inset * 1.5), Math.max(2, radius - 2), "rgba(9,28,74,0.42)");
+    ctx.fillStyle = "rgba(5,16,45,0.44)";
+    ctx.fillRect(x, y + h - Math.max(3, h * 0.14), w, Math.max(2, h * 0.1));
 
-    // Cara superior iluminada: una superficie amplia con dos niveles de luz.
-    fillRounded(ctx, x + 1, y, Math.max(2, w - 2), capH, radius, "rgba(109, 196, 255, 0.96)");
-    fillRounded(ctx, x + w * 0.08, y + h * 0.1, w * 0.84, Math.max(3, capH * 0.42), Math.min(5, radius), "rgba(224, 248, 255, 0.58)");
-    fillRounded(ctx, x + w * 0.16, y + h * 0.24, w * 0.68, Math.max(2, capH * 0.2), 3, "rgba(255,255,255,0.26)");
+    // Cara superior ancha: la iluminación ocupa la superficie y conecta con el bloque vecino.
+    fillRounded(ctx, x, y, w, capH, radius, "rgba(109, 196, 255, 0.96)");
+    fillRounded(ctx, x + w * 0.08, y + h * 0.1, w * 0.84, Math.max(3, capH * 0.46), Math.min(4, radius), "rgba(224, 248, 255, 0.58)");
+    fillRounded(ctx, x + w * 0.17, y + h * 0.25, w * 0.66, Math.max(2, capH * 0.18), 2, "rgba(255,255,255,0.3)");
 
-    // Bisel inferior y remaches: detalles que refuerzan forma y escala.
-    ctx.fillStyle = "rgba(5,16,45,0.52)";
-    ctx.fillRect(x + inset, y + h - Math.max(3, h * 0.14), Math.max(4, w - inset * 2), Math.max(2, h * 0.08));
-    ctx.fillStyle = "rgba(225,248,255,0.55)";
-    const rivet = Math.max(1.5, Math.min(4, h * 0.1));
-    for (const px of [x + w * 0.13, x + w * 0.5, x + w * 0.87]) {
+    // Remaches internos, alejados de las uniones para no dibujar falsas grietas.
+    ctx.fillStyle = "rgba(225,248,255,0.5)";
+    const rivet = Math.max(1.5, Math.min(3.5, h * 0.085));
+    for (const px of [x + w * 0.18, x + w * 0.5, x + w * 0.82]) {
       ctx.beginPath();
-      ctx.arc(px, y + h * 0.67, rivet, 0, Math.PI * 2);
+      ctx.arc(px, y + h * 0.68, rivet, 0, Math.PI * 2);
       ctx.fill();
     }
-    strokeRounded(ctx, x, y, w, h, radius, "rgba(179,235,255,0.78)", Math.max(1, h * 0.045));
+    strokeRounded(ctx, x, y, w, h, radius, "rgba(179,235,255,0.76)", Math.max(1, h * 0.04));
   } else if (kind === "decor") {
     const cx = x + w / 2;
     const cy = y + h / 2;

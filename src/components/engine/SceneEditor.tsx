@@ -17,6 +17,7 @@ interface Props {
 type HandleId = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 const HANDLES: HandleId[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 const HANDLE_PX = 14;
+const ROTATE_HANDLE_PX = 22;
 const SNAP_OPTIONS = [0, 8, 20, 40] as const;
 
 function handlePos(e: Entity, h: HandleId) {
@@ -174,9 +175,11 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
   // Pointer tracking
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const gesture = useRef<{
-    mode: "idle" | "pan" | "move" | "resize" | "place" | "pinch" | "hb-move" | "hb-resize";
+    mode: "idle" | "pan" | "move" | "resize" | "rotate" | "place" | "pinch" | "hb-move" | "hb-resize";
     startSX?: number; startSY?: number;
     entStartX?: number; entStartY?: number; entStartW?: number; entStartH?: number;
+    rotateStartAngle?: number;
+    entStartRotation?: number;
     hbStartX?: number; hbStartY?: number; hbStartW?: number; hbStartH?: number;
     entId?: string;
     handle?: HandleId;
@@ -340,6 +343,30 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
         ctx.fillStyle = "#7dd3fc";
         ctx.fillText(label, lx + 5, ly + 13);
 
+        // Tirador circular separado: rotación directa alrededor del centro.
+        const rotateX = sx + sw / 2;
+        const rotateY = sy - 40;
+        ctx.strokeStyle = "rgba(125,211,252,0.7)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(sx + sw / 2, sy);
+        ctx.lineTo(rotateX, rotateY);
+        ctx.stroke();
+        ctx.fillStyle = "#162c59";
+        ctx.strokeStyle = "#7dd3fc";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(rotateX, rotateY, ROTATE_HANDLE_PX / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#e0f2fe";
+        ctx.font = "700 12px ui-sans-serif, system-ui";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("↻", rotateX, rotateY + 0.5);
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
+
         for (const h of HANDLES) {
           const wp = handlePos(sel, h);
           const hx = pan.x + wp.x * scale - HANDLE_PX / 2;
@@ -400,6 +427,14 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
       if (wx >= e.x && wx <= e.x + e.w && wy >= e.y && wy <= e.y + e.h) return e;
     }
     return null;
+  };
+
+  const hitRotateHandle = (sx: number, sy: number): boolean => {
+    const sel = scene.entities.find(e => e.id === selectedId);
+    if (!sel) return false;
+    const centerX = pan.x + (sel.x + sel.w / 2) * scale;
+    const topY = pan.y + sel.y * scale - 40;
+    return Math.hypot(sx - centerX, sy - topY) <= ROTATE_HANDLE_PX;
   };
 
   const hitHandle = (sx: number, sy: number): HandleId | null => {
@@ -477,6 +512,21 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
     if (pointers.current.size >= 2) { beginPinch(); return; }
 
     const w = screenToWorld(sx, sy);
+
+    if (tool === "select" && selectedId && hitRotateHandle(sx, sy)) {
+      const ent = scene.entities.find(e => e.id === selectedId)!;
+      const centerX = pan.x + (ent.x + ent.w / 2) * scale;
+      const centerY = pan.y + (ent.y + ent.h / 2) * scale;
+      gesture.current = {
+        mode: "rotate",
+        entId: ent.id,
+        startSX: sx,
+        startSY: sy,
+        rotateStartAngle: Math.atan2(sy - centerY, sx - centerX),
+        entStartRotation: ent.rotation ?? 0,
+      };
+      return;
+    }
 
     const handle = hitHandle(sx, sy);
     if (handle && selectedId) {
@@ -585,6 +635,18 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
           ? { ...e, x: snapVal((g.entStartX || 0) + dx), y: snapVal((g.entStartY || 0) + dy) }
           : e
       );
+      onChange({ ...scene, entities });
+    } else if (g.mode === "rotate" && g.entId) {
+      const ent = scene.entities.find(e => e.id === g.entId);
+      if (!ent) return;
+      const centerX = pan.x + (ent.x + ent.w / 2) * scale;
+      const centerY = pan.y + (ent.y + ent.h / 2) * scale;
+      const angle = Math.atan2(sy - centerY, sx - centerX);
+      const deltaDegrees = ((angle - (g.rotateStartAngle || 0)) * 180) / Math.PI;
+      let rotation = (g.entStartRotation || 0) + deltaDegrees;
+      if (ev.shiftKey) rotation = Math.round(rotation / 15) * 15;
+      rotation = ((rotation % 360) + 360) % 360;
+      const entities = scene.entities.map(e => e.id === g.entId ? { ...e, rotation } : e);
       onChange({ ...scene, entities });
     } else if (g.mode === "resize" && g.entId && g.handle) {
       const w = screenToWorld(sx, sy);

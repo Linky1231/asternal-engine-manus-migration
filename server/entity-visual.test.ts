@@ -14,7 +14,7 @@ describe("default entity visual system", () => {
     expect(visual).toContain('kind === "goal"');
     expect(visual).toContain('kind === "enemy"');
     expect(visual).toContain('kind === "platform"');
-    expect(visual).toContain("Halo ancho");
+    expect(visual).toContain("Halo volumétrico");
     expect(visual).toContain("const rivet");
     expect(visual).toContain('kind === "decor"');
     expect(visual).not.toMatch(/create(?:Linear|Radial|Conic)Gradient/);
@@ -25,6 +25,15 @@ describe("default entity visual system", () => {
     expect(editor).toContain("drawEntityFallback(ctx, { ...e, x: 0, y: 0 }");
     expect(runtime).toContain('import { drawEntityFallback } from "@/lib/engine/entity-visual";');
     expect(runtime).toContain("drawEntityFallback(ctx, e");
+  });
+
+  it("exposes direct rotation from the selected object canvas", () => {
+    expect(editor).toContain('mode: "idle" | "pan" | "move" | "resize" | "rotate"');
+    expect(editor).toContain("hitRotateHandle");
+    expect(editor).toContain('mode: "rotate"');
+    expect(editor).toContain("entStartRotation");
+    expect(editor).toContain("deltaDegrees");
+    expect(editor).toContain("rotation");
   });
 
   it("preserves the existing entity IDs and gameplay flags", () => {

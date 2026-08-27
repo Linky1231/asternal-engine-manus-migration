@@ -1614,3 +1614,13 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Reemplazar la línea de brillo por iluminación volumétrica integrada y coherente
 - [x] Aplicar el mismo resultado en editor y runtime sin cambiar colisiones ni dimensiones
 - [x] Validar escena predeterminada, pruebas, responsive y build
+
+
+# Plataformas continuas y rotación de objetos
+
+- [x] Auditar la causa de los huecos entre plataformas y el estado actual de selección/transformación
+- [x] Corregir el dibujo de plataformas para eliminar cortes y mantener una unión visual continua
+- [x] Añadir control visible de rotación para objetos seleccionados
+- [x] Persistir rotación, reflejarla en editor y Play, y conservar colisiones compatibles
+- [x] Validar móvil, interacción, pruebas y build
+- [x] Actualizar la aserción de plataforma para reflejar el nombre actual de la iluminación volumétrica
