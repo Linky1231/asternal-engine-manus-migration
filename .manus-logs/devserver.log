@@ -2544,3 +2544,8 @@
 [2026-08-27T02:38:52.027Z] 2:38:52 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx
 [2026-08-27T02:40:01.001Z] 2:40:01 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx
 [2026-08-27T02:40:49.676Z] 2:40:49 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx
+[2026-08-27T19:35:52.169Z] Starting dev server with command: pnpm run dev
+[2026-08-27T19:35:52.462Z] $ vite --host
+[2026-08-27T19:35:52.713Z] VITE v7.3.6  ready in 218 ms
+[2026-08-27T19:35:52.714Z] ➜  Local:   http://localhost:5173/
+[2026-08-27T19:35:52.714Z] ➜  Network: http://169.254.0.21:5173/

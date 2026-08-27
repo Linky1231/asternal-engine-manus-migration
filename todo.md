@@ -1658,3 +1658,10 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Retirar Tiles de la navegación principal e integrarlo como subsección de Configuraciones
 - [x] Implementar la jerarquía en el editor para crear, renombrar, mover y reordenar nodos
 - [x] Añadir regresiones, validar escritorio/móvil, documentar y publicar
+
+# Planificación de lenguaje ampliable por IA
+
+- [x] Inventariar el lenguaje de bloques, runtime, persistencia y rutas de publicación actuales
+- [x] Definir arquitectura de núcleo estable, API de extensiones y módulos de juego generados por IA
+- [x] Diseñar el flujo de ramas, diffs, validación, publicación y restauración de cambios generados
+- [x] Documentar la hoja de ruta, criterios de aceptación y fases de implementación
