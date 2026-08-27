@@ -23,7 +23,7 @@ export type GameReviewInput = {
   priceOrbes: number;
   hasCover: boolean;
   screenshotCount: number;
-  project: { sceneCount: number; entityCount: number; scriptCount: number; uiElementCount: number; textSamples: string[] };
+  project: { sceneCount: number; entityCount: number; uiElementCount: number; textSamples: string[] };
   previewImage?: string;
 };
 
@@ -169,19 +169,12 @@ export function summarizeGameForOrion(project: unknown): GameReviewInput["projec
   const root = project && typeof project === "object" ? project as Record<string, unknown> : {};
   const scenes = Array.isArray(root.scenes) ? root.scenes : [];
   let entityCount = 0;
-  let scriptCount = 0;
   let uiElementCount = 0;
   for (const scene of scenes.slice(0, 100)) {
     if (!scene || typeof scene !== "object") continue;
     const record = scene as Record<string, unknown>;
     const entities = Array.isArray(record.entities) ? record.entities : [];
     entityCount += entities.length;
-    for (const entity of entities.slice(0, 2_000)) {
-      if (entity && typeof entity === "object") {
-        const scripts = (entity as Record<string, unknown>).scripts;
-        scriptCount += Array.isArray(scripts) ? scripts.length : 0;
-      }
-    }
     uiElementCount += Array.isArray(record.ui) ? record.ui.length : 0;
   }
   const textSamples: string[] = [];
@@ -189,7 +182,6 @@ export function summarizeGameForOrion(project: unknown): GameReviewInput["projec
   return {
     sceneCount: scenes.length,
     entityCount: Math.min(entityCount, 2_000),
-    scriptCount: Math.min(scriptCount, 1_000),
     uiElementCount: Math.min(uiElementCount, 1_000),
     textSamples,
   };

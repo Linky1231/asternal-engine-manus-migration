@@ -1658,3 +1658,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Retirar Tiles de la navegación principal e integrarlo como subsección de Configuraciones
 - [x] Implementar la jerarquía en el editor para crear, renombrar, mover y reordenar nodos
 - [x] Añadir regresiones, validar escritorio/móvil, documentar y publicar
+
+# Sustitución de scripts por IA de autoría del entorno
+
+- [x] Auditar los bloques/scripts actuales, el runtime, el contexto del motor y los puntos de modificación del editor
+- [x] Diseñar un contrato de instrucciones y cambios JSON con validación, vista previa, aplicación y deshacer
+- [x] Crear la IA server-side que transforme instrucciones en planes seguros de cambios del entorno
+- [x] Reemplazar la interfaz de scripts por el asistente conversacional y aplicar sus cambios aprobados
+- [x] Retirar el sistema de scripts legado y normalizar proyectos existentes sin perder escenas u objetos
+- [x] Añadir pruebas, validar IA/editor/persistencia/responsive, documentar y publicar

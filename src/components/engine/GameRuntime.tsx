@@ -3,7 +3,6 @@ import type { AudioAsset, Entity, InputBinding, RuntimeInput, RuntimeState, Scen
 import { DEFAULT_INPUT_MAP, stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
 import { getRenderableImage, type RenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
-import { createScriptRunner } from "@/lib/engine/scripts";
 import { playAudioSource, startMusic, stopMusic, setVolume, setMuted } from "@/lib/engine/sfx";
 import { drawUIElement } from "./UIEditor";
 import { drawPlayerPill } from "@/lib/engine/player-visual";
@@ -56,7 +55,6 @@ export function GameRuntime({
     let drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
     const state: RuntimeState = newRuntimeState(initial);
     stateRef.current = state;
-    let scripts = createScriptRunner();
     const shake = { intensity: 0, time: 0 };
     const hooks = {
       shake: (intensity: number, duration: number) => {
@@ -71,7 +69,6 @@ export function GameRuntime({
         work = JSON.parse(JSON.stringify(initial));
         drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
         Object.assign(state, newRuntimeState(initial));
-        scripts = createScriptRunner();
       },
     };
 
@@ -338,7 +335,6 @@ export function GameRuntime({
         while (acc >= targetDt && steps < 5) {
           if (!state.win && !state.dead) {
             stepScene(work, inputRef.current, state, targetDt);
-            scripts.step(work, state, inputRef.current, hooks, targetDt);
             if (drawList.length !== work.entities.length) {
               drawList = sortedForRender(work).filter(e => !isOnHiddenLayer(work, e));
             }

@@ -20,7 +20,7 @@ import { UIEditor } from "./UIEditor";
 import { ProjectManager } from "./ProjectManager";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { ScriptEditor } from "./ScriptEditor";
+import { EditorAuthoringAssistant } from "./EditorAuthoringAssistant";
 import { useT, setLang } from "@/lib/i18n";
 
 
@@ -794,7 +794,7 @@ function InspectorPanel({
       />
 
       <AnimationsButton entity={ent} onUpdate={update} />
-      <ScriptsButton entity={ent} sounds={project?.assets?.sounds ?? []} onUpdate={update} />
+      <AuthoringAssistantButton scene={scene} onChangeScene={onChangeScene} />
       <DialogEditor entity={ent} onUpdate={update} />
       <HitboxEditor entity={ent} onUpdate={update} />
 
@@ -1296,7 +1296,7 @@ function VariablesPanel({ values, types, onChange }: {
         </div>;
       })}
       <div className="flex gap-1"><input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { commit(newName, "number", 0); setNewName(""); } }} placeholder="nueva_variable" className="min-w-0 flex-1 bg-input/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono" /><button type="button" onClick={() => { commit(newName, "number", 0); setNewName(""); }} className="px-2 rounded border border-primary/40 text-primary text-xs">+</button></div>
-      <p className="text-[9px] font-mono text-muted-foreground">Nombre, tipo y valor inicial disponibles para bloques y runtime.</p>
+      <p className="text-[9px] font-mono text-muted-foreground">Nombre, tipo y valor inicial disponibles para la escena y sus comportamientos.</p>
     </section>
   );
 }
@@ -1624,25 +1624,19 @@ function scaleScene(scene: Scene, k: number): Scene {
   };
 }
 
-function ScriptsButton({ entity, sounds, onUpdate }: { entity: Entity; sounds: import("@/lib/engine/core").AudioAsset[]; onUpdate: (patch: Partial<Entity>) => void }) {
+function AuthoringAssistantButton({ scene, onChangeScene }: { scene: Scene; onChangeScene: (scene: Scene) => void }) {
   const [open, setOpen] = useState(false);
-  const count = entity.scripts?.length ?? 0;
   return (
     <>
       <button
         onClick={() => setOpen(true)}
         className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
       >
-        <span>◉ EVENTS · BLOCKS</span>
-        <span className="font-mono text-[10px] opacity-80">{count} SCRIPTS</span>
+        <span>✦ IA DE AUTORÍA</span>
+        <span className="font-mono text-[10px] opacity-80">INSTRUCCIONES</span>
       </button>
       {open && (
-        <ScriptEditor
-          entity={entity}
-          sounds={sounds}
-          onChange={onUpdate}
-          onClose={() => setOpen(false)}
-        />
+        <EditorAuthoringAssistant scene={scene} onChange={onChangeScene} onClose={() => setOpen(false)} />
       )}
     </>
   );
@@ -1705,7 +1699,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           <li><span className="text-primary-glow">CONSTRUIR</span> · toca para colocar la herramienta, pellizca para zoom, desliza para mover.</li>
           <li><span className="text-primary-glow">SELECCIONAR</span> · toca una entidad y abre INSPECCIÓN para editarla.</li>
           <li><span className="text-primary-glow">ASSETS</span> · importa varios fotogramas para crear una animación.</li>
-          <li><span className="text-primary-glow">SCRIPTS</span> · añade bloques de eventos (onStart, onCollide) para dar vida a las entidades.</li>
+          <li><span className="text-primary-glow">IA DE AUTORÍA</span> · describe el cambio de juego y revisa el plan antes de aplicarlo a la escena.</li>
           <li><span className="text-primary-glow">ESCENAS</span> · renombra en línea, duplica con ⧉, escala ×N desde el inspector.</li>
           <li><span className="text-primary-glow">DATOS</span> · exporta/importa el proyecto como JSON. Guarda automáticamente.</li>
         </ul>

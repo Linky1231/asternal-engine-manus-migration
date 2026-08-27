@@ -87,9 +87,11 @@ function inferVariableTypes(values: Record<string, string | number | boolean> | 
 }
 
 function normalizeEntity(entity: Entity): Entity {
+  const { scripts: _legacyScripts, ...withoutScripts } = entity as Entity & { scripts?: unknown };
+  void _legacyScripts;
   const inferredBody = entity.gravity || entity.controllable || entity.kind === "enemy" ? "dynamic" : "static";
   return {
-    ...entity,
+    ...withoutScripts,
     name: entity.name?.trim() || entity.kind,
     tags: Array.isArray(entity.tags) ? [...new Set(entity.tags.map(tag => String(tag).trim()).filter(Boolean))] : [],
     scaleX: entity.scaleX ?? 1,

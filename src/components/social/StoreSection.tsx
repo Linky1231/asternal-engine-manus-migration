@@ -174,7 +174,6 @@ function AssetCard({
           const c = ap.color as string | undefined;
           const w = ap.w as number | undefined;
           const h = ap.h as number | undefined;
-          const hasScripts = Array.isArray(ap.scripts) && ap.scripts.length > 0;
           return (
             <div className="flex flex-wrap gap-1">
               {k && <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-primary/8 text-primary/70 border border-primary/10">{k.toUpperCase()}</span>}
@@ -183,7 +182,6 @@ function AssetCard({
               {!!ap.solid && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-amber-500/8 text-amber-600 border border-amber-500/10">solid</span>}
               {!!ap.texture && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-violet-500/8 text-violet-600 border border-violet-500/10">textura</span>}
               {!!ap.moving && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-cyan-500/8 text-cyan-600 border border-cyan-500/10">móvil</span>}
-              {hasScripts && <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-emerald-500/8 text-emerald-600 border border-emerald-500/10">scripts</span>}
             </div>
           );
         })()}

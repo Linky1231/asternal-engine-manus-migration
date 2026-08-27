@@ -18,7 +18,7 @@ type GameSubmission = {
   priceOrbes: number;
   hasCover: boolean;
   screenshotCount: number;
-  project: { sceneCount: number; entityCount: number; scriptCount: number; uiElementCount: number; textSamples: string[] };
+  project: { sceneCount: number; entityCount: number; uiElementCount: number; textSamples: string[] };
   previewImage?: string;
 };
 type ArtworkSubmission = {
@@ -154,7 +154,6 @@ export function normalizeCommunitySubmission(value: unknown): CommunitySubmissio
       project: {
         sceneCount: cleanCount(project.sceneCount, 100),
         entityCount: cleanCount(project.entityCount, 2_000),
-        scriptCount: cleanCount(project.scriptCount, 1_000),
         uiElementCount: cleanCount(project.uiElementCount, 1_000),
         textSamples: Array.isArray(project.textSamples)
           ? project.textSamples.filter(sample => typeof sample === "string").map(sample => sample.slice(0, 220)).slice(0, 20)

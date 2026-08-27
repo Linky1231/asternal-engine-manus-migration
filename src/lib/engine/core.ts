@@ -1,6 +1,5 @@
 // Asternal Engine core: ECS-lite + loop + physics + scenes + input
 import type { AnimationClip } from "./animations";
-import type { Script } from "./scripts";
 
 export type EntityKind = "player" | "platform" | "enemy" | "coin" | "goal" | "decor";
 
@@ -35,7 +34,7 @@ export interface AudioAsset {
   duration?: number;
   /** Ganancia propia del recurso, multiplicada por el volumen global. */
   volume?: number;
-  /** Permite que el clip se use en repetición desde los bloques de audio. */
+  /** Permite que el clip se use en repetición desde los ajustes de audio. */
   loop?: boolean;
 }
 
@@ -110,8 +109,7 @@ export interface Entity {
   opacity?: number;
   texture?: string | null;
   animations?: AnimationClip[];
-  scripts?: Script[];
-  /** Datos de autoría libres para que los scripts no dependan de casos por tipo. */
+  /** Datos de autoría libres para el entorno y la IA de autoría. */
   variables?: Record<string, string | number | boolean>;
   /** Esquema persistente de variables iniciales; saves previos infieren el tipo del valor. */
   variableTypes?: Record<string, VariableType>;
@@ -238,7 +236,7 @@ export interface Scene {
   width: number;
   height: number;
   entities: Entity[];
-  /** Estado compartido por escena, accesible desde los bloques visuales. */
+  /** Estado compartido por escena, accesible desde el editor y sus comportamientos. */
   variables?: Record<string, string | number | boolean>;
   variableTypes?: Record<string, VariableType>;
   timeLimit?: number;            // seconds; 0 = no limit
