@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { supabase, clearSupabaseCredentials } from "@/integrations/supabase/client";
 import {
   Gamepad2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2,
   Check, AlertCircle, Sparkles, RefreshCw,
@@ -306,34 +305,15 @@ function AuthPage() {
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) navigate({ to: returnTo || "/" });
-    });
+    fetch("/api/manus/session", { credentials: "include" })
+      .then(response => response.ok ? response.json() : null)
+      .then(payload => { if (payload?.user) navigate({ to: returnTo || "/" }); })
+      .catch(() => { /* La pantalla mantiene disponible el acceso oficial. */ });
     requestAnimationFrame(() => setLoaded(true));
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   useEffect(() => {
-    if (!window.location.search.includes("multimodal=1")) return;
-    let active = true;
-    setMultimodalState("loading");
-    void (async () => {
-      try {
-        const response = await fetch("/api/supabase/link-manus", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({}) });
-        const payload = await response.json() as { error?: string; session?: Record<string, unknown>; username?: string };
-        if (!response.ok || !payload.session) throw new Error(payload.error || "No se pudo sincronizar la cuenta.");
-        const { error } = await supabase.auth.setSession(payload.session as never);
-        if (error) throw error;
-        if (!active) return;
-        setMultimodalState("success");
-        setMultimodalMessage(`Cuenta sincronizada como @${payload.username || "tu perfil"}.`);
-        window.history.replaceState({}, "", "/auth");
-      } catch (error) {
-        if (!active) return;
-        setMultimodalState("error");
-        setMultimodalMessage(error instanceof Error ? error.message : "No se pudo completar la sincronización.");
-      }
-    })();
-    return () => { active = false; };
+    if (window.location.search.includes("multimodal=1")) window.history.replaceState({}, "", "/auth");
   }, []);
 
   const launchMultimodalLogin = () => {
@@ -346,84 +326,6 @@ function AuthPage() {
     }
   };
 
-  const clearErrors = () => { setErr(null); setFieldErrors({}); };
-
-  // Recuperación rápida: si una clave guardada en el navegador es inválida
-  // (p. ej. un token sbp_… pegado como anon key), la borra y recarga la app.
-  const resetConnection = () => {
-    clearSupabaseCredentials();
-    window.location.reload();
-  };
-
-  const switchMode = (m: "signin" | "signup") => {
-    clearErrors();
-    setSuccessMsg(null);
-    setMode(m);
-  };
-
-  /** Normaliza un nombre de usuario a la forma segura (minúsculas, a-z0-9_). */
-  const cleanUsername = (v: string) => v.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-
-  /**
-   * Resuelve el identificador de acceso: si es un correo se usa tal cual;
-   * si es un nombre de usuario se mapea de forma determinista a
-   * <usuario>@asternal.app (la misma cuenta creada al registrarse sin correo).
-   */
-  const resolveLoginEmail = (identifier: string): string => {
-    const v = identifier.trim();
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return v;
-    const u = cleanUsername(v);
-    return `${u || "usuario"}@asternal.app`;
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearErrors();
-    setSuccessMsg(null);
-    email.setTouched(true);
-    password.setTouched(true);
-    if (mode === "signup") username.setTouched(true);
-
-    const errors: Record<string, string> = {};
-    if (!email.value.trim()) errors.email = "Escribe tu usuario o correo";
-    if (mode === "signup" && !cleanUsername(username.value)) errors.username = "Elige un nombre de usuario";
-    if (!password.value) errors.password = "La contraseña es obligatoria";
-    else if (password.value.length < 6) errors.password = "Mínimo 6 caracteres";
-
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
-
-    setBusy(true);
-    try {
-      if (mode === "signup") {
-        const u = cleanUsername(username.value);
-        // Sin correo no pasa nada: se usa <usuario>@asternal.app (determinista,
-        // sirve también para acceder después solo con el nombre de usuario).
-        const emailFinal = email.value.trim() || `${u}@asternal.app`;
-        const { error } = await supabase.auth.signUp({
-          email: emailFinal, password: password.value,
-          options: { data: { username: u } },
-        });
-        if (error) throw error;
-        setSuccessMsg("Cuenta creada correctamente");
-        setTimeout(() => navigate({ to: returnTo || "/" }), 1000);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: resolveLoginEmail(email.value),
-          password: password.value,
-        });
-        if (error) throw error;
-        navigate({ to: returnTo || "/" });
-      }
-    } catch (e) {
-      const msg = (e as Error).message;
-      const friendly = friendlyAuthError(msg);
-      setErr(friendly);
-      if (/email|user|rate/i.test(msg))
-        setFieldErrors(prev => ({ ...prev, email: friendly }));
-      else if (/password|contraseña/i.test(msg))
-        setFieldErrors(prev => ({ ...prev, password: friendly }));
-    } finally { setBusy(false); }
-  };
 
   return (
     <div className="min-h-dvh w-full flex flex-col bg-background overflow-y-auto relative">
@@ -528,131 +430,16 @@ function AuthPage() {
                       </p>
                     </div>
 
-                    {/* Selector de acceso: mismo gris suave y pastilla clara de la navegación inferior. */}
-                    <div className="flex bg-muted/60 rounded-xl p-0.5 mb-5 relative" role="tablist" aria-label="Modo de acceso">
-                      <div
-                        className="absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-[10px] grad-brand shadow-sm will-change-transform"
-                        style={{
-                          left: 0,
-                          transform: `translateX(${mode === "signin" ? 0 : 100}%)`,
-                          transition: "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)",
-                          pointerEvents: "none" as const,
-                        }}
-                      />
-                      {(["signin", "signup"] as const).map(m => (
-                        <button key={m} type="button" onClick={() => switchMode(m)} role="tab"
-                          aria-selected={mode === m}
-                          className={`relative z-10 flex-1 min-h-11 rounded-[10px] text-xs font-display font-semibold tracking-wider transition-colors duration-200 ${
-                            mode === m
-                              ? "text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}>
-                          {m === "signin" ? "ACCEDER" : "REGISTRARSE"}
-                        </button>
-                      ))}
+                    <div className="space-y-3">
+                      <button type="button" aria-label="Continuar con Google" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-slate-300/30 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70">
+                        {multimodalState === "loading" ? <Loader2 size={18} className="animate-spin text-slate-500" /> : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.4-.18-2.06H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.23Z" /><path fill="#34A853" d="M12 21.72c2.63 0 4.84-.87 6.45-2.37l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.72Z" /><path fill="#FBBC05" d="M6.54 13.79a5.85 5.85 0 0 1 0-3.58V7.68H3.3a9.73 9.73 0 0 0 0 8.64l3.24-2.53Z" /><path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.25 14.63 2.28 12 2.28a9.74 9.74 0 0 0-8.7 5.4l3.24 2.53C7.31 7.9 9.46 6.18 12 6.18Z" /></svg>
+                        )}
+                        {multimodalState === "loading" ? "Conectando…" : "Continuar con Google"}
+                      </button>
+                      <p className="px-3 text-center text-xs leading-relaxed text-muted-foreground/75">Tu acceso se administra de forma segura con Manus. No necesitas crear otra contraseña en Asternal.</p>
+                      {multimodalMessage && <p className={`text-center text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
                     </div>
-
-                    {mode === "signin" && (
-                      <div className="mb-4">
-                        <button type="button" aria-label="Continuar con Google" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-slate-300/30 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70">
-                          {multimodalState === "loading" ? <Loader2 size={18} className="animate-spin text-slate-500" /> : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                              <path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.4-.18-2.06H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.23Z" />
-                              <path fill="#34A853" d="M12 21.72c2.63 0 4.84-.87 6.45-2.37l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.72Z" />
-                              <path fill="#FBBC05" d="M6.54 13.79a5.85 5.85 0 0 1 0-3.58V7.68H3.3a9.73 9.73 0 0 0 0 8.64l3.24-2.53Z" />
-                              <path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.25 14.63 2.28 12 2.28a9.74 9.74 0 0 0-8.7 5.4l3.24 2.53C7.31 7.9 9.46 6.18 12 6.18Z" />
-                            </svg>
-                          )}
-                          {multimodalState === "loading" ? "Conectando…" : "Continuar con Google"}
-                        </button>
-                        {multimodalMessage && <p className={`mt-2 text-center text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
-                      </div>
-                    )}
-
-                    {/* Form */}
-                    <form onSubmit={onSubmit} className="space-y-3">
-                      {mode === "signup" && (
-                        <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '0ms' }}>
-                          <FloatInput label="Nombre de usuario" icon={User} type="text"
-                            value={username.value} onChange={username.setValue}
-                            onFocus={() => username.setFocused(true)}
-                            onBlur={() => { username.setFocused(false); username.setTouched(true); }}
-                            focused={username.focused} hasValue={username.hasValue}
-                            placeholder="tu_usuario" autoComplete="username" maxLength={32}
-                            inputRef={usernameRef as React.RefObject<HTMLInputElement>}
-                            error={fieldErrors.username} />
-                        </div>
-                      )}
-
-                      <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '80ms' }}>
-                        <FloatInput
-                          label={mode === "signup" ? "Correo electrónico (opcional)" : "Usuario o correo"}
-                          icon={mode === "signup" ? Mail : User}
-                          type="text"
-                          value={email.value} onChange={email.setValue}
-                          onFocus={() => email.setFocused(true)}
-                          onBlur={() => { email.setFocused(false); email.setTouched(true); }}
-                          focused={email.focused} hasValue={email.hasValue}
-                          placeholder={mode === "signup" ? "email@ejemplo.com (no es necesario)" : "tu_usuario o email@ejemplo.com"}
-                          autoComplete={mode === "signup" ? "email" : "username"}
-                          inputRef={emailRef} error={fieldErrors.email} />
-                      </div>
-
-                      <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '160ms' }}>
-                        <FloatInput label="Contraseña" icon={Lock} type={showPw ? "text" : "password"}
-                          value={password.value} onChange={password.setValue}
-                          onFocus={() => password.setFocused(true)}
-                          onBlur={() => { password.setFocused(false); password.setTouched(true); }}
-                          focused={password.focused} hasValue={password.hasValue}
-                          placeholder={mode === "signup" ? "Mínimo 6 caracteres" : "••••••••"}
-                          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                          minLength={6} inputRef={passwordRef} error={fieldErrors.password}>
-                          <button type="button" onClick={() => setShowPw(!showPw)}
-                            className="pr-3 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors shrink-0" tabIndex={-1}>
-                            {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </FloatInput>
-                        {mode === "signup" && <PasswordStrength password={password.value} />}
-                      </div>
-
-                      {err && !fieldErrors.email && !fieldErrors.password && !fieldErrors.username && (
-                        <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-destructive/[0.04] border border-destructive/10 text-xs text-destructive/90 animate-[scale-in_200ms_ease-out]">
-                          <div className="w-4 h-4 rounded-full bg-destructive/8 grid place-items-center shrink-0 mt-[1px] text-[9px] font-bold">!</div>
-                          <span>{err}</span>
-                        </div>
-                      )}
-
-                      {/* Recuperación de una configuración local de conexión inválida. */}
-                      {err && /invalid api key|apikey|invalid key/i.test(err) && (
-                        <button type="button" onClick={resetConnection}
-                          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-dashed border-amber-400/50 text-[11px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/70 dark:hover:bg-amber-950/40 transition-colors"
-                        >
-                          <RefreshCw size={11} /> Restablecer conexión y recargar
-                        </button>
-                      )}
-
-                      {successMsg && (
-                        <div className="px-3.5 py-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200/60 text-xs text-emerald-700/90 animate-[scale-in_300ms_ease-out]">
-                          {successMsg}
-                        </div>
-                      )}
-
-                      {/* Submit button */}
-                      <div style={{ animation: 'slide-in-up 300ms cubic-bezier(0.22,1,0.36,1) both', animationDelay: '240ms' }}>
-                        <button disabled={busy}
-                          className="btn-grad relative w-full py-2.5 rounded-xl text-sm font-display font-semibold tracking-wide active:scale-[0.98] disabled:opacity-50"
-                        >
-                          <span className="flex items-center justify-center gap-2">
-                            {busy ? (
-                              <><Loader2 size={14} className="animate-spin" />{mode === "signin" ? "Accediendo…" : "Creando…"}</>
-                            ) : (
-                              <><span>{mode === "signin" ? "ACCEDER" : "CREAR CUENTA"}</span><ArrowRight size={13} /></>
-                            )}
-                          </span>
-                        </button>
-                      </div>
-
-                    </form>
 
                     <div className="mt-5 pt-4 border-t border-border/40">
                       {returnTo && returnTo.startsWith("/profile/") && (

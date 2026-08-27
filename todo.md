@@ -1715,3 +1715,20 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Implementar el esquema de registros de versiones, propuestas, capacidades y permisos por cuenta en Supabase
 - [x] Conectar Scripts manuales con versiones de código y propuestas privadas asociadas a Supabase
 - [ ] Definir y conectar un compilador aislado que tome versiones desde Supabase y devuelva artefactos ejecutables sin GitHub
+
+# Scripts manuales locales sincronizados al publicar
+
+- [ ] Definir el paquete de código, versión y manifiesto que acompaña a cada publicación de juego
+- [ ] Guardar versiones y propuestas de Scripts manuales de forma local durante la edición
+- [ ] Adjuntar al publicar una instantánea verificable de código y configuración del juego
+- [ ] Restaurar la versión publicada al abrir el juego en otro dispositivo
+- [ ] Validar sincronización, aislamiento y compatibilidad de publicaciones
+
+# Migración prioritaria de Supabase a Manus
+
+- [x] Inventariar y respaldar de forma no destructiva los datos, archivos, autenticación y configuraciones actuales de Supabase
+- [x] Definir el modelo de datos y almacenamiento administrados por Manus que reemplazará los registros de prueba
+- [ ] Implementar los servicios internos de Manus para perfiles, publicaciones, proyectos, conversaciones y recursos
+- [ ] Sustituir los clientes y flujos de Supabase por autenticación oficial, datos y almacenamiento de Manus
+- [ ] Eliminar dependencias, configuraciones, rutas y contenido de prueba de Supabase tras validación y confirmación final
+- [ ] Validar la migración completa y retomar Scripts manuales sobre la nueva base

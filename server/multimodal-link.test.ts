@@ -11,17 +11,14 @@ const helper = readFileSync(resolve(root, "src/lib/auth/manus.ts"), "utf8");
 const supabaseClient = readFileSync(resolve(root, "src/integrations/supabase/client.ts"), "utf8");
 
 describe("Manus multimodal login", () => {
-  it("protects the link endpoint with Manus session authentication", () => {
-    expect(server).toContain('app.post("/api/supabase/link-manus"');
+  it("expone la sesión y el cierre de sesión oficiales de Manus sin un puente externo", () => {
+    expect(server).toContain('app.get("/api/manus/session"');
+    expect(server).toContain('app.post("/api/manus/logout"');
     expect(server).toContain('import { registerOAuthRoutes } from "./oauth";');
     expect(server).toContain("registerOAuthRoutes(app);");
     expect(server).toContain("sdk.authenticateRequest(req)");
-    expect(server).toContain("listSupabaseUsers");
-    expect(server).toContain("createSupabaseUser");
-    expect(server).toContain("signInSupabaseUser");
-    expect(server).toContain("verifySupabaseProfile");
-    expect(server).toContain('crypto.randomBytes(32)');
-    expect(server).not.toContain("manusUser.password");
+    expect(server).not.toContain('/api/supabase/link-manus');
+    expect(server).not.toContain("signInSupabaseUser");
   });
 
   it("returns to profile only for the one-time multimodal intent", () => {
@@ -32,18 +29,20 @@ describe("Manus multimodal login", () => {
     expect(helper).toContain("window.location.origin");
     expect(helper).not.toContain("asternaleng-ceskknda.manus.space");
     expect(helper).not.toContain("isAsternalRuntime");
-    expect(readFileSync(resolve(root, "src/routes/index.tsx"), "utf8")).toContain("multimodalReturn");
+    expect(readFileSync(resolve(root, "src/routes/index.tsx"), "utf8")).toContain('"/api/manus/session"');
   });
 
-  it("materializes a visible profile when the compatibility client receives the returned session", () => {
-    expect(supabaseClient).toContain("ensureProfileExists(user.id, user.email");
-    expect(supabaseClient).toContain("user.user_metadata?.manus_username");
+  it("desconecta el cliente de Supabase y no conserva credenciales incrustadas", () => {
+    expect(supabaseClient).not.toContain("createClient<Database>");
+    expect(supabaseClient).not.toContain("supabase.co");
+    expect(supabaseClient).toContain("servicios de Manus");
   });
 
-  it("exposes the action inside Log in and establishes the returned Supabase session", () => {
+  it("expone el acceso dentro de Log in sin crear una segunda sesión", () => {
     expect(auth).toContain("Continuar con Google");
     expect(auth).toContain("startMultimodalLogin");
-    expect(auth).toContain("supabase.auth.setSession");
+    expect(auth).toContain('"/api/manus/session"');
+    expect(auth).not.toContain("supabase.auth.setSession");
     expect(auth).toContain('aria-label="Continuar con Google"');
     expect(profile).not.toContain("Login multimodal");
   });

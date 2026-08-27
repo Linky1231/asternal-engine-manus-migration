@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
 import {
   saveProjectById,
   setProjectCloudId,
@@ -12,6 +10,27 @@ import {
   setCurrentProjectId,
 } from "./storage";
 import type { Project } from "./core";
+
+export type CloudProject = { id: string; name: string; data: unknown; updated_at: string | number | null };
+
+async function manusProjectRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "No se pudo sincronizar con Manus.");
+  return body as T;
+}
+
+export async function cloudListProjects(): Promise<CloudProject[]> {
+  return manusProjectRequest<CloudProject[]>("/api/manus/projects");
+}
+
+export async function cloudSaveProject(input: { id?: string | null; name: string; data: unknown }): Promise<CloudProject> {
+  return manusProjectRequest<CloudProject>("/api/manus/projects", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function cloudDeleteProject(id: string): Promise<void> {
+  await manusProjectRequest<{ success: true }>(`/api/manus/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
 
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingPushes = new Map<string, Project>();
@@ -58,12 +77,10 @@ async function flushProjectPush(localId: string): Promise<void> {
       pendingPushes.delete(localId);
       if (!project) continue;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
         const cloudId = getProjectCloudId(localId);
         const saved = await cloudSaveProject({ id: cloudId, name: project.name || "Untitled Game", data: cloudProjectData(localId, project) });
-        const remoteMs = Date.parse(saved.updated_at);
-        setProjectCloudId(localId, saved.id, Number.isFinite(remoteMs) ? remoteMs : Date.now());
+        const remoteMs = toMillis(saved.updated_at);
+        setProjectCloudId(localId, saved.id, remoteMs || Date.now());
       } catch { /* el siguiente cambio reintentará sin duplicar filas */ }
     }
   })().finally(() => {
@@ -122,8 +139,6 @@ function isPristineDefault(p: Project | null): boolean {
  */
 export async function activateCloudProjectIfBlank(): Promise<string | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
     const curId = getCurrentProjectId();
     const cur = loadProjectById(curId);
     if (!cur || !isPristineDefault(cur)) return null;
@@ -186,18 +201,13 @@ export function scheduleAssetLibraryPush(items: AssetLibraryItem[]) {
 /** Sube la biblioteca completa como una única fila por cuenta (upsert). */
 export async function pushAssetLibraryToCloud(items: AssetLibraryItem[]): Promise<void> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("user_projects").select("id,data").eq("user_id", user.id);
-    const rows = (data ?? []) as Array<{ id: string; data?: unknown }>;
+    const rows = await cloudListProjects() as Array<{ id: string; data?: unknown }>;
     const row = rows.find(r => isAssetLibraryRow(r.data));
     const payload = { name: "__asternal_assets__", data: { __kind: ASSET_LIBRARY_KIND, items } as never };
     if (row) {
-      await supabase.from("user_projects")
-        .update({ name: payload.name, data: payload.data })
-        .eq("id", (row as { id: string }).id).eq("user_id", user.id);
+      await cloudSaveProject({ id: row.id, ...payload });
     } else {
-      await supabase.from("user_projects").insert({ user_id: user.id, ...payload } as never);
+      await cloudSaveProject(payload);
     }
   } catch { /* sin sesión, esquema sin crear o red caída: silencioso */ }
 }
@@ -205,10 +215,7 @@ export async function pushAssetLibraryToCloud(items: AssetLibraryItem[]): Promis
 /** Descarga la biblioteca de la nube (null si no existe, sin sesión o error). */
 export async function pullAssetLibraryFromCloud(): Promise<AssetLibraryItem[] | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const { data } = await supabase.from("user_projects").select("data").eq("user_id", user.id);
-    const rows = (data ?? []) as Array<{ data?: unknown }>;
+    const rows = await cloudListProjects() as Array<{ data?: unknown }>;
     const row = rows.find(r => isAssetLibraryRow(r.data));
     if (!row) return null;
     const items = (row.data as { items?: AssetLibraryItem[] } | undefined)?.items;
@@ -225,9 +232,6 @@ export async function pullAssetLibraryFromCloud(): Promise<AssetLibraryItem[] | 
  * Devuelve cuántos se subieron y cuántos se importaron.
  */
 export async function syncAllProjects(): Promise<{ pushed: number; imported: number }> {
-  const { data: { user } } = await withCloudTimeout(supabase.auth.getUser(), "La sesión de nube no respondió a tiempo");
-  if (!user) return { pushed: 0, imported: 0 };
-
   // 1) Leer primero la nube para comparar las copias ya vinculadas.
   // Se mantiene last-write-wins por proyecto, sin sobrescribir silenciosamente
   // una edición local que sea más nueva que la remota.

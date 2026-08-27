@@ -3,7 +3,7 @@ import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { hydrateManusCollections, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { orderFeedPosts } from "@/lib/social/feed-order";
@@ -178,40 +178,11 @@ function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const multimodalReturn = new URLSearchParams(window.location.search).get("multimodal") === "1";
-        if (multimodalReturn) {
-          const response = await fetch("/api/supabase/link-manus", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({}) });
-          const payload = await response.json() as { error?: string; session?: Record<string, unknown> };
-          if (!response.ok || !payload.session) throw new Error(payload.error || "No se pudo sincronizar la cuenta.");
-          const { error } = await supabase.auth.setSession(payload.session as never);
-          if (error) throw error;
-          window.history.replaceState({}, "", "/");
-        }
-        let session = null;
-        try {
-          const res = await supabase.auth.getSession();
-          session = res.data?.session ?? null;
-        } catch {
-          /* Credenciales de Supabase rotas/inaccesibles → se intenta la cuenta local */
-        }
-        let uid: string | null = session?.user?.id ?? null;
-        let localSession = false;
-        if (!uid) {
-          // Puente: cuenta local creada antes de conectar Supabase (o credenciales
-          // inválidas). La app sigue funcionando en modo local en lugar de
-          // redirigir en bucle a /auth.
-          try {
-            const raw = localStorage.getItem("_local_auth_session");
-            if (raw) {
-              const s = JSON.parse(raw) as { userId?: string; expiresAt?: string };
-              if (s.userId && s.expiresAt && new Date(s.expiresAt) > new Date()) {
-                uid = s.userId;
-                localSession = true;
-              }
-            }
-          } catch { /* noop */ }
-        }
+        const sessionResponse = await fetch("/api/manus/session", { credentials: "include" });
+        const sessionPayload = await sessionResponse.json() as { user?: { id?: string }; error?: string };
+        const uid = sessionPayload.user?.id ?? null;
         if (!uid) { navigate({ to: "/auth" }); return; }
+        await hydrateManusCollections();
         setMyId(uid);
         void fetchFollowing(uid)
           .then(profiles => setFollowingIds(profiles.map(profile => profile.id)))
@@ -221,24 +192,10 @@ function HomePage() {
         // Sincroniza los proyectos con la nube (sube los locales sin respaldo y
         // descarga los de la cuenta) para que los juegos aparezcan en cualquier
         // dispositivo con la misma cuenta. Silencioso: no bloquea la carga.
-        if (!localSession) {
-          syncAllProjects().then(r => {
-            if (r.pushed > 0 || r.imported > 0) {
-              toast.success(
-                `Nube sincronizada: ${r.pushed} subido${r.pushed === 1 ? "" : "s"} · ${r.imported} descargado${r.imported === 1 ? "" : "s"}`
-              );
-            }
-          }).catch(() => {/* noop */});
-        }
+        // La sincronización de proyectos se conectará a Manus en la siguiente
+        // fase de migración. No se llama a proveedores externos desde aquí.
         let prof: Profile | null = null;
         try { prof = await getMyProfile(); } catch { /* noop */ }
-        if (!prof && localSession) {
-          // El perfil de la cuenta local vive en localStorage.
-          try {
-            const rows = JSON.parse(localStorage.getItem("_local_data_profiles") || "[]") as Profile[];
-            prof = rows.find((p) => p.id === uid) ?? null;
-          } catch { /* noop */ }
-        }
         if (prof) setMe(prof);
         try { setMod(await isMod()); } catch { /* noop */ }
         try { setAdmin(await isAdmin()); } catch { /* noop */ }
@@ -258,7 +215,7 @@ function HomePage() {
     }
   }, [tab, reload, myId]);
 
-  const logout = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
+  const logout = async () => { await fetch("/api/manus/logout", { method: "POST", credentials: "include" }); navigate({ to: "/auth" }); };
   const closeMenu = () => { setMenuOpen(false); };
 
   return (

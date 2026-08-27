@@ -6,8 +6,6 @@
  * lives in the browser via localStorage.
  */
 
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from './types';
 
 // ───── Types ─────
 
@@ -56,6 +54,56 @@ function getTableData<T = Record<string, unknown>>(table: string): T[] {
 
 function saveTableData(table: string, data: unknown[]): void {
   localStorage.setItem(`_local_data_${table}`, JSON.stringify(data));
+}
+
+const MANUS_COLLECTIONS = new Set([
+  "profiles", "posts", "comments", "reactions", "reposts", "follows", "notifications", "reports", "blocks",
+  "tags", "post_tags", "post_polls", "post_poll_votes", "game_purchases", "game_plays", "orbe_transactions",
+  "forum_categories", "forum_threads", "forum_posts", "forum_thread_votes", "forum_votes", "chats", "chat_members",
+  "chat_messages", "stickers", "events", "event_submissions", "event_participants", "trust_points_history",
+]);
+
+function isManusCollection(table: string): boolean { return MANUS_COLLECTIONS.has(table); }
+
+async function manusRecordRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "No se pudo sincronizar con Manus.");
+  return body as T;
+}
+
+function persistManusRecord(table: string, row: Record<string, unknown>): void {
+  if (!isManusCollection(table) || !row.id) return;
+  void manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}`, {
+    method: "POST",
+    body: JSON.stringify({ id: row.id, data: row }),
+  }).catch(() => { /* La copia local se reintenta al volver a sincronizar. */ });
+}
+
+function removeManusRecord(table: string, id: unknown): void {
+  if (!isManusCollection(table) || typeof id !== "string") return;
+  void manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => { /* La copia local conserva el estado hasta la siguiente sesión. */ });
+}
+
+/** Carga en local las colecciones asociadas a la sesión oficial de Manus. */
+export async function hydrateManusCollections(): Promise<{ id: string; name?: string | null } | null> {
+  if (typeof window === "undefined") return null;
+  const session = await manusRecordRequest<{ user: { id: string; name?: string | null } }>("/api/manus/session");
+  const marker = localStorage.getItem("_ast_manus_open_id");
+  if (marker !== session.user.id) {
+    const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter((key): key is string => Boolean(key?.startsWith("_local_data_") || key?.startsWith("_local_storage_")));
+    keys.forEach(key => localStorage.removeItem(key));
+    localStorage.setItem("_ast_manus_open_id", session.user.id);
+  }
+  await Promise.all([...MANUS_COLLECTIONS].map(async collection => {
+    const rows = await manusRecordRequest<Record<string, unknown>[]>(`/api/manus/records/${encodeURIComponent(collection)}`);
+    saveTableData(collection, rows);
+  }));
+  return session.user;
 }
 
 function applyFilters(rows: Record<string, unknown>[], filters: QueryFilter[]): Record<string, unknown>[] {
@@ -320,6 +368,7 @@ class LocalQueryBuilder {
     const rows = getTableData(this.table);
     const newRow: Record<string, unknown> = { ...(this.insertData || {}), id: (this.insertData?.id as string) || uid(), created_at: now(), updated_at: now() };
     rows.push(newRow); saveTableData(this.table, rows);
+    persistManusRecord(this.table, newRow);
     if (this.singleMode) return { data: this.project(newRow), error: null, count: null };
     return { data: [this.project(newRow)], error: null, count: null };
   }
@@ -329,6 +378,7 @@ class LocalQueryBuilder {
     const filtered = applyFilters(rows, this.filters);
     for (const row of filtered) Object.assign(row, this.updateData || {}, { updated_at: now() });
     saveTableData(this.table, rows);
+    filtered.forEach(row => persistManusRecord(this.table, row));
     if (this.singleMode) return { data: filtered.length ? this.project(filtered[0]) : null, error: null, count: null };
     return { data: filtered.map(r => this.project(r)), error: null, count: null };
   }
@@ -338,6 +388,7 @@ class LocalQueryBuilder {
     const filtered = applyFilters(rows, this.filters);
     const deletedIds = new Set(filtered.map(r => r.id));
     saveTableData(this.table, rows.filter(r => !deletedIds.has(r.id)));
+    filtered.forEach(row => removeManusRecord(this.table, row.id));
     return { data: filtered.map(r => this.project(r)), error: null, count: null };
   }
 
@@ -695,79 +746,13 @@ function createLocalClient(): LocalClient {
  *      seguridad real la da RLS en la base de datos.
  */
 
-const DEFAULT_SUPABASE_URL: string = "https://gxpgczwkovertezeydkt.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4cGdjendrb3ZlcnRlemV5ZGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MTk5NTUsImV4cCI6MjEwMTE5NTk1NX0.GGGjdgi2l2NmQBQ1pS8k37npT3p6hx9Sl5JF0DdQ9cM"; // anon key del proyecto — pública por diseño; así TODOS los dispositivos se conectan sin configurar nada
-let _warnedMissingAnon = false;
-
-const LOCAL_SB_URL_KEY = '_ast_supabase_url';
-const LOCAL_SB_ANON_KEY = '_ast_supabase_anon';
-
-function readLocal(key: string): string | null {
-  try { return localStorage.getItem(key); } catch { return null; }
-}
-
-function writeLocal(key: string, value: string | null): void {
-  try {
-    if (value && value.trim()) localStorage.setItem(key, value.trim());
-    else localStorage.removeItem(key);
-  } catch { /* ignore quota/private-mode errors */ }
-}
-
-/** ¿Tiene pinta de anon/publishable key de Supabase (JWT o sb_publishable_)? */
-function looksLikeSupabaseKey(key: string): boolean {
-  if (!key) return false;
-  if (key.startsWith('sb_publishable_')) return true; // clave pública (formato nuevo)
-  if (key.startsWith('sb_secret_') || key.startsWith('sbp_')) return false; // service role / token personal: NO
-  const parts = key.split('.');
-  return parts.length === 3 && parts[0].startsWith('eyJ') && parts[0].length > 20;
-}
-
-/** ¿Tiene pinta de URL de proyecto Supabase? */
-function looksLikeSupabaseUrl(url: string): boolean {
-  if (!url) return false;
-  try {
-    const u = new URL(url);
-    return (u.protocol === 'https:' || u.protocol === 'http:')
-      && (/\.supabase\.co$/i.test(u.hostname) || /(^|\.)localhost$/.test(u.hostname) || /^127\./.test(u.hostname));
-  } catch { return false; }
-}
-
-export function getSupabaseUrl(): string | undefined {
-  const local = readLocal(LOCAL_SB_URL_KEY);
-  if (local && local.trim()) {
-    if (looksLikeSupabaseUrl(local.trim())) return local.trim();
-    // Credencial guardada con formato inválido: se descarta sola para que la
-    // app no quede bloqueada y se usa la URL del entorno (Keys) o la por defecto.
-    writeLocal(LOCAL_SB_URL_KEY, null);
-  }
-  const env = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  if (env && env.trim()) return env.trim();
-  return DEFAULT_SUPABASE_URL.trim() || undefined;
-}
-
-export function getSupabaseAnonKey(): string | undefined {
-  const local = readLocal(LOCAL_SB_ANON_KEY);
-  if (local && local.trim()) {
-    if (looksLikeSupabaseKey(local.trim())) return local.trim();
-    // Caso típico de bloqueo: un token de acceso personal (sbp_…) pegado por
-    // error como anon key → cada petición falla con "Invalid API key" y la app
-    // ni siquiera deja entrar. Lo limpiamos y usamos la clave del entorno.
-    writeLocal(LOCAL_SB_ANON_KEY, null);
-  }
-  const env = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (env && env.trim()) return env.trim();
-  if (!env && !_warnedMissingAnon) {
-    _warnedMissingAnon = true;
-    console.warn(
-      "[supabase] VITE_SUPABASE_ANON_KEY no está en este build. " +
-      "Si ya la guardaste en el tab Keys, guarda un cambio en el código " +
-      "para forzar la recompilación (las variables se hornean al compilar)."
-    );
-  }
-  return (DEFAULT_SUPABASE_ANON_KEY && DEFAULT_SUPABASE_ANON_KEY.trim()) || undefined;
-}
-
 export type SaveCredentialsResult = { ok: boolean; error?: string };
+
+/** @deprecated La migración a Manus no expone URL ni claves externas. */
+export function getSupabaseUrl(): undefined { return undefined; }
+
+/** @deprecated La migración a Manus no expone URL ni claves externas. */
+export function getSupabaseAnonKey(): undefined { return undefined; }
 
 /**
  * Guarda (o borra) las credenciales escritas a mano en el diálogo de
@@ -776,31 +761,17 @@ export type SaveCredentialsResult = { ok: boolean; error?: string };
  * con "Invalid API key".
  */
 export function saveSupabaseCredentials(url: string, anonKey: string): SaveCredentialsResult {
-  const cleanUrl = url.trim();
-  const cleanKey = anonKey.trim();
-  if (cleanKey && !looksLikeSupabaseKey(cleanKey)) {
-    return {
-      ok: false,
-      error: cleanKey.startsWith('sbp_')
-        ? 'Ese es un token de acceso personal (sbp_…), no la anon key. La anon key empieza por eyJ…'
-        : 'Esa anon key no parece válida (debe ser un JWT que empieza por eyJ…).',
-    };
-  }
-  if (cleanUrl && !looksLikeSupabaseUrl(cleanUrl)) {
-    return { ok: false, error: 'La URL no parece la de un proyecto Supabase (https://xxxx.supabase.co).' };
-  }
-  writeLocal(LOCAL_SB_URL_KEY, cleanUrl ? cleanUrl : null);
-  writeLocal(LOCAL_SB_ANON_KEY, cleanKey ? cleanKey : null);
-  return { ok: true };
+  void url;
+  void anonKey;
+  return { ok: false, error: "La configuración externa fue retirada; Asternal ahora usa los servicios de Manus." };
 }
 
 export function clearSupabaseCredentials(): void {
-  writeLocal(LOCAL_SB_URL_KEY, null);
-  writeLocal(LOCAL_SB_ANON_KEY, null);
+  // No se almacenan credenciales externas en el navegador.
 }
 
 export function hasSupabaseConfig(): boolean {
-  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
+  return false;
 }
 
 /**
@@ -825,18 +796,8 @@ export function isSchemaMissing(err: unknown): boolean {
 }
 
 function createSupabaseClient(): LocalClient {
-  const url = getSupabaseUrl();
-  const anonKey = getSupabaseAnonKey();
-  if (url && anonKey) {
-    try {
-      // Real Supabase: auth, data, storage and RPC all work against the cloud.
-      return createClient<Database>(url, anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-      }) as unknown as LocalClient;
-    } catch (e) {
-      console.warn('[supabase] Error creando el cliente real, usando modo local:', e);
-    }
-  }
+  // Adaptador de transición: no realiza llamadas a Supabase. Las colecciones
+  // se migrarán gradualmente a los servicios autenticados de Manus.
   return createLocalClient();
 }
 

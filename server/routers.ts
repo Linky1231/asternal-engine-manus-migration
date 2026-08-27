@@ -1,7 +1,10 @@
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { createManusRecord, deleteOwnManusRecord, getVisibleManusRecord, listOwnManusRecords, listPublicManusRecords, updateOwnManusRecord } from "./manus-records";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -16,13 +19,14 @@ export const appRouter = router({
       } as const;
     }),
   }),
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  records: router({
+    mine: protectedProcedure.input(z.object({ collection: z.string().min(1).max(64).optional() })).query(({ ctx, input }) => listOwnManusRecords(ctx.user.openId, input.collection)),
+    public: publicProcedure.input(z.object({ collection: z.string().min(1).max(64) })).query(({ input }) => listPublicManusRecords(input.collection)),
+    visible: publicProcedure.input(z.object({ id: z.string().min(1).max(64) })).query(({ ctx, input }) => getVisibleManusRecord(ctx.user?.openId ?? null, input.id)),
+    create: protectedProcedure.input(z.object({ collection: z.string().min(1).max(64), data: z.record(z.unknown()), visibility: z.enum(["private", "public"]).optional() })).mutation(({ ctx, input }) => createManusRecord({ ...input, id: randomUUID(), ownerOpenId: ctx.user.openId })),
+    update: protectedProcedure.input(z.object({ id: z.string().min(1).max(64), data: z.record(z.unknown()).optional(), visibility: z.enum(["private", "public"]).optional() })).mutation(({ ctx, input }) => updateOwnManusRecord({ ...input, ownerOpenId: ctx.user.openId })),
+    remove: protectedProcedure.input(z.object({ id: z.string().min(1).max(64) })).mutation(async ({ ctx, input }) => { await deleteOwnManusRecord(ctx.user.openId, input.id); return { success: true }; }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
