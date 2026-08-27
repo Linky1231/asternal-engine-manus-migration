@@ -33,7 +33,7 @@ describe("UI contrast and consistency", () => {
 
   it("keeps Plus inputs and X/Twitter readable on dark surfaces", () => {
     expect(glass).toContain(".plus-page .plus-social-input");
-    expect(glass).toContain("oklch(0.16 0.03 258 / 0.98)");
+    expect(glass).toContain("background: oklch(0.19 0.035 258 / 0.98) !important;");
     expect(plus).toContain('placeholder="URL de X / Twitter"');
     expect(plus).toContain("placeholder:text-muted-foreground/80");
     expect(profile).toContain('label: "X / Twitter"');
@@ -48,7 +48,8 @@ describe("UI contrast and consistency", () => {
 
   it("keeps the global visual system and shared controls coherent", () => {
     expect(styles).toContain(".ui-panel {");
-    expect(styles).toContain("radial-gradient(circle at 50% 110%");
+    expect(styles).toContain("background: oklch(0.215 0.032 258 / 0.96);");
+    expect(styles).not.toMatch(/(?:linear|radial|conic)-gradient/);
     expect(subPageHeader).toContain("ui-icon-tile");
     expect(button).toContain("transition-[background-color,border-color,box-shadow,color,transform]");
     expect(postCard).toContain("ui-panel");

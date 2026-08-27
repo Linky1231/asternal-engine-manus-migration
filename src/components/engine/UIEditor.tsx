@@ -651,7 +651,7 @@ function ElementInspector({ el, update, remove, clone }: {
                 src={el.image}
                 alt=""
                 className="w-12 h-12 rounded border border-border object-contain"
-                style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "12px 12px", backgroundPosition: "0 0,0 6px,6px -6px,-6px 0", imageRendering: "auto" }}
+                style={{ backgroundColor: "#e5e7eb", backgroundImage: "none", imageRendering: "auto" }}
               />
             )}
             <button onClick={() => fileRef.current?.click()} className="flex-1 py-2 rounded-xl border border-primary/50 bg-primary/15 text-primary-glow text-[10px] font-display tracking-widest active:scale-[0.96] transition">ELEGIR IMAGEN</button>

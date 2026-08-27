@@ -714,7 +714,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-border gap-2 shrink-0"
         style={{
-          background: "linear-gradient(180deg, oklch(0.18 0.03 258 / 0.96), oklch(0.14 0.025 258 / 0.92))",
+          background: "oklch(0.16 0.028 258 / 0.96)",
           backdropFilter: "blur(20px) saturate(180%)",
         }}
       >
@@ -750,7 +750,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
             Cancel
           </button>
           <button onClick={save} className="text-[11px] font-semibold px-3 py-1.5 rounded-lg text-primary-foreground transition active:scale-[0.97]" style={{
-            background: "var(--gradient-asternal)",
+            background: "var(--primary)",
             boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 14px -4px oklch(0.66 0.18 246 / 0.55)",
           }}>
             Save
@@ -767,7 +767,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
             maxWidth: "100%",
             maxHeight: "100%",
             aspectRatio: "1 / 1",
-            background: "linear-gradient(180deg, oklch(0.97 0.005 250), oklch(0.93 0.008 250))",
+            background: "#f3f5f8",
             boxShadow:
               "inset 0 1px 0 oklch(1 0 0 / 0.7), 0 12px 40px -18px oklch(0.4 0.05 258 / 0.28), 0 0 0 1px oklch(0.82 0.01 250 / 0.6)",
             overflow: "hidden",
@@ -776,10 +776,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
           <div
             className="rounded-sm overflow-hidden w-full h-full"
             style={{
-              backgroundImage:
-                "linear-gradient(45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.955 0.003 250) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.955 0.003 250) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.955 0.003 250) 75%)",
-              backgroundSize: "20px 20px",
-              backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
+              backgroundImage: "none",
               backgroundColor: "#f8fafc",
             }}
           >
@@ -823,7 +820,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
 
       {/* Bottom panel — scrollable, taller for easier access */}
       <div className="shrink-0 max-h-[45dvh] overflow-y-auto border-t border-border" style={{
-        background: "linear-gradient(0deg, oklch(0.18 0.03 258 / 0.98), oklch(0.14 0.025 258 / 0.94))",
+        background: "oklch(0.16 0.028 258 / 0.98)",
         backdropFilter: "blur(20px) saturate(180%)",
       }}>
         <button onClick={() => setToolsExpanded(e => !e)} className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-display tracking-widest text-muted-foreground hover:text-foreground transition">
@@ -842,7 +839,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
                 <button key={t.id} title={t.title} onClick={() => setTool(t.id)}
                   className={`flex-1 h-9 rounded-xl text-base transition-all flex items-center justify-center ${tool === t.id ? "text-primary-foreground" : "text-foreground/60 hover:text-foreground/90"}`}
                   style={tool === t.id ? {
-                    background: "var(--gradient-asternal)",
+                    background: "var(--primary)",
                     boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 246 / 0.5)",
                   } : undefined}
                 >{t.icon}</button>

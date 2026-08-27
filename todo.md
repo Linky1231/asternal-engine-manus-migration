@@ -1586,3 +1586,12 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Corregir el color y tratamiento visual de la bombilla en la pantalla de Login
 - [x] Reorganizar los botones del compositor de Chats en móvil para preservar una zona de escritura amplia y usable
 - [x] Validar accesibilidad, responsive, pruebas y build
+
+
+# Superficies sólidas con relieve suave
+
+- [x] Auditar y localizar todos los degradados restantes, incluidos paneles, badges, iconos y controles
+- [x] Eliminar los degradados restantes sin romper la textura opcional ni los estados semánticos
+- [x] Aplicar suavidad y relieve sutil a botones y controles actuales con foco accesible
+- [x] Validar contraste, responsive, pruebas y build
+- [x] Actualizar la aserción heredada de Plus para reflejar la nueva superficie sólida sin degradado

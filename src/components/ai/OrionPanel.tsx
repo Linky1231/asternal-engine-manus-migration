@@ -254,7 +254,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
           >
             <div
               className="w-full h-full rounded-full grid place-items-center"
-              style={{ background: "var(--gradient-asternal)" }}
+              style={{ background: "var(--primary)" }}
             >
               <Bot size={19} strokeWidth={2.2} className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]" />
             </div>
@@ -374,7 +374,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col items-center justify-center pt-10 pb-4 text-center">
               <div
                 className="w-16 h-16 rounded-full grid place-items-center text-primary-foreground mb-3"
-                style={{ background: "var(--gradient-asternal)", boxShadow: "0 8px 30px -8px oklch(0.55 0.15 262/0.5)" }}
+                style={{ background: "var(--primary)", boxShadow: "0 8px 30px -8px oklch(0.55 0.15 262/0.5)" }}
               >
                 <Bot size={28} />
               </div>
@@ -407,7 +407,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
                 {m.role === "assistant" && (
                   <div
                     className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
-                    style={{ width: 28, height: 28, background: "var(--gradient-asternal)" }}
+                    style={{ width: 28, height: 28, background: "var(--primary)" }}
                   >
                     <Bot size={14} />
                   </div>
@@ -435,7 +435,7 @@ export default function OrionPanel({ onClose }: { onClose: () => void }) {
             <div className="flex gap-2 justify-start">
               <div
                 className="shrink-0 rounded-full grid place-items-center text-primary-foreground"
-                style={{ width: 28, height: 28, background: "var(--gradient-asternal)" }}
+                style={{ width: 28, height: 28, background: "var(--primary)" }}
               >
                 <Bot size={14} />
               </div>

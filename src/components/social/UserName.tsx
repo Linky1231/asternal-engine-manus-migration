@@ -34,7 +34,7 @@ export function UserName({
       </span>
       {showBadge && badge && (
         <span
-          className="inline-flex items-center px-1 py-0.5 rounded text-white text-[9px] font-display shrink-0"
+          className="inline-flex items-center px-1 py-0.5 rounded text-white text-[9px] font-display shrink-0 border border-white/35 shadow-[0_2px_6px_-3px_rgba(48,171,173,0.7)]"
           style={{ background: "var(--gradient-plus)" }}
           title="Asternal Plus"
         >

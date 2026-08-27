@@ -6,10 +6,9 @@
   --glass-blue-edge: oklch(0.62 0.12 252 / 0.52);
   --glass-deep-shadow: 0 24px 50px -28px oklch(0.02 0.02 258 / 0.78), 0 8px 18px -13px oklch(0.03 0.03 258 / 0.56);
   --glass-control-shadow: inset 0 1.5px 0 oklch(0.98 0.02 252 / 0.14), inset 0 -1px 0 oklch(0.05 0.04 258 / 0.38), 0 8px 17px -13px oklch(0.03 0.02 258 / 0.58);
-  /* Firma de referencia: cobalto → periwinkle → aqua sobre navy. */
-  --asternal-control-gradient: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
-  /* Aurora queda disponible solo para las superficies Plus autorizadas. */
-  --plus-aurora-gradient: linear-gradient(135deg, #268FB3 0%, #30ABAD 52%, #7ACBD9 100%);
+  /* Superficies sólidas de marca; se conserva el nombre por compatibilidad. */
+  --asternal-control-gradient: oklch(0.68 0.15 257);
+  --plus-aurora-gradient: #30ABAD;
   --plus-aurora-solid: #268FB3;
   --plus-aurora-edge: #30ABAD;
 }
@@ -50,6 +49,31 @@
 :is(button, a).grad-brand:active {
   transform: translateY(1px) scale(0.975);
   box-shadow: inset 0 2px 5px oklch(0.24 0.06 260 / 0.22), 0 4px 10px -8px oklch(0.38 0.1 260 / 0.5) !important;
+}
+
+/* Relieve uniforme para controles que no pasan por Button: volumen leve, sin
+   brillos duros ni cambios de tamaño que desplacen el layout. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.10), 0 4px 10px -8px oklch(0.02 0.02 258 / 0.62);
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 140ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms cubic-bezier(0.23, 1, 0.32, 1), border-color 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover {
+  box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.16), 0 7px 14px -9px oklch(0.02 0.02 258 / 0.72);
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: inset 0 2px 4px oklch(0.02 0.02 258 / 0.20), 0 2px 6px -5px oklch(0.02 0.02 258 / 0.62);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--primary-glow);
+  outline-offset: 2px;
 }
 
 /* Superficies y estructuras: un vidrio blanco pronunciado para separar capas. */
@@ -171,7 +195,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* La barra de navegación debe mostrar vidrio incluso con contenido claro detrás. */
 .app-header,
 .glass-header {
-  background: linear-gradient(135deg, oklch(0.18 0.03 258 / 0.92), oklch(0.24 0.035 258 / 0.82)) !important;
+  background: oklch(0.21 0.032 258 / 0.94) !important;
   border-color: oklch(0.54 0.05 258 / 0.58) !important;
   box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.14), 0 9px 24px -24px oklch(0.02 0.02 258 / 0.72) !important;
   backdrop-filter: blur(24px) saturate(1.16) !important;
@@ -179,7 +203,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* Menú principal: mantiene profundidad de vidrio, pero las opciones no compiten como CTAs. */
 .menu-drawer {
-  background: linear-gradient(160deg, oklch(0.20 0.03 258 / 0.98), oklch(0.14 0.025 258 / 0.96)) !important;
+  background: oklch(0.17 0.028 258 / 0.98) !important;
   border-color: oklch(0.52 0.05 258 / 0.62) !important;
   box-shadow: -18px 0 42px -26px oklch(0.28 0.05 260 / 0.48), inset 1px 0 0 oklch(1 0 0 / 0.84) !important;
   backdrop-filter: blur(20px) saturate(1.08) !important;
@@ -209,7 +233,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .plus-page .plus-glass-card,
 .plus-page .plus-glass-note,
 .plus-page .plus-social-input {
-  background: linear-gradient(135deg, oklch(0.20 0.035 258 / 0.96), oklch(0.14 0.025 258 / 0.94)) !important;
+  background: oklch(0.17 0.03 258 / 0.96) !important;
   border-color: oklch(0.62 0.12 252 / 0.42) !important;
   box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12), 0 18px 34px -28px oklch(0.02 0.02 258 / 0.68) !important;
   backdrop-filter: blur(20px) saturate(1.12);
@@ -261,9 +285,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .plus-page .plus-glass-card,
 .plus-page .plus-glass-note {
   border-color: oklch(0.62 0.12 252 / 0.42) !important;
-  background:
-    linear-gradient(135deg, oklch(0.22 0.04 258 / 0.96), oklch(0.15 0.025 258 / 0.94)),
-    var(--glass-base) !important;
+  background: oklch(0.18 0.035 258 / 0.96) !important;
   box-shadow: 0 20px 42px -30px oklch(0.02 0.02 258 / 0.68), inset 0 1px 0 oklch(0.98 0.02 252 / 0.12) !important;
 }
 
@@ -286,15 +308,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 .plus-page .plus-social-input {
   border: 1px solid oklch(0.62 0.12 252 / 0.44);
-  background: linear-gradient(135deg, oklch(0.16 0.03 258 / 0.98), oklch(0.22 0.04 258 / 0.9)) !important;
+  background: oklch(0.19 0.035 258 / 0.98) !important;
   box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12);
 }
 
 /* El resumen de beneficios conserva la identidad Aurora de Centro Plus. */
 .profile-plus-benefits {
   border-color: rgb(48 171 173 / 0.42) !important;
-  background:
-    linear-gradient(135deg, rgb(38 143 179 / 0.15), rgb(48 171 173 / 0.11) 52%, rgb(122 203 217 / 0.14)) !important;
+  background: rgb(38 143 179 / 0.16) !important;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.72), 0 16px 30px -26px rgb(38 143 179 / 0.42);
 }
 

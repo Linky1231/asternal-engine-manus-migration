@@ -12,12 +12,14 @@ describe("dark reference palette", () => {
   it("uses a dark navy canvas with light foreground tokens", () => {
     expect(styles).toContain("--canvas: oklch(0.155 0.025 258)");
     expect(styles).toContain("--foreground: oklch(0.94 0.018 252)");
-    expect(styles).toContain("--gradient-asternal: linear-gradient(135deg");
+    expect(styles).toContain("--gradient-asternal: oklch");
+    expect(styles).not.toMatch(/(?:linear|radial|conic)-gradient/);
   });
 
   it("does not force white glass surfaces", () => {
     expect(glass).toContain("background-color: var(--glass-fill) !important;");
-    expect(glass).toContain("background: linear-gradient(135deg, oklch(0.18 0.03 258");
+    expect(glass).toContain("background: oklch(0.21 0.032 258 / 0.94) !important;");
+    expect(glass).not.toMatch(/(?:linear|radial|conic)-gradient/);
     expect(glass).not.toContain("background-color: oklch(1 0 0 / 0.68) !important;");
   });
 
@@ -27,8 +29,9 @@ describe("dark reference palette", () => {
   });
 
   it("keeps the paint editor chrome dark while preserving the drawing canvas", () => {
-    expect(paint).toContain('background: "linear-gradient(180deg, oklch(0.18 0.03 258');
-    expect(paint).toContain('background: "linear-gradient(0deg, oklch(0.18 0.03 258');
+    expect(paint).toContain('background: "oklch(0.16 0.028 258 / 0.96)');
+    expect(paint).toContain('background: "oklch(0.16 0.028 258 / 0.98)');
+    expect(paint).not.toMatch(/(?:linear|radial|conic)-gradient/);
     expect(paint).toContain('backgroundColor: "#f8fafc"');
   });
 });

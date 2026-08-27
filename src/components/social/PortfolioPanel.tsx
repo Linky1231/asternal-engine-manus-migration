@@ -457,7 +457,7 @@ export function PortfolioPanel({
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-background/95 backdrop-blur-md animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Portafolio">
       <div className="min-h-full max-w-6xl mx-auto px-3 py-3 sm:px-6 sm:py-6">
-      <div className="relative min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(99,178,255,0.1),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(242,248,255,0.98))] shadow-xl animate-in slide-in-from-bottom-2 duration-300 flex flex-col">
+      <div className="relative min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-3rem)] rounded-2xl border border-primary/20 bg-[#f7faff] shadow-xl animate-in slide-in-from-bottom-2 duration-300 flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60 shrink-0">
           <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0"

@@ -1140,7 +1140,7 @@ function TexturePicker({ texture, fit = "stretch", onPick, onClear, onFit }: {
         <button
           onClick={() => inputRef.current?.click()}
           className="relative w-16 h-16 rounded-lg border border-line-strong bg-input/40 grid place-items-center overflow-hidden shadow-xs"
-          style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "12px 12px", backgroundPosition: "0 0,0 6px,6px -6px,-6px 0" }}
+          style={{ backgroundColor: "#e5e7eb", backgroundImage: "none" }}
         >
           {texture ? (
             <img src={texture} alt="texture" className="absolute inset-0 w-full h-full" style={{ objectFit: fit === "stretch" ? "fill" : fit, imageRendering: "auto" }} />
@@ -1387,7 +1387,7 @@ function AssetsPanel({
           <div key={sp.id} className="panel rounded-lg p-2 border border-border/60 glow-border">
             <div
               className="aspect-square rounded-md grid place-items-center overflow-hidden border border-border/30"
-              style={{ backgroundColor: "#e5e7eb", backgroundImage: "linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%)", backgroundSize: "16px 16px", backgroundPosition: "0 0,0 8px,8px -8px,-8px 0" }}
+              style={{ backgroundColor: "#e5e7eb", backgroundImage: "none" }}
             >
               {sp.frames[0]?.composite && (
                 <img src={sp.frames[0].composite} alt={sp.name}

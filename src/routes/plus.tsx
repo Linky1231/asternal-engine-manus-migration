@@ -26,16 +26,16 @@ export const Route = createFileRoute("/plus")({
 });
 
 const FRAMES = [
-  { id: "aurora", label: "Aurora", css: "linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF)" },
-  { id: "ocean",  label: "Océano", css: "linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2)" },
-  { id: "ice",    label: "Hielo",  css: "linear-gradient(135deg, #B8ECFF, #7BE7FF, #2FD9D2)" },
-  { id: "neon",   label: "Neón",   css: "linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6)" },
+  { id: "aurora", label: "Aurora", css: "#2FD9D2" },
+  { id: "ocean",  label: "Océano", css: "#1AA6D6" },
+  { id: "ice",    label: "Hielo",  css: "#B8ECFF" },
+  { id: "neon",   label: "Neón",   css: "#7BE7FF" },
 ];
 
 const NAME_EFFECTS: { id: string; label: string }[] = [
   { id: "glow",     label: "Brillo" },
   { id: "rainbow",  label: "Arcoíris" },
-  { id: "gradient", label: "Degradado" },
+  { id: "gradient", label: "Azul vivo" },
   { id: "pulse",    label: "Pulso" },
   { id: "shadow",   label: "Sombra" },
   { id: "neon",     label: "Neón" },

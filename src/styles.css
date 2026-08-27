@@ -120,18 +120,16 @@
   --glass-shadow: 0 16px 38px -24px oklch(0.02 0.02 258 / 0.7), 0 3px 10px -7px oklch(0.02 0.02 258 / 0.5);
   --glass-blur: blur(18px) saturate(1.1);
 
-  /* ── Degradados oficiales (DESIGN.md §2.2) ── */
-  /* ÚNICO degradado de marca: 135° cobalto → azur → cielo (Azure Drift). */
-  --gradient-asternal: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
-  /* Variantes del MISMO degradado: diluido (acentos de fondo) y suave-profundo (banner destacado). */
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.61 0.18 273 / 0.2), oklch(0.69 0.15 257 / 0.14) 48%, oklch(0.82 0.1 222 / 0.12));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.14 273) 0%, oklch(0.5 0.12 257) 48%, oklch(0.65 0.09 222) 100%);
+  /* Tokens sólidos de marca: se conservan los nombres por compatibilidad. */
+  --gradient-asternal: oklch(0.68 0.15 257);
+  --gradient-asternal-soft: oklch(0.22 0.04 258 / 0.94);
+  --gradient-asternal-deep: oklch(0.30 0.06 258 / 0.98);
 
   /* Asternal Plus — azul cian (logo gota+cruz) */
   --plus: oklch(0.76 0.12 220);
   --plus-glow: oklch(0.84 0.10 195);
   --plus-fg: oklch(0.12 0.025 258);
-  --gradient-plus: linear-gradient(135deg, oklch(0.76 0.12 220), oklch(0.84 0.10 195));
+  --gradient-plus: oklch(0.78 0.11 207);
   --shadow-plus: 0 10px 30px -10px oklch(0.62 0.12 220 / 0.4);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -176,9 +174,9 @@
   --destructive-foreground: oklch(0.12 0.025 258);
   --success: oklch(0.75 0.14 165);
   --warn: oklch(0.82 0.14 88);
-  --gradient-asternal: linear-gradient(135deg, oklch(0.61 0.18 273) 0%, oklch(0.69 0.15 257) 48%, oklch(0.82 0.1 222) 100%);
-  --gradient-asternal-soft: linear-gradient(135deg, oklch(0.61 0.18 273 / 0.2), oklch(0.69 0.15 257 / 0.14) 48%, oklch(0.82 0.1 222 / 0.12));
-  --gradient-asternal-deep: linear-gradient(135deg, oklch(0.42 0.14 273) 0%, oklch(0.5 0.12 257) 48%, oklch(0.65 0.09 222) 100%);
+  --gradient-asternal: oklch(0.68 0.15 257);
+  --gradient-asternal-soft: oklch(0.22 0.04 258 / 0.94);
+  --gradient-asternal-deep: oklch(0.30 0.06 258 / 0.98);
   --shadow-xs: 0 1px 2px 0 oklch(0.03 0.02 258 / 0.35);
   --shadow-sm: 0 2px 8px -2px oklch(0.03 0.02 258 / 0.42), 0 1px 2px -1px oklch(0.03 0.02 258 / 0.32);
   --shadow-md: 0 8px 20px -6px oklch(0.03 0.02 258 / 0.5), 0 2px 6px -2px oklch(0.03 0.02 258 / 0.35);
@@ -202,11 +200,7 @@
   }
 
   body {
-    background:
-      radial-gradient(circle at 8% -10%, oklch(0.72 0.08 236 / 0.14), transparent 30rem),
-      radial-gradient(circle at 92% 8%, oklch(0.55 0.15 262 / 0.11), transparent 28rem),
-      radial-gradient(circle at 50% 110%, oklch(0.34 0.11 270 / 0.09), transparent 34rem),
-      var(--canvas);
+    background: var(--canvas);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -404,10 +398,8 @@
 }
 
 @utility cyber-grid {
-  background-image:
-    linear-gradient(var(--color-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image: none;
+  background-color: color-mix(in oklab, var(--canvas) 96%, var(--primary) 4%);
 }
 
 /* ============ Refinamiento visual de superficies y tiles ============ */
@@ -420,22 +412,17 @@
   background-image: none;
 }
 .grad-brand-soft {
-  background-image: var(--gradient-asternal-soft);
+  background-color: var(--gradient-asternal-soft);
+  background-image: none;
 }
 .grad-brand-deep {
-  background-image: var(--gradient-asternal-deep);
+  background-color: var(--gradient-asternal-deep);
+  background-image: none;
 }
 
-/* Firma en hairline (borde superior de publicaciones, franjas de identidad):
-   el MISMO degradado oficial que se desvanece hacia la derecha. */
+/* Firma cromática compacta para separadores y franjas de identidad. */
 .grad-brand-fade {
-  background-image: linear-gradient(
-    to right,
-    oklch(0.52 0.15 266) 0%,
-    oklch(0.61 0.12 254) 40%,
-    oklch(0.74 0.08 234) 62%,
-    transparent 100%
-  );
+  background-color: color-mix(in oklab, var(--primary) 64%, transparent);
 }
 
 /* ============ Banner destacado: azul de marca + animación «mejor juego» ============ */
@@ -443,13 +430,7 @@
 /* Overlay azul (nunca negro): mantiene el banner en la identidad cobalto incluso
    con portadas grises/apagadas, y da contraste al título sin desaturar a gris. */
 .banner-overlay-deep {
-  background: linear-gradient(
-    to top,
-    oklch(0.24 0.06 264 / 0.92) 0%,
-    oklch(0.3 0.07 258 / 0.4) 40%,
-    oklch(0.34 0.06 248 / 0.1) 75%,
-    transparent 100%
-  );
+  background: oklch(0.18 0.04 264 / 0.62);
 }
 
 /* Banner: sombra neutra y sutil — sin glow pulsante (AI slop: colored pulsing glow). */
@@ -474,7 +455,7 @@
   left: 0;
   width: 34%;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.16) 50%, transparent 100%);
+  background: rgba(255, 255, 255, 0.08);
   animation: banner-shine 14s ease-in-out infinite;
   will-change: transform;
 }
@@ -486,7 +467,7 @@
   will-change: opacity;
 }
 
-/* Textura de grano sutil sobre degradados (nunca se ve plano ni "de algoritmo"). */
+/* Textura opcional; las superficies base permanecen sólidas y limpias. */
 .noise-overlay {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
   background-size: 140px 140px;
@@ -495,11 +476,8 @@
 /* Tile de juego sin portada: blueprint sobre blanco + borde brillante fino y
    sombra de color difusa (reemplaza el recuadro celeste con el icono genérico). */
 .tile-blueprint {
-  background:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-    var(--gradient-asternal-soft);
-  background-size: 24px 24px, 24px 24px, 100% 100%;
+  background-color: var(--gradient-asternal-soft);
+  background-image: none;
   border: 1px solid oklch(0.62 0.12 252 / 0.64);
   box-shadow: var(--shadow-float);
 }
@@ -582,7 +560,7 @@
 
 /* Superficies compartidas: profundidad sobria y lectura estable. */
 .ui-panel {
-  background: linear-gradient(145deg, oklch(0.235 0.034 258 / 0.96), oklch(0.19 0.028 258 / 0.94));
+  background: oklch(0.215 0.032 258 / 0.96);
   border: 1px solid oklch(0.52 0.055 258 / 0.44);
   box-shadow: 0 18px 38px -28px oklch(0.02 0.02 258 / 0.82), inset 0 1px 0 oklch(0.98 0.02 252 / 0.08);
 }
@@ -597,7 +575,7 @@
 
 .ui-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, oklch(0.62 0.08 258 / 0.42), transparent);
+  background: oklch(0.62 0.08 258 / 0.42);
 }
 
 @media (max-width: 640px) {
@@ -635,19 +613,12 @@
   text-shadow: 0 0 8px oklch(0.72 0.15 245 / 0.8);
 }
 .name-fx-rainbow {
-  background: linear-gradient(90deg,
-    #ff5e7a, #ffb84d, #ffe45c, #7dff9f, #4dd6ff, #a97dff, #ff5e7a);
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  animation: name-rainbow-anim 6s linear infinite;
+  color: oklch(0.82 0.14 88);
+  text-shadow: 0 0 8px oklch(0.82 0.14 88 / 0.42);
 }
 .name-fx-gradient {
-  background: linear-gradient(90deg, oklch(0.55 0.16 262), oklch(0.72 0.15 320), oklch(0.64 0.12 220));
-  background-size: 200% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  animation: name-rainbow-anim 5s linear infinite;
+  color: var(--primary-glow);
+  text-shadow: 0 0 8px oklch(0.72 0.15 266 / 0.44);
 }
 .name-fx-pulse {
   color: oklch(0.55 0.16 262);
@@ -691,27 +662,23 @@
   animation: frame-glow 3s ease-in-out infinite;
 }
 .plus-frame-aurora::before {
-  background: linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF, #2FD9D2);
-  background-size: 200% 200%;
-  animation: frame-glow 3s ease-in-out infinite, frame-shift 6s ease-in-out infinite;
+  background: #2FD9D2;
+  animation: frame-glow 3s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(26, 166, 214, 0.45);
 }
 .plus-frame-ocean::before {
-  background: linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2, #1AA6D6);
-  background-size: 200% 200%;
-  animation: frame-glow 3.5s ease-in-out infinite, frame-shift 7s ease-in-out infinite;
+  background: #1AA6D6;
+  animation: frame-glow 3.5s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(15, 108, 158, 0.45);
 }
 .plus-frame-ice::before {
-  background: linear-gradient(135deg, #B8ECFF, #ffffff, #7BE7FF, #B8ECFF);
-  background-size: 200% 200%;
-  animation: frame-glow 4s ease-in-out infinite, frame-shift 8s ease-in-out infinite;
+  background: #B8ECFF;
+  animation: frame-glow 4s ease-in-out infinite;
   box-shadow: 0 0 12px -2px rgba(184, 236, 255, 0.45);
 }
 .plus-frame-neon::before {
-  background: linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6, #7BE7FF);
-  background-size: 200% 200%;
-  animation: frame-glow 2.5s ease-in-out infinite, frame-shift 5s ease-in-out infinite;
+  background: #7BE7FF;
+  animation: frame-glow 2.5s ease-in-out infinite;
   box-shadow: 0 0 14px -2px rgba(47, 217, 210, 0.55);
 }
 
@@ -816,14 +783,8 @@
   animation: float 3.6s ease-in-out infinite;
 }
 @utility anim-shimmer {
-  background: linear-gradient(
-    90deg,
-    oklch(0.24 0.032 258) 0%,
-    oklch(0.36 0.045 258) 50%,
-    oklch(0.24 0.032 258) 100%
-  );
-  background-size: 800px 100%;
-  animation: shimmer 1.6s linear infinite;
+  background: oklch(0.30 0.04 258);
+  animation: gentle-pulse 1.6s ease-in-out infinite;
 }
 
 /* Entrada de tarjetas del feed: animación CSS pura (opacity + translateY, sin

@@ -522,11 +522,11 @@ export const PostCard = memo(function PostCard({
 
 function frameCss(id: string): string {
   switch (id) {
-    case "aurora": return "linear-gradient(135deg, #1AA6D6, #2FD9D2, #7BE7FF)";
-    case "ocean": return "linear-gradient(135deg, #0F6C9E, #1AA6D6, #2FD9D2)";
-    case "ice": return "linear-gradient(135deg, #B8ECFF, #7BE7FF, #2FD9D2)";
-    case "neon": return "linear-gradient(135deg, #2FD9D2, #B8ECFF, #1AA6D6)";
-    default: return "linear-gradient(135deg, #1AA6D6, #2FD9D2)";
+    case "aurora": return "#2FD9D2";
+    case "ocean": return "#1AA6D6";
+    case "ice": return "#B8ECFF";
+    case "neon": return "#7BE7FF";
+    default: return "#1AA6D6";
   }
 }
 

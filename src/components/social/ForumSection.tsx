@@ -77,19 +77,16 @@ const DEFAULT_TAG_STYLE = "bg-neutral-50/80 text-neutral-500 border-neutral-200/
 function AvatarMini({ username, size = "md" }: { username: string; size?: "sm" | "md" | "lg" }) {
   const sizeMap = { sm: "w-6 h-6 text-[9px]", md: "w-8 h-8 text-xs", lg: "w-10 h-10 text-sm" };
   const letter = username[0]?.toUpperCase() ?? "?";
-  // Generate two deterministic hues from username
+  // Generate a deterministic hue from username
   const h1 = username.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
-  const h2 = (h1 + 40) % 360;
-  // Convert HSL to RGB for guaranteed 100% opaque solid colors
+  // Convert HSL to RGB for a guaranteed 100% opaque solid color
   const c1 = hslToRgb(h1, 65, 48);
-  const c2 = hslToRgb(h2, 60, 38);
   return (
     <div
       className={`${sizeMap[size]} rounded-full grid place-items-center font-display font-semibold shrink-0`}
       style={{
-        background: `linear-gradient(135deg, rgb(${c1.join(",")}), rgb(${c2.join(",")}))`,
+        background: `rgb(${c1.join(",")})`,
         color: "rgb(255,255,255)",
-        backgroundSize: "cover",
       }}
     >
       {letter}
