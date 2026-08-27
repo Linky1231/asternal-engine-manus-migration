@@ -88,21 +88,25 @@ function inferVariableTypes(values: Record<string, string | number | boolean> | 
 
 function normalizeEntity(entity: Entity): Entity {
   const inferredBody = entity.gravity || entity.controllable || entity.kind === "enemy" ? "dynamic" : "static";
+  // Los datos antiguos podían incluir arreglos de bloques. Se descartan durante
+  // la normalización: el comportamiento nuevo vive en la versión de código del
+  // proyecto, no dentro de entidades serializadas.
+  const { scripts: _legacyScripts, ...withoutScripts } = entity as Entity & { scripts?: unknown };
   return {
-    ...entity,
-    name: entity.name?.trim() || entity.kind,
-    tags: Array.isArray(entity.tags) ? [...new Set(entity.tags.map(tag => String(tag).trim()).filter(Boolean))] : [],
-    scaleX: entity.scaleX ?? 1,
-    scaleY: entity.scaleY ?? 1,
-    bodyType: entity.bodyType ?? inferredBody,
-    mass: entity.mass ?? 1,
-    friction: entity.friction ?? 0.8,
-    restitution: entity.restitution ?? 0,
-    collisionShape: entity.collisionShape ?? "rectangle",
-    collisionLayer: entity.collisionLayer ?? 1,
-    collisionMask: entity.collisionMask ?? 15,
-    isTrigger: entity.isTrigger ?? false,
-    variableTypes: inferVariableTypes(entity.variables, entity.variableTypes),
+    ...withoutScripts,
+    name: withoutScripts.name?.trim() || withoutScripts.kind,
+    tags: Array.isArray(withoutScripts.tags) ? [...new Set(withoutScripts.tags.map(tag => String(tag).trim()).filter(Boolean))] : [],
+    scaleX: withoutScripts.scaleX ?? 1,
+    scaleY: withoutScripts.scaleY ?? 1,
+    bodyType: withoutScripts.bodyType ?? inferredBody,
+    mass: withoutScripts.mass ?? 1,
+    friction: withoutScripts.friction ?? 0.8,
+    restitution: withoutScripts.restitution ?? 0,
+    collisionShape: withoutScripts.collisionShape ?? "rectangle",
+    collisionLayer: withoutScripts.collisionLayer ?? 1,
+    collisionMask: withoutScripts.collisionMask ?? 15,
+    isTrigger: withoutScripts.isTrigger ?? false,
+    variableTypes: inferVariableTypes(withoutScripts.variables, withoutScripts.variableTypes),
   };
 }
 

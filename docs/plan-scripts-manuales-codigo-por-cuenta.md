@@ -341,6 +341,86 @@ Al autorizar la implementación, el trabajo comenzará por el registro de forks 
 
 Antes de la fase de commits/build externo se solicitará la credencial de servidor que corresponda. Hasta entonces no se modificarán la versión compartida de Asternal, los proyectos existentes ni el sistema de bloques actualmente publicado.
 
+## Capacidades avanzadas conectadas al código interno
+
+Una capacidad avanzada es código nuevo que Asternal todavía no tiene, pero que queda incorporado a la versión aislada del creador como una parte funcional de su motor. No es un bloque ni una opción ficticia del inspector. Por ejemplo, si el creador pide un ranking, el sistema debe crear la lógica de puntuación, el lugar donde se guarda, la interfaz que lo presenta y los puntos donde el juego actualiza ese ranking.
+
+| Punto de integración real | Archivo actual | Papel de una capacidad avanzada |
+| --- | --- | --- |
+| Modelo y reglas del juego | `src/lib/engine/core.ts` | Define las estructuras, estado y reglas que la nueva capacidad necesita durante Play. |
+| Ciclo de ejecución | `src/components/engine/GameRuntime.tsx` | Inicializa, actualiza y limpia la capacidad dentro del loop del juego, junto con input, UI, audio y física existentes. |
+| Interfaz de autoría | `src/components/engine/AsternalEditor.tsx`, `UIEditor.tsx` | Muestra en Inspección o UI los ajustes que el creador necesite para configurar la nueva capacidad. |
+| Persistencia de proyecto | `src/lib/engine/storage.ts`, sincronización cloud | Normaliza y conserva su configuración usando IDs de proyecto, escena y entidad que ya existen. |
+| Servicios propios | `server/` | Aporta datos de servidor del proyecto, validaciones y lecturas/escrituras autorizadas cuando la capacidad lo requiere. |
+| Validación | `server/*.test.ts`, `pnpm test`, `pnpm build`, Play | Comprueba que el código nuevo esté conectado, persista y no impida compilar la versión aislada. |
+
+La propuesta de una capacidad deberá declarar cómo se enlaza con cada punto que requiere. Si el cambio solo necesita una interfaz de juego, no agregará persistencia. Si el creador pide una tabla de posiciones persistente, la propuesta debe modificar tanto el juego como los servicios y el modelo de datos autorizado para ese proyecto.
+
+### Ejemplo: crear un ranking que todavía no existe
+
+| Conexión requerida | Cambio directo de código que debe producirse |
+| --- | --- |
+| Modelo | Se agrega un tipo de configuración de ranking y un estado de puntuación de la versión aislada. |
+| Runtime | Se añade la actualización de puntuación al finalizar o durante la partida, según el diseño pedido. |
+| Servicio | Se crea una operación de lectura/escritura que valida `ownerId` y `projectId`; las filas de ranking se separan por proyecto. |
+| Interfaz de juego | Se programa una tabla o panel dentro de la UI del juego para mostrar posiciones reales. |
+| Interfaz de editor | Se añaden los ajustes específicos al inspector de la versión del creador si necesita configurarlos. |
+| Pruebas | Se prueban la puntuación, el aislamiento entre proyectos, la persistencia y la presentación en Play. |
+
+El resultado no quedará en una «lista de scripts disponibles». Se convertirá en archivos reales de la versión aislada, por ejemplo una carpeta propia de la capacidad, sus pruebas y los cambios necesarios en el runtime/editor para registrarla. Cada archivo y cada conexión aparecerán en el diff.
+
+### Contrato de capacidad avanzada
+
+Cada capacidad creada por Scripts manuales tendrá un manifiesto de conexión. Este manifiesto no ejecuta comportamiento por sí mismo ni sustituye el código generado: permite comprobar que el código nuevo se registró en los lugares que necesita antes de activar la versión.
+
+```ts
+type AdvancedCapabilityManifest = {
+  id: string;
+  name: string;
+  ownerId: string;
+  projectId: string;
+  sourceVersionId: string;
+  files: string[];
+  connections: {
+    engine: boolean;
+    runtime: boolean;
+    editor: boolean;
+    persistence: boolean;
+    gameUi: boolean;
+    server: boolean;
+  };
+  dataModel: {
+    kind: "none" | "project-state" | "server-records";
+    migrationId?: string;
+  };
+  testFiles: string[];
+};
+```
+
+El manifiesto permite una integración real y comprobable. Un ranking que usa estado persistente, por ejemplo, no puede declararse listo si `server`, `persistence` y `gameUi` no están conectados por código. Una mejora de visualización de plataformas puede declarar sólo `engine`, `runtime` y `editor`. El sistema valida que los archivos que cada conexión declara realmente aparezcan en el diff y que existan pruebas para cada cambio de comportamiento.
+
+| Tipo de cambio | Archivos que la propuesta debe crear o modificar | Conexiones mínimas exigidas |
+| --- | --- | --- |
+| Nueva regla de gameplay | Módulo de regla, integración en el runtime y pruebas. | `engine`, `runtime`. |
+| Nueva herramienta en Inspección | Componente/estado del editor, modelo y persistencia cuando tenga configuración. | `editor`, `engine`; `persistence` si guarda datos. |
+| Nueva UI dentro del juego | Componente/renderer de UI, evento de juego y pruebas. | `runtime`, `gameUi`. |
+| Sistema persistente por proyecto, como ranking | Código de servidor, modelo de datos autorizado, runtime, UI y pruebas. | `engine`, `runtime`, `persistence`, `gameUi`, `server`. |
+| Cambio visual de motor | Renderizador, runtime y controles editoriales si el creador necesita configurarlo. | `engine`, `runtime`; `editor` cuando corresponda. |
+
+### Secuencia de conexión de una capacidad nueva
+
+Scripts manuales deberá ejecutar y comprobar esta secuencia después de redactar el diff. El objetivo no es imponer una lista limitada de efectos; el objetivo es garantizar que una nueva función se conecta de forma completa y no queda como un archivo sin uso.
+
+1. **Crear el módulo de fuente.** El cambio añade los archivos TypeScript/TSX necesarios dentro del árbol de la versión aislada, con un identificador de capacidad estable.
+2. **Conectar el motor.** Si la capacidad tiene estado o reglas nuevas, el cambio modifica el contrato del motor y el punto de inicialización correspondiente.
+3. **Conectar el runtime.** El parche registra la capacidad en el ciclo de Play y enlaza sus eventos con el estado, input, física, audio o render que utilice.
+4. **Conectar el editor.** Cuando la capacidad necesita configuración, el cambio incorpora sus controles al panel de Inspección de la versión del creador y los enlaza con los IDs de proyecto, escena, objeto o UI seleccionados.
+5. **Conectar la persistencia.** La configuración de la capacidad se normaliza en `storage.ts`; si requiere datos de servidor, una migración aprobada crea registros con `ownerId` y `projectId` obligatorios.
+6. **Conectar la interfaz de juego.** Si tiene resultados que mostrar o controlar, el cambio los dibuja/actualiza en Play desde estado real, no desde datos de ejemplo.
+7. **Registrar y comprobar.** El manifiesto, el diff y las pruebas confirman que no faltó ninguna conexión declarada antes de compilar la versión.
+
+El primer build no permitirá que una petición agregue dependencias o ejecute comandos arbitrarios. Todo código generado debe usar las dependencias ya presentes en Asternal. Si más adelante una capacidad exige una dependencia, Scripts manuales creará una propuesta separada que muestre el paquete, versión, motivo, archivos afectados y pruebas adicionales antes de permitir su instalación.
+
 ## Referencias
 
 [1]: https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts "GitHub Docs — Workflow artifacts"

@@ -1692,3 +1692,26 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Diseñar Scripts manuales para crear exclusivamente cambios directos de código fuente por versión aislada
 - [x] Definir migración de proyectos existentes sin scripts de bloque ni pérdida de escenas, entidades o IDs
 - [x] Actualizar la especificación y solicitar aprobación antes de implementar la retirada estructural
+
+# Scripts manuales: capacidades avanzadas conectadas
+
+- [x] Auditar los puntos de extensión de motor, runtime, editor, persistencia e interfaz
+- [x] Diseñar el contrato de capacidades avanzadas que genera y conecta código nuevo por versión aislada
+- [x] Implementar la propuesta de código fuente y el registro de capacidades para proyectos aislados
+- [ ] Validar escenarios avanzados, aislamiento y compatibilidad de proyectos existentes
+- [ ] Publicar la mejora y documentar cómo Scripts manuales conecta capacidades nuevas
+
+# Versiones internas sin GitHub
+
+- [x] Reemplazar la dependencia de GitHub por almacenamiento privado de fuentes, versiones y artefactos dentro de Asternal
+- [x] Implementar el control de acceso por cuenta para leer, proponer y crear versiones internas por cuenta
+- [x] Conectar el visor de código y los cambios avanzados a las versiones internas del proyecto
+- [ ] Implementar un compilador interno aislado que produzca artefactos privados por versión sin usar GitHub
+
+# Versiones privadas en Supabase
+
+- [x] Verificar la configuración de Supabase disponible para registros y almacenamiento de versiones privadas
+- [x] Crear la versión fuente inicial, el manifiesto privado y el visor autenticado de archivos por proyecto
+- [x] Implementar el esquema de registros de versiones, propuestas, capacidades y permisos por cuenta en Supabase
+- [x] Conectar Scripts manuales con versiones de código y propuestas privadas asociadas a Supabase
+- [ ] Definir y conectar un compilador aislado que tome versiones desde Supabase y devuelva artefactos ejecutables sin GitHub

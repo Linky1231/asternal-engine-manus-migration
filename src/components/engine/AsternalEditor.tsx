@@ -794,7 +794,7 @@ function InspectorPanel({
       />
 
       <AnimationsButton entity={ent} onUpdate={update} />
-      <ScriptsButton entity={ent} sounds={project?.assets?.sounds ?? []} onUpdate={update} />
+      <ScriptsButton entity={ent} projectId={project ? getCurrentProjectId() : ""} />
       <DialogEditor entity={ent} onUpdate={update} />
       <HitboxEditor entity={ent} onUpdate={update} />
 
@@ -1624,9 +1624,8 @@ function scaleScene(scene: Scene, k: number): Scene {
   };
 }
 
-function ScriptsButton({ entity, sounds, onUpdate }: { entity: Entity; sounds: import("@/lib/engine/core").AudioAsset[]; onUpdate: (patch: Partial<Entity>) => void }) {
+function ScriptsButton({ entity, projectId }: { entity: Entity; projectId: string }) {
   const [open, setOpen] = useState(false);
-  const count = entity.scripts?.length ?? 0;
   return (
     <>
       <button
@@ -1634,14 +1633,13 @@ function ScriptsButton({ entity, sounds, onUpdate }: { entity: Entity; sounds: i
         className="w-full mt-1 px-3 py-2.5 rounded-md bg-primary/10 border border-accent/50 text-primary-glow font-display text-xs tracking-widest flex items-center justify-between glow-border"
       >
         <span>◉ SCRIPTS MANUALES</span>
-        <span className="font-mono text-[10px] opacity-80">{count} GUARDADOS</span>
+        <span className="font-mono text-[10px] opacity-80">CÓDIGO</span>
       </button>
       {open && (
-        <ScriptEditor
-          entity={entity}
-          sounds={sounds}
-          onChange={onUpdate}
-          onClose={() => setOpen(false)}
+          <ScriptEditor
+            entity={entity}
+            projectId={projectId}
+            onClose={() => setOpen(false)}
         />
       )}
     </>
@@ -1705,7 +1703,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
           <li><span className="text-primary-glow">CONSTRUIR</span> · toca para colocar la herramienta, pellizca para zoom, desliza para mover.</li>
           <li><span className="text-primary-glow">SELECCIONAR</span> · toca una entidad y abre INSPECCIÓN para editarla.</li>
           <li><span className="text-primary-glow">ASSETS</span> · importa varios fotogramas para crear una animación.</li>
-          <li><span className="text-primary-glow">SCRIPTS</span> · añade bloques de eventos (onStart, onCollide) para dar vida a las entidades.</li>
+          <li><span className="text-primary-glow">SCRIPTS MANUALES</span> · describe una capacidad para crear una propuesta de código interno del proyecto.</li>
           <li><span className="text-primary-glow">ESCENAS</span> · renombra en línea, duplica con ⧉, escala ×N desde el inspector.</li>
           <li><span className="text-primary-glow">DATOS</span> · exporta/importa el proyecto como JSON. Guarda automáticamente.</li>
         </ul>

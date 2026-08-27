@@ -1,6 +1,5 @@
 // Asternal Engine core: ECS-lite + loop + physics + scenes + input
 import type { AnimationClip } from "./animations";
-import type { Script } from "./scripts";
 
 export type EntityKind = "player" | "platform" | "enemy" | "coin" | "goal" | "decor";
 
@@ -110,7 +109,6 @@ export interface Entity {
   opacity?: number;
   texture?: string | null;
   animations?: AnimationClip[];
-  scripts?: Script[];
   /** Datos de autoría libres para que los scripts no dependan de casos por tipo. */
   variables?: Record<string, string | number | boolean>;
   /** Esquema persistente de variables iniciales; saves previos infieren el tipo del valor. */

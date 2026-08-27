@@ -1074,12 +1074,12 @@ export async function cloudListProjects(): Promise<CloudProject[]> {
   if (!user) return [];
   const { data, error } = await supabase.from("user_projects").select("id,user_id,name,data,published_post_id,created_at,updated_at").eq("user_id", user.id).order("updated_at", { ascending: false });
   if (error) throw error;
-  // La biblioteca de assets del editor vive en una fila reservada de esta tabla
-  // (data.__kind = "asset-library"): no es un proyecto y no debe listarse como
-  // juego ni importarse como tal en otros dispositivos.
+  // La biblioteca, las versiones y las propuestas de código del editor viven en
+  // filas reservadas: no son proyectos y no deben listarse como juegos ni
+  // importarse como tales en otros dispositivos.
   return ((data ?? []) as CloudProject[]).filter(r => {
     const d = r.data as { __kind?: string } | null;
-    return !d || d.__kind !== "asset-library";
+    return !d || !d.__kind;
   });
 }
 

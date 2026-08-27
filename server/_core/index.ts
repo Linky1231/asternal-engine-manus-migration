@@ -3,8 +3,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { completeOrionChat } from "../orion";
-import { createManualScript } from "../manual-scripts";
 import { authenticateCommunityRequest, rankCommunityFeed, reviewCommunityPost, reviewCommunitySubmission } from "../community-ai";
+import { applySourceProposal, createManualSourceProposal, createSourceProposal, ensureSourceVersion, getSourceFile, listSourceProposals } from "../source-versions";
 import { sdk } from "./sdk";
 import { registerOAuthRoutes } from "./oauth";
 import { createSupabaseUser, listSupabaseUsers, signInSupabaseUser, updateSupabaseUser, upsertSupabaseProfile, verifySupabaseProfile } from "./supabase-admin-fetch";
@@ -24,11 +24,62 @@ app.post("/api/orion/chat", async (req, res) => {
   }
 });
 
-app.post("/api/orion/manual-script", async (req, res) => {
+app.post("/api/orion/source-version", async (req, res) => {
   try {
-    res.json(await createManualScript(req.body?.description, req.body?.entityKind));
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await ensureSourceVersion(user.id, req.body?.projectId));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "No se pudo crear el script.";
+    const message = error instanceof Error ? error.message : "No se pudo crear la versión privada.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.get("/api/orion/source-file", async (req, res) => {
+  try {
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await getSourceFile(user.id, req.query.projectId, req.query.versionId, req.query.path));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo leer el archivo privado.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/orion/source-proposal", async (req, res) => {
+  try {
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await createSourceProposal(user.id, req.body ?? {}));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo preparar el cambio interno.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/orion/source-apply", async (req, res) => {
+  try {
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await applySourceProposal(user.id, req.body ?? {}));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo crear la versión candidata.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.post("/api/orion/source-edit", async (req, res) => {
+  try {
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await createManualSourceProposal(user.id, req.body ?? {}));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo guardar la edición manual.";
+    res.status(400).json({ error: message });
+  }
+});
+
+app.get("/api/orion/source-proposals", async (req, res) => {
+  try {
+    const user = await authenticateCommunityRequest(req.header("authorization"));
+    res.json(await listSourceProposals(user.id, req.query.projectId));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudieron consultar los cambios internos.";
     res.status(400).json({ error: message });
   }
 });

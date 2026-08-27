@@ -17,9 +17,12 @@ describe("presentación de Scripts manuales", () => {
     expect(editorSource).toContain("SCRIPTS MANUALES");
   });
 
-  it("orienta a describir un comportamiento sin presentar el compositor como inteligencia artificial", () => {
-    expect(scriptEditorSource).toContain("DESCRIBE EL COMPORTAMIENTO");
-    expect(scriptEditorSource).toContain("CREAR SCRIPT");
+  it("orienta a describir un cambio de código sin presentar el compositor como inteligencia artificial", () => {
+    expect(scriptEditorSource).toContain("DESCRIBE LO QUE NECESITAS");
+    expect(scriptEditorSource).toContain("CREAR CAMBIO DE CÓDIGO");
+    expect(scriptEditorSource).toContain("ARCHIVOS");
+    expect(scriptEditorSource).not.toContain("+ NUEVO SCRIPT VACÍO");
+    expect(scriptEditorSource).not.toContain("+ AGREGAR BLOQUE");
     expect(scriptEditorSource).not.toMatch(/Scripting AI|IA de autoría/i);
   });
 });

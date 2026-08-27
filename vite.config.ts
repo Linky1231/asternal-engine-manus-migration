@@ -3,7 +3,8 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, type Plugin } from "vite";
 import { completeOrionChat } from "./server/orion";
-import { createManualScript } from "./server/manual-scripts";
+import { authenticateCommunityRequest } from "./server/community-ai";
+import { applySourceProposal, createManualSourceProposal, createSourceProposal, ensureSourceVersion, getSourceFile, listSourceProposals } from "./server/source-versions";
 
 function manusOrionDevEndpoint(): Plugin {
   return {
@@ -30,26 +31,57 @@ function manusOrionDevEndpoint(): Plugin {
           })();
         });
       });
-      server.middlewares.use("/api/orion/manual-script", (request, response, next) => {
-        if (request.method !== "POST") return next();
+      const readJson = (request: any) => new Promise<Record<string, unknown>>((resolve, reject) => {
         let raw = "";
-        request.on("data", chunk => { raw += String(chunk); });
-        request.on("error", next);
+        request.on("data", (chunk: unknown) => { raw += String(chunk); });
+        request.on("error", reject);
         request.on("end", () => {
-          void (async () => {
-            try {
-              const body = JSON.parse(raw || "{}") as { description?: unknown; entityKind?: unknown };
-              const result = await createManualScript(body.description, body.entityKind);
-              response.setHeader("Content-Type", "application/json");
-              response.end(JSON.stringify(result));
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "No se pudo crear el script.";
-              response.statusCode = 400;
-              response.setHeader("Content-Type", "application/json");
-              response.end(JSON.stringify({ error: message }));
-            }
-          })();
+          try { resolve(JSON.parse(raw || "{}") as Record<string, unknown>); }
+          catch (error) { reject(error); }
         });
+      });
+      const sendJson = (response: any, status: number, data: unknown) => {
+        response.statusCode = status;
+        response.setHeader("Content-Type", "application/json");
+        response.end(JSON.stringify(data));
+      };
+      const runPrivate = (handler: (userId: string, body: Record<string, unknown>, query: URLSearchParams) => Promise<unknown>) => (request: any, response: any, next: any) => {
+        void (async () => {
+          try {
+            const user = await authenticateCommunityRequest(request.headers.authorization);
+            const body = request.method === "POST" ? await readJson(request) : {};
+            const query = new URL(request.url || "", "http://localhost").searchParams;
+            sendJson(response, 200, await handler(user.id, body, query));
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "No se pudo completar la operación de código.";
+            sendJson(response, 400, { error: message });
+          }
+        })();
+        void next;
+      };
+      server.middlewares.use("/api/orion/source-version", (request, response, next) => {
+        if (request.method !== "POST") return next();
+        return runPrivate((userId, body) => ensureSourceVersion(userId, body.projectId))(request, response, next);
+      });
+      server.middlewares.use("/api/orion/source-file", (request, response, next) => {
+        if (request.method !== "GET") return next();
+        return runPrivate((userId, _body, query) => getSourceFile(userId, query.get("projectId"), query.get("versionId"), query.get("path")))(request, response, next);
+      });
+      server.middlewares.use("/api/orion/source-proposal", (request, response, next) => {
+        if (request.method !== "POST") return next();
+        return runPrivate((userId, body) => createSourceProposal(userId, body))(request, response, next);
+      });
+      server.middlewares.use("/api/orion/source-apply", (request, response, next) => {
+        if (request.method !== "POST") return next();
+        return runPrivate((userId, body) => applySourceProposal(userId, body))(request, response, next);
+      });
+      server.middlewares.use("/api/orion/source-edit", (request, response, next) => {
+        if (request.method !== "POST") return next();
+        return runPrivate((userId, body) => createManualSourceProposal(userId, body))(request, response, next);
+      });
+      server.middlewares.use("/api/orion/source-proposals", (request, response, next) => {
+        if (request.method !== "GET") return next();
+        return runPrivate((userId, _body, query) => listSourceProposals(userId, query.get("projectId")))(request, response, next);
       });
     },
   };
