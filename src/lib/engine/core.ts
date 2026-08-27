@@ -187,6 +187,22 @@ export interface SceneHierarchy {
   groups: SceneGroup[];
 }
 
+/** Eventos internos emitidos exclusivamente durante la ejecución del juego. */
+export type GameplayEvent = { type: "scene_start" | "ui_event" | "collect" | "player_hit" | "goal"; name?: string; entityId?: string };
+export type GameplayCommand =
+  | { type: "add_score"; amount: number }
+  | { type: "set_variable"; key: string; value: string | number | boolean }
+  | { type: "add_variable"; key: string; amount: number }
+  | { type: "set_ui_text"; targetId: string; text: string }
+  | { type: "set_ui_visible"; targetId: string; visible: boolean }
+  | { type: "set_entity_visible"; targetId: string; visible: boolean }
+  | { type: "play_sound"; audioId: string }
+  | { type: "restart" }
+  | { type: "win" };
+export interface GameplayRule { id: string; name: string; event: GameplayEvent["type"]; eventName?: string; targetId?: string; once?: boolean; commands: GameplayCommand[]; }
+/** Código de juego declarativo, ejecutado únicamente por el runtime de Play. */
+export interface GameplayProgram { rules: GameplayRule[]; }
+
 // ---- UI Overlay ----
 export type UIElementKind = "button" | "label" | "image" | "panel" | "bar" | "joystick";
 export type UIAnchor = "tl" | "tc" | "tr" | "cl" | "c" | "cr" | "bl" | "bc" | "br";
@@ -250,6 +266,8 @@ export interface Scene {
   camera?: { mode?: "follow-player" | "fixed"; x?: number; y?: number; deadZone?: number };
   /** Jerarquía de grupos disponible para el editor y futuras automatizaciones. */
   hierarchy?: SceneHierarchy;
+  /** Lógica persistente de gameplay. Nunca controla la interfaz del editor. */
+  gameplay?: GameplayProgram;
 }
 
 export const DEFAULT_LAYER_ID = "default";
@@ -452,6 +470,8 @@ export interface RuntimeState {
   dialog?: { entityId: string; speaker: string; text: string; portrait?: string | null; lineIndex: number; totalLines: number; pauses: boolean } | null;
   dialogQueue?: { entityId: string }[];
   dialogAdvance?: boolean; // set by UI to advance current line
+  variables: Record<string, string | number | boolean>;
+  firedRules: Record<string, boolean>;
 }
 
 export function newRuntimeState(scene?: Scene): RuntimeState {
@@ -471,6 +491,8 @@ export function newRuntimeState(scene?: Scene): RuntimeState {
     dialog: null,
     dialogQueue: [],
     dialogAdvance: false,
+    variables: { ...(scene?.variables ?? {}) },
+    firedRules: {},
   };
 }
 
@@ -513,7 +535,7 @@ function emit(state: RuntimeState, p: ParticleSpec) {
   state.particles.push(p);
 }
 
-export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState, dt: number) {
+export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState, dt: number, onEvent?: (event: GameplayEvent) => void) {
   const BASE_SPEED = 220;
   const JUMP = 520;
 
@@ -840,6 +862,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         o.color = "#22c55e";
       }
       if (o.collectible) {
+        onEvent?.({ type: "collect", entityId: o.id });
         emit(state, { x: o.x + o.w / 2, y: o.y + o.h / 2, color: o.color, count: 8 });
         const pu = o.powerup;
         if (pu === "speed") state.speedT = 6;
@@ -848,6 +871,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         else state.score += o.value ?? 10;
         o.x = -9999;
       } else if (o.hazard) {
+        onEvent?.({ type: "player_hit", entityId: o.id });
         if (state.invulnT <= 0) {
           emit(state, { x: e.x + e.w / 2, y: e.y + e.h / 2, color: "#f43f5e", count: 14 });
           // Knockback player away from hazard so they don't get stuck inside
@@ -861,6 +885,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         }
 
       } else if (o.goal) {
+        onEvent?.({ type: "goal", entityId: o.id });
         state.win = true;
         if (typeof window !== "undefined") {
           try {

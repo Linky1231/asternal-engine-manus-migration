@@ -131,6 +131,12 @@ function normalizeHierarchy(scene: Project["scenes"][number]) {
   };
 }
 
+function normalizeGameplay(scene: Project["scenes"][number]) {
+  const events = new Set(["scene_start", "ui_event", "collect", "player_hit", "goal"]);
+  const commands = new Set(["add_score", "set_variable", "add_variable", "set_ui_text", "set_ui_visible", "set_entity_visible", "play_sound", "restart", "win"]);
+  return { rules: (scene.gameplay?.rules ?? []).filter(rule => rule && events.has(rule.event)).slice(0, 64).map((rule, index) => ({ ...rule, id: typeof rule.id === "string" && rule.id ? rule.id : `rule_${index}`, name: rule.name?.trim() || `Regla ${index + 1}`, commands: (rule.commands ?? []).filter(command => command && commands.has(command.type)).slice(0, 12) })) };
+}
+
 export function normalizeProject(p: Project): Project {
   if (!p.scenes?.length) return newProject();
   const settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
@@ -150,6 +156,7 @@ export function normalizeProject(p: Project): Project {
       ...scene,
       ...normalizeHierarchy(scene),
       variableTypes: inferVariableTypes(scene.variables, scene.variableTypes),
+      gameplay: normalizeGameplay(scene),
       camera: scene.camera ?? { mode: "follow-player", deadZone: 0 },
       ui: (scene.ui ?? []).map(element => element.kind === "bar" ? { ...element, initialValue: element.initialValue ?? element.max ?? 1 } : element),
     })),

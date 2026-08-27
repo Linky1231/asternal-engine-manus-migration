@@ -1674,3 +1674,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Renombrar IA de autoría a Scripting AI en toda la interfaz y documentación pertinente
 - [x] Convertir el asistente en una vista aislada responsive sin cruces con inspector, compositor o navegación móvil
 - [x] Añadir regresiones, validar en móvil y escritorio, y publicar la corrección
+
+# Scripting AI para lógica interna de juego
+
+- [x] Auditar runtime, UI de juego, eventos y persistencia para definir los puntos de extensión de gameplay
+- [x] Diseñar un programa de gameplay declarativo y ejecutable, limitado al juego y aislado de la interfaz del editor
+- [x] Ampliar Scripting AI para proponer cambios de UI de juego, eventos, reglas y comportamiento avanzado
+- [x] Ejecutar los programas aprobados en Play y permitir aplicar/deshacer los cambios de proyecto
+- [x] Añadir regresiones de aislamiento, ejecución, UI de juego y persistencia; validar y publicar

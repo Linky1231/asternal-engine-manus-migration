@@ -5,7 +5,7 @@ type AuthoringPlan = { summary: string; assumptions: string[]; operations: Autho
 type AuthoringContext = { scene: Record<string, unknown>; groups: Array<Record<string, unknown>>; entities: Array<Record<string, unknown>> };
 
 const kinds = ["player", "platform", "enemy", "coin", "goal", "decor"] as const;
-const operationTypes = ["create_entity", "update_entity", "configure_behavior", "delete_entity", "move_entity", "create_group", "update_group", "delete_group", "update_scene"] as const;
+const operationTypes = ["create_entity", "update_entity", "configure_behavior", "delete_entity", "move_entity", "create_group", "update_group", "delete_group", "update_scene", "create_game_ui", "add_game_rule"] as const;
 
 const planSchema = {
   type: "object",
@@ -34,7 +34,9 @@ const planSchema = {
           behavior: { type: ["string", "null"], enum: ["moving", "crumble", "spring", "patrol", "powerup", "switch", "door", null] },
           enabled: { type: ["boolean", "null"] },
           config: { type: ["object", "null"], properties: { axis: { type: ["string", "null"], enum: ["x", "y", null] }, range: { type: ["number", "null"] }, speed: { type: ["number", "null"] }, delay: { type: ["number", "null"] }, respawn: { type: ["number", "null"] }, force: { type: ["number", "null"] }, ledgeSafe: { type: ["boolean", "null"] }, powerup: { type: ["string", "null"], enum: ["speed", "djump", "invuln", null] }, switchId: { type: ["string", "null"] }, doorId: { type: ["string", "null"] } }, required: ["axis", "range", "speed", "delay", "respawn", "force", "ledgeSafe", "powerup", "switchId", "doorId"], additionalProperties: false },
-        }, required: ["type", "targetId", "entity", "patch", "behavior", "enabled", "config"], additionalProperties: false,
+          ui: { type: ["object", "null"], properties: { kind: { type: ["string", "null"], enum: ["button", "label", "image", "panel", "bar", "joystick", null] }, name: { type: ["string", "null"] }, text: { type: ["string", "null"] }, action: { type: ["string", "null"], enum: ["none", "left", "right", "jump", "restart", "exit", "event", null] }, eventName: { type: ["string", "null"] }, x: { type: ["number", "null"] }, y: { type: ["number", "null"] }, w: { type: ["number", "null"] }, h: { type: ["number", "null"] } }, required: ["kind", "name", "text", "action", "eventName", "x", "y", "w", "h"], additionalProperties: false },
+          rule: { type: ["object", "null"], properties: { id: { type: ["string", "null"] }, name: { type: ["string", "null"] }, event: { type: ["string", "null"], enum: ["scene_start", "ui_event", "collect", "player_hit", "goal", null] }, eventName: { type: ["string", "null"] }, targetId: { type: ["string", "null"] }, once: { type: ["boolean", "null"] }, commands: { type: ["array", "null"], items: { type: "object", properties: { type: { type: "string", enum: ["add_score", "set_variable", "add_variable", "set_ui_text", "set_ui_visible", "set_entity_visible", "play_sound", "restart", "win"] }, amount: { type: ["number", "null"] }, key: { type: ["string", "null"] }, value: { type: ["string", "number", "boolean", "null"] }, targetId: { type: ["string", "null"] }, text: { type: ["string", "null"] }, visible: { type: ["boolean", "null"] }, audioId: { type: ["string", "null"] } }, required: ["type", "amount", "key", "value", "targetId", "text", "visible", "audioId"], additionalProperties: false } } }, required: ["id", "name", "event", "eventName", "targetId", "once", "commands"], additionalProperties: false },
+        }, required: ["type", "targetId", "entity", "patch", "behavior", "enabled", "config", "ui", "rule"], additionalProperties: false,
       },
     },
   }, required: ["summary", "assumptions", "operations"], additionalProperties: false,
@@ -65,6 +67,8 @@ function normalizeOperation(input: unknown): AuthoringOperation | null {
   if (type === "update_group" && id(raw.targetId)) return { type, targetId: id(raw.targetId)!, name: text(patch.name, "Grupo"), parentId: id(patch.parentId) };
   if (type === "delete_group" && id(raw.targetId)) return { type, targetId: id(raw.targetId)! };
   if (type === "update_scene") return { type, patch: { name: pick<string>(patch, "nameScene"), bg: pick<string>(patch, "bg"), gravity: pick<number>(patch, "value"), width: pick<number>(patch, "w"), height: pick<number>(patch, "h"), cameraMode: pick<"follow-player" | "fixed">(patch, "cameraMode"), cameraX: pick<number>(patch, "cameraX"), cameraY: pick<number>(patch, "cameraY"), cameraDeadZone: pick<number>(patch, "cameraDeadZone") } };
+  if (type === "create_game_ui") { const ui = raw.ui as Record<string, unknown>; if (!ui || !["button", "label", "image", "panel", "bar", "joystick"].includes(text(ui.kind))) return null; return { type, ui: { kind: text(ui.kind), name: text(ui.name, "Control"), text: pick<string>(ui, "text"), action: pick<string>(ui, "action"), eventName: pick<string>(ui, "eventName"), x: pick<number>(ui, "x"), y: pick<number>(ui, "y"), w: pick<number>(ui, "w"), h: pick<number>(ui, "h") } }; }
+  if (type === "add_game_rule") { const rule = raw.rule as Record<string, unknown>; if (!rule || !["scene_start", "ui_event", "collect", "player_hit", "goal"].includes(text(rule.event)) || !Array.isArray(rule.commands)) return null; return { type, rule: { id: "ai", name: text(rule.name, "Regla de juego"), event: text(rule.event), eventName: pick<string>(rule, "eventName"), targetId: id(rule.targetId) ?? undefined, once: rule.once === true, commands: rule.commands.slice(0, 12) } }; }
   return null;
 }
 
@@ -77,7 +81,7 @@ export async function createAuthoringPlan(instruction: unknown, context: unknown
   const model = catalog.data.some(item => item.id === "gpt-5") ? "gpt-5" : catalog.data.some(item => item.id === "gpt-5-mini") ? "gpt-5-mini" : catalog.data[0]?.id;
   if (!model) throw new Error("No hay un modelo de IA disponible para el editor.");
   const response = await invokeLLM({ model, temperature: 0.2, response_format: { type: "json_schema", json_schema: { name: "asternal_authoring_plan", strict: true, schema: planSchema as unknown as Record<string, unknown> } }, messages: [
-    { role: "system", content: "Eres Asternal Authoring AI. Convierte la intención de un creador en operaciones seguras para una escena Canvas 2D. No escribes JavaScript, HTML, bloques ni scripts; el motor aplica solo operaciones JSON validadas. Usa exclusivamente IDs que existan en el contexto. Para crear objetos usa create_entity; para modificar usa update_entity. Para lógica de juego usa configure_behavior: moving, crumble, spring, patrol, powerup, switch o door. Conserva dimensiones y objetos salvo petición clara. Nunca elimines objetos si la instrucción no dice eliminar. Devuelve un plan breve y práctico." },
+    { role: "system", content: "Eres Scripting AI de Asternal. Convierte la intención de un creador en operaciones seguras para la lógica interna de un juego Canvas 2D. No escribes JavaScript, HTML ni modificas la interfaz del editor; el runtime aplica solo operaciones JSON validadas. Usa IDs existentes. Para UI del JUEGO usa create_game_ui; para conectar botones usa add_game_rule con evento ui_event y comandos declarativos. También puedes responder a collect, player_hit, goal y scene_start. Para lógica nativa usa configure_behavior. Conserva objetos salvo petición clara. Devuelve un plan breve y práctico." },
     { role: "user", content: JSON.stringify({ instruction: request, context: safeContext }) },
   ] });
   const content = response.choices?.[0]?.message?.content;

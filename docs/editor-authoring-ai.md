@@ -9,6 +9,12 @@ La antigua interfaz e intérprete de scripts por bloques fue retirada. En su lug
 
 Scripting AI recibe una representación acotada de la escena: sus dimensiones, cámara, grupos y objetos con sus IDs, nombres, tipos, posiciones, dimensiones, etiquetas y flags. A partir de ello, devuelve un plan JSON con un resumen, supuestos y operaciones. El cliente valida y muestra esas operaciones; los cambios solo se aplican tras pulsar **Aplicar plan**. Cada aplicación conserva una instantánea para **Deshacer último cambio**.
 
+## Lógica interna ejecutable
+
+Scripting AI también puede crear **UI del juego** y reglas internas que se ejecutan solamente al pulsar **Play**. Puede añadir botones, texto u otros controles al overlay del juego y conectarlos a eventos de inicio de escena, pulsación de un botón interno, recogida de objeto, golpe al jugador o llegada a la meta. Las reglas admiten sumar puntuación, cambiar variables de juego, cambiar la UI del juego, mostrar u ocultar entidades, reproducir un sonido, reiniciar o completar el nivel.
+
+> Esta lógica se guarda en `scene.gameplay` y se interpreta directamente dentro del runtime de Asternal. No modifica archivos fuente, componentes ni la interfaz del editor; tampoco evalúa JavaScript proporcionado por el modelo o por una instrucción.
+
 > Scripting AI no ejecuta JavaScript, HTML, código arbitrario ni instrucciones del modelo directamente. Solo puede proponer operaciones declarativas incluidas en el contrato del motor.
 
 | Área | Operaciones disponibles |

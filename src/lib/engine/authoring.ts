@@ -1,4 +1,4 @@
-import { KIND_PRESETS, uid, type Entity, type EntityKind, type Scene } from "./core";
+import { KIND_PRESETS, newUIElement, uid, type Entity, type EntityKind, type GameplayRule, type Scene, type UIElementKind } from "./core";
 
 export type AuthoringEntityPatch = {
   name?: string; tags?: string[]; x?: number; y?: number; w?: number; h?: number; color?: string;
@@ -17,7 +17,9 @@ export type AuthoringOperation =
   | { type: "create_group"; name: string; parentId: string | null }
   | { type: "update_group"; targetId: string; name: string; parentId: string | null }
   | { type: "delete_group"; targetId: string }
-  | { type: "update_scene"; patch: { name?: string; bg?: string; gravity?: number; width?: number; height?: number; cameraMode?: "follow-player" | "fixed"; cameraX?: number; cameraY?: number; cameraDeadZone?: number } };
+  | { type: "update_scene"; patch: { name?: string; bg?: string; gravity?: number; width?: number; height?: number; cameraMode?: "follow-player" | "fixed"; cameraX?: number; cameraY?: number; cameraDeadZone?: number } }
+  | { type: "create_game_ui"; ui: { kind: UIElementKind; name: string; text?: string; action?: "none" | "left" | "right" | "jump" | "restart" | "exit" | "event"; eventName?: string; x?: number; y?: number; w?: number; h?: number } }
+  | { type: "add_game_rule"; rule: GameplayRule };
 
 export type AuthoringPlan = { summary: string; assumptions: string[]; operations: AuthoringOperation[]; model?: string };
 
@@ -132,6 +134,17 @@ export function applyAuthoringPlan(scene: Scene, plan: AuthoringPlan): { scene: 
     if (operation.type === "update_scene") {
       const patch = operation.patch ?? {};
       next = { ...next, name: text(patch.name, next.name), bg: /^#[0-9a-f]{6}$/i.test(patch.bg ?? "") ? patch.bg! : next.bg, gravity: finite(patch.gravity, next.gravity, 0, 4000), width: finite(patch.width, next.width, 200, 5000), height: finite(patch.height, next.height, 200, 5000), camera: { ...next.camera, mode: patch.cameraMode === "fixed" || patch.cameraMode === "follow-player" ? patch.cameraMode : next.camera?.mode, x: finite(patch.cameraX, next.camera?.x ?? 0, 0, next.width), y: finite(patch.cameraY, next.camera?.y ?? 0, 0, next.height), deadZone: finite(patch.cameraDeadZone, next.camera?.deadZone ?? 0, 0, 1000) } }; applied++; continue;
+    }
+    if (operation.type === "create_game_ui") {
+      const spec = operation.ui;
+      if (!["button", "label", "image", "panel", "bar", "joystick"].includes(spec.kind)) { skipped++; continue; }
+      const ui = newUIElement(spec.kind);
+      next.ui = [...(next.ui ?? []), { ...ui, name: text(spec.name, ui.name), text: typeof spec.text === "string" ? spec.text.slice(0, 160) : ui.text, action: spec.action ?? ui.action, eventName: typeof spec.eventName === "string" ? spec.eventName.slice(0, 80) : ui.eventName, x: finite(spec.x, ui.x, -2000, 2000), y: finite(spec.y, ui.y, -2000, 2000), w: finite(spec.w, ui.w, 16, 2000), h: finite(spec.h, ui.h, 16, 2000) }]; applied++; continue;
+    }
+    if (operation.type === "add_game_rule") {
+      const rule = operation.rule;
+      if (!rule?.id || !rule.name || !Array.isArray(rule.commands) || rule.commands.length > 12) { skipped++; continue; }
+      next.gameplay = { rules: [...(next.gameplay?.rules ?? []), { ...rule, id: uid(), name: text(rule.name, "Regla de juego"), commands: rule.commands.slice(0, 12) }] }; applied++; continue;
     }
     skipped++;
   }

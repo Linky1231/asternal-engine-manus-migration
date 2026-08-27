@@ -7,7 +7,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 export function EditorAuthoringAssistant({ scene, onChange, onClose }: { scene: Scene; onChange: (scene: Scene) => void; onClose: () => void }) {
   const [instruction, setInstruction] = useState("");
-  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "Describe el cambio que quieres hacer. Prepararé un plan con objetos, física, colisiones, cámara, jerarquía y comportamientos antes de aplicarlo." }]);
+  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "Describe el cambio que quieres hacer. Prepararé un plan con objetos, física, cámara, UI del juego y reglas internas ejecutables antes de aplicarlo." }]);
   const [plan, setPlan] = useState<AuthoringPlan | null>(null);
   const [undoScene, setUndoScene] = useState<Scene | null>(null);
   const [loading, setLoading] = useState(false);

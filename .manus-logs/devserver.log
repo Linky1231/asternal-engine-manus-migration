@@ -2606,3 +2606,34 @@
 [2026-08-27T03:36:02.076Z] 3:36:02 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/EditorAuthoringAssistant.tsx
 [2026-08-27T03:36:46.580Z] 3:36:46 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx
 [2026-08-27T03:38:17.168Z] 3:38:17 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/EditorAuthoringAssistant.tsx
+[2026-08-27T04:03:34.603Z] 4:03:34 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/PaintEditor.tsx, /src/components/engine/AsternalEditor.tsx, /src/components/engine/SceneEditor.tsx, /src/components/engine/GameRuntime.tsx, /src/components/engine/AnimationEditor.tsx, /src/components/engine/UIEditor.tsx, /src/routes/index.tsx, /src/components/social/StoreSection.tsx, /src/components/engine/ProjectManager.tsx, /src/components/social/GameCard.tsx, /src/components/social/GlobalSearchPanel.tsx, /src/components/engine/EditorAuthoringAssistant.tsx
+[2026-08-27T04:03:35.151Z] 4:03:35 AM [vite] (client) hmr invalidate /src/components/engine/GameRuntime.tsx Could not Fast Refresh ("drawEntity" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:35.151Z] 4:03:35 AM [vite] (client) hmr update /src/components/engine/AsternalEditor.tsx, /src/components/social/GameCard.tsx, /src/components/engine/UIEditor.tsx
+[2026-08-27T04:03:35.152Z] 4:03:35 AM [vite] (client) hmr invalidate /src/components/engine/UIEditor.tsx Could not Fast Refresh ("drawUIElement" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:35.152Z] 4:03:35 AM [vite] (client) hmr update /src/components/engine/AsternalEditor.tsx, /src/components/engine/GameRuntime.tsx
+[2026-08-27T04:03:35.152Z] 4:03:35 AM [vite] (client) hmr invalidate /src/routes/index.tsx Could not Fast Refresh ("Route" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:35.152Z] 4:03:35 AM [vite] (client) hmr update /src/main.tsx
+[2026-08-27T04:03:35.462Z] 4:03:35 AM [vite] (client) hmr invalidate /src/main.tsx Could not Fast Refresh ("true" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:35.462Z] 4:03:35 AM [vite] (client) page reload src/main.tsx
+[2026-08-27T04:03:40.249Z] 4:03:40 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/GameRuntime.tsx
+[2026-08-27T04:03:40.371Z] 4:03:40 AM [vite] (client) hmr invalidate /src/components/engine/GameRuntime.tsx Could not Fast Refresh ("drawEntity" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:40.371Z] 4:03:40 AM [vite] (client) hmr update /src/components/engine/AsternalEditor.tsx, /src/components/social/GameCard.tsx, /src/components/engine/UIEditor.tsx
+[2026-08-27T04:03:47.300Z] 4:03:47 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/GameRuntime.tsx
+[2026-08-27T04:03:47.409Z] 4:03:47 AM [vite] (client) hmr invalidate /src/components/engine/GameRuntime.tsx Could not Fast Refresh ("drawEntity" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:03:47.409Z] 4:03:47 AM [vite] (client) hmr update /src/components/engine/AsternalEditor.tsx, /src/components/social/GameCard.tsx, /src/components/engine/UIEditor.tsx
+[2026-08-27T04:04:08.006Z] 4:04:08 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/EditorAuthoringAssistant.tsx
+[2026-08-27T04:04:27.494Z] 4:04:27 AM [vite] server/editor-authoring-ai.ts changed, restarting server...
+[2026-08-27T04:04:27.523Z] 4:04:27 AM [vite] server restarted.
+[2026-08-27T04:05:22.342Z] 4:05:22 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/AsternalEditor.tsx, /src/routes/index.tsx, /src/components/social/StoreSection.tsx, /src/components/engine/ProjectManager.tsx, /src/components/social/GameCard.tsx, /src/components/social/GlobalSearchPanel.tsx
+[2026-08-27T04:05:22.476Z] 4:05:22 AM [vite] (client) hmr invalidate /src/routes/index.tsx Could not Fast Refresh ("Route" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:05:22.476Z] 4:05:22 AM [vite] (client) hmr update /src/main.tsx
+[2026-08-27T04:05:22.567Z] 4:05:22 AM [vite] (client) hmr invalidate /src/main.tsx Could not Fast Refresh ("true" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2026-08-27T04:05:22.567Z] 4:05:22 AM [vite] (client) page reload src/main.tsx
+[2026-08-27T04:06:24.293Z] [ELIFECYCLE] Command failed.
+[2026-08-27T04:06:24.297Z] Dev server exited with code -1
+[2026-08-27T04:06:25.387Z] Starting dev server with command: pnpm run dev
+[2026-08-27T04:06:25.661Z] $ vite --host
+[2026-08-27T04:06:25.878Z] VITE v7.3.6  ready in 192 ms
+[2026-08-27T04:06:25.878Z] ➜  Local:   http://localhost:5173/
+[2026-08-27T04:06:25.878Z] ➜  Network: http://169.254.0.21:5173/
+[2026-08-27T04:07:52.147Z] 4:07:52 AM [vite] (client) hmr update /src/styles.css, /src/components/engine/EditorAuthoringAssistant.tsx
