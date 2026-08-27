@@ -973,89 +973,36 @@ export async function loadGameProject(signedUrl: string): Promise<unknown> {
 }
 
 // ---------- Ranking: juegos más jugados (24h) ----------
-const LOCAL_PLAYS_KEY = "_local_game_plays";
-const PLAYS_WINDOW_MS = 24 * 3600 * 1000;
-
-/**
- * Registra una jugada (al lanzar un juego). Best-effort: intenta guardarla en
- * la nube (tabla game_plays) y siempre la guarda localmente como respaldo.
- */
+/** Registra una jugada desde la sesión oficial de Manus. */
 export async function recordGamePlay(postId: string): Promise<void> {
   if (!postId) return;
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.id) {
-      try {
-        await supabase.from("game_plays").insert({ user_id: user.id, post_id: postId });
-      } catch {
-        /* tabla sin crear en la BD → solo local */
-      }
-    }
+    await fetch("/api/manus/game-plays", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId }),
+    });
   } catch {
-    /* noop */
-  }
-  try {
-    const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
-    const list = raw ? JSON.parse(raw) : [];
-    list.push({ post_id: postId, at: Date.now() });
-    // Poda: guarda solo lo relevante para el ranking (últimos 7 días).
-    const cut = Date.now() - 7 * 24 * 3600 * 1000;
-    const pruned = list.filter((x: { at: number }) => typeof x.at === "number" && x.at > cut).slice(-3000);
-    localStorage.setItem(LOCAL_PLAYS_KEY, JSON.stringify(pruned));
-  } catch {
-    /* noop */
+    /* El juego continúa aun cuando el contador no pueda actualizarse. */
   }
 }
 
 /**
  * Cuenta las jugadas de cada juego en las últimas 24 horas.
- * Devuelve { counts, cloud }:
- *  - counts: mapa post_id → número de jugadas.
- *  - cloud: true si la nube respondió (la tabla game_plays existe y el ranking
- *    se sincroniza entre dispositivos); false si solo hay registro local del
- *    navegador (tabla sin crear o sin sesión → sin sincronización).
- * Cuando la nube funciona se usan SOLO sus datos: el registro local contiene
- * exactamente las mismas jugadas ya subidas por este navegador, así que
- * sumarlas duplicaría el conteo.
+ * Devuelve conteos reales registrados por Manus durante las últimas 24 horas.
  */
 export async function fetchGamePlayCounts24h(postIds: string[]): Promise<{ counts: Record<string, number>; cloud: boolean }> {
-  const counts: Record<string, number> = {};
-  if (!postIds.length) return { counts, cloud: false };
-  const since = new Date(Date.now() - PLAYS_WINDOW_MS).toISOString();
-  let cloudOk = false;
+  if (!postIds.length) return { counts: {}, cloud: true };
   try {
-    const { data, error } = await supabase
-      .from("game_plays")
-      .select("post_id")
-      .gte("created_at", since)
-      .in("post_id", postIds);
-    if (!error && Array.isArray(data)) {
-      cloudOk = true;
-      for (const r of data as { post_id: string }[]) {
-        counts[r.post_id] = (counts[r.post_id] ?? 0) + 1;
-      }
-    }
+    const params = new URLSearchParams({ postIds: postIds.slice(0, 100).join(",") });
+    const response = await fetch(`/api/manus/game-plays?${params.toString()}`, { credentials: "include" });
+    const data = await response.json().catch(() => null) as { counts?: Record<string, number>; cloud?: boolean } | null;
+    if (!response.ok || !data) throw new Error("No se pudo leer el ranking.");
+    return { counts: data.counts ?? {}, cloud: data.cloud === true };
   } catch {
-    /* tabla sin crear → se usa solo el respaldo local */
+    return { counts: {}, cloud: false };
   }
-  if (!cloudOk) {
-    try {
-      const raw = localStorage.getItem(LOCAL_PLAYS_KEY);
-      if (raw) {
-        const list = JSON.parse(raw) as { post_id: string; at: number }[];
-        const cut = Date.now() - PLAYS_WINDOW_MS;
-        const ids = new Set(postIds);
-        for (const x of list) {
-          if (typeof x.at === "number" && x.at > cut && ids.has(x.post_id)) {
-            counts[x.post_id] = (counts[x.post_id] ?? 0) + 1;
-          }
-        }
-      }
-    } catch {
-      /* noop */
-    }
-  }
-  return { counts, cloud: cloudOk };
 }
 
 // ---------- Cloud project sync ----------

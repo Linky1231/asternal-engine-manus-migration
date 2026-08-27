@@ -1,9 +1,6 @@
 import { invokeLLM, type LLMMessage } from "./_core/llm";
 import { getOrionModel } from "./orion";
-import { normalizeCommunitySettings, parseCommunitySettings, type CommunitySettings } from "../src/lib/community/about";
-
-type UserIdentity = { id: string };
-type SettingsRecord = { content?: string | null; updated_at?: string | null };
+import { normalizeCommunitySettings, type CommunitySettings } from "../src/lib/community/about";
 
 export type ModerationDecision = { allowed: boolean; reason: string; summary: string };
 
@@ -32,45 +29,11 @@ export type CommunitySubmission = GameSubmission | ArtworkSubmission;
 
 const DEFAULT_BLOCK_REASON = "Orión no pudo verificar esta publicación. Inténtalo de nuevo en unos instantes.";
 
-function restUrl(path: string) {
-  const base = process.env.SUPABASE_URL;
-  if (!base) throw new Error("La moderación comunitaria no está configurada.");
-  return `${base.replace(/\/$/, "")}${path}`;
-}
-
-function serviceHeaders(extra: Record<string, string> = {}) {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error("La moderación comunitaria no está configurada.");
-  return { apikey: key, Authorization: `Bearer ${key}`, ...extra };
-}
-
-export async function authenticateCommunityRequest(authorization: string | undefined): Promise<UserIdentity> {
-  const token = authorization?.replace(/^Bearer\s+/i, "").trim();
-  if (!token) throw new Error("Inicia sesión para usar las funciones comunitarias de Orión.");
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { id: token };
-  const response = await fetch(restUrl("/auth/v1/user"), {
-    headers: serviceHeaders({ Authorization: `Bearer ${token}` }),
-  });
-  const user = await response.json().catch(() => null) as UserIdentity | null;
-  if (!response.ok || !user?.id) throw new Error("Tu sesión ya no es válida. Vuelve a iniciar sesión.");
-  return user;
-}
-
 async function getCommunitySettings(fallbackSettings?: unknown): Promise<CommunitySettings> {
   const fallback = typeof fallbackSettings === "string"
     ? normalizeCommunitySettings({ rules: fallbackSettings })
     : normalizeCommunitySettings(fallbackSettings);
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return fallback;
-  try {
-    const response = await fetch(restUrl("/rest/v1/posts?select=content,updated_at&category=eq.system&post_type=eq.about_settings&deleted_at=is.null&order=updated_at.desc&limit=1"), {
-      headers: serviceHeaders(),
-    });
-    if (!response.ok) return fallback;
-    const rows = await response.json().catch(() => []) as SettingsRecord[];
-    return rows[0]?.content ? parseCommunitySettings(rows[0].content) : fallback;
-  } catch {
-    return fallback;
-  }
+  return fallback;
 }
 
 function stripJsonFence(value: string) {

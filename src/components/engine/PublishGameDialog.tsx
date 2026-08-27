@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { publishGame, updateGame, GAME_GENRES } from "@/lib/social/api";
 import { makeOrionImagePreview, reviewGameWithOrion, summarizeGameForOrion } from "@/lib/ai/community-orion";
 import { Upload, Loader2, CheckCircle2, ImagePlus, Images, X, GitFork, Sparkles, Move, RotateCcw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "@tanstack/react-router";
 import type { Project } from "@/lib/engine/core";
 import { coverFrameStyle, DEFAULT_COVER_FRAME, normaliseCoverFrame, type CoverFrame } from "@/lib/social/cover-frame";
@@ -121,8 +120,8 @@ export function PublishGameDialog({
     if (!title.trim()) { setErr("Título requerido"); return; }
     setBusy(true); setErr(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      const session = await fetch("/api/manus/session", { credentials: "include" });
+      if (!session.ok) { navigate({ to: "/auth" }); return; }
       const tags = tagInput.split(/[,\s#]+/).map(t => t.trim()).filter(Boolean);
       const newShots = newShotFiles();
       setReviewing(true);

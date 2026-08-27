@@ -33,25 +33,25 @@ export async function createManusRecord(input: { id: string; collection: string;
 
 export async function getOwnManusRecord(ownerOpenId: string, id: string) {
   const db = await database();
-  const rows = await db.select().from(asteralRecords).where(and(eq(asteralRecords.id, id), eq(asteralRecords.ownerOpenId, ownerOpenId))).limit(1);
+  const rows = await db.select().from(asternalRecords).where(and(eq(asternalRecords.id, id), eq(asternalRecords.ownerOpenId, ownerOpenId))).limit(1);
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
 export async function listOwnManusRecords(ownerOpenId: string, collection?: string) {
   const db = await database();
-  const where = collection ? and(eq(asteralRecords.ownerOpenId, ownerOpenId), eq(asteralRecords.collection, collection)) : eq(asteralRecords.ownerOpenId, ownerOpenId);
-  return (await db.select().from(asteralRecords).where(where).orderBy(desc(asteralRecords.updatedAt))).map(toRecord);
+  const where = collection ? and(eq(asternalRecords.ownerOpenId, ownerOpenId), eq(asternalRecords.collection, collection)) : eq(asternalRecords.ownerOpenId, ownerOpenId);
+  return (await db.select().from(asternalRecords).where(where).orderBy(desc(asternalRecords.updatedAt))).map(toRecord);
 }
 
 export async function listPublicManusRecords(collection: string) {
   const db = await database();
-  return (await db.select().from(asteralRecords).where(and(eq(asteralRecords.collection, collection), eq(asteralRecords.visibility, "public"))).orderBy(desc(asteralRecords.updatedAt))).map(toRecord);
+  return (await db.select().from(asternalRecords).where(and(eq(asternalRecords.collection, collection), eq(asternalRecords.visibility, "public"))).orderBy(desc(asternalRecords.updatedAt))).map(toRecord);
 }
 
 export async function getVisibleManusRecord(ownerOpenId: string | null, id: string) {
   const db = await database();
-  const visibility = ownerOpenId ? or(eq(asteralRecords.ownerOpenId, ownerOpenId), eq(asteralRecords.visibility, "public")) : eq(asteralRecords.visibility, "public");
-  const rows = await db.select().from(asteralRecords).where(and(eq(asteralRecords.id, id), visibility)).limit(1);
+  const visibility = ownerOpenId ? or(eq(asternalRecords.ownerOpenId, ownerOpenId), eq(asternalRecords.visibility, "public")) : eq(asternalRecords.visibility, "public");
+  const rows = await db.select().from(asternalRecords).where(and(eq(asternalRecords.id, id), visibility)).limit(1);
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
@@ -61,11 +61,11 @@ export async function updateOwnManusRecord(input: { id: string; ownerOpenId: str
   if (input.data !== undefined) patch.data = input.data;
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (!Object.keys(patch).length) return getOwnManusRecord(input.ownerOpenId, input.id);
-  await db.update(asteralRecords).set(patch).where(and(eq(asteralRecords.id, input.id), eq(asteralRecords.ownerOpenId, input.ownerOpenId)));
+  await db.update(asternalRecords).set(patch).where(and(eq(asternalRecords.id, input.id), eq(asternalRecords.ownerOpenId, input.ownerOpenId)));
   return getOwnManusRecord(input.ownerOpenId, input.id);
 }
 
 export async function deleteOwnManusRecord(ownerOpenId: string, id: string) {
   const db = await database();
-  await db.delete(asteralRecords).where(and(eq(asteralRecords.id, id), eq(asteralRecords.ownerOpenId, ownerOpenId)));
+  await db.delete(asternalRecords).where(and(eq(asternalRecords.id, id), eq(asternalRecords.ownerOpenId, ownerOpenId)));
 }

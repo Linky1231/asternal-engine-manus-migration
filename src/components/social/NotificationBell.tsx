@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Bell } from "lucide-react";
 import { countUnreadNotifications } from "@/lib/social/api";
 import { NotificationsPanel } from "./NotificationsPanel";
-import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Campana de notificaciones: muestra el contador de no leídas en la cabecera y
@@ -19,30 +18,15 @@ export function NotificationBell() {
     } catch { /* noop */ }
   };
 
-  // Carga inicial + refresco periódico + realtime (se sincroniza entre dispositivos).
+  // Carga inicial, actualización periódica y eventos de la interfaz.
   useEffect(() => {
     reload();
     const t = setInterval(reload, 45000);
     const onNotificationsChanged = () => { void reload(); };
     window.addEventListener("asternal-notifications:changed", onNotificationsChanged);
-    let channel: unknown;
-    try {
-      if (typeof supabase.channel === "function") {
-        channel = (supabase as any)
-          .channel("my-notifications-count")
-          .on("postgres_changes", { schema: "public", table: "notifications", event: "INSERT" }, () => { void reload(); })
-          .on("postgres_changes", { schema: "public", table: "notifications", event: "UPDATE" }, () => { void reload(); });
-        (channel as any).subscribe?.();
-      }
-    } catch {
-      /* cliente local: sin realtime */
-    }
     return () => {
       clearInterval(t);
       window.removeEventListener("asternal-notifications:changed", onNotificationsChanged);
-      try {
-        (supabase as any).removeChannel?.(channel);
-      } catch { /* noop */ }
     };
   }, []);
 

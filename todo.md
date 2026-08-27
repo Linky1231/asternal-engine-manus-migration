@@ -1732,3 +1732,7 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [ ] Sustituir los clientes y flujos de Supabase por autenticación oficial, datos y almacenamiento de Manus
 - [ ] Eliminar dependencias, configuraciones, rutas y contenido de prueba de Supabase tras validación y confirmación final
 - [ ] Validar la migración completa y retomar Scripts manuales sobre la nueva base
+- [ ] Sustituir la autenticación de revisión y versiones privadas por sesiones oficiales de Manus en producción y desarrollo
+- [x] Trasladar el índice de propuestas y versiones privadas a registros aislados de Manus sin acceso administrativo a Supabase
+- [x] Migrar conversaciones, miembros, mensajes y medios del chat a tablas con permisos de Manus
+- [ ] Sustituir los avisos, rankings y pantallas visibles que aún solicitan configuración de Supabase por flujos oficiales de Manus

@@ -76,33 +76,43 @@ async function manusRecordRequest<T>(path: string, init?: RequestInit): Promise<
   return body as T;
 }
 
-function persistManusRecord(table: string, row: Record<string, unknown>): void {
+async function persistManusRecord(table: string, row: Record<string, unknown>): Promise<void> {
   if (!isManusCollection(table) || !row.id) return;
-  void manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}`, {
+  await manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}`, {
     method: "POST",
     body: JSON.stringify({ id: row.id, data: row }),
-  }).catch(() => { /* La copia local se reintenta al volver a sincronizar. */ });
+  });
 }
 
-function removeManusRecord(table: string, id: unknown): void {
+async function removeManusRecord(table: string, id: unknown): Promise<void> {
   if (!isManusCollection(table) || typeof id !== "string") return;
-  void manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => { /* La copia local conserva el estado hasta la siguiente sesión. */ });
+  await manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 /** Carga en local las colecciones asociadas a la sesión oficial de Manus. */
-export async function hydrateManusCollections(): Promise<{ id: string; name?: string | null } | null> {
+export async function hydrateManusCollections(): Promise<{ id: string; name?: string | null; email?: string | null } | null> {
   if (typeof window === "undefined") return null;
-  const session = await manusRecordRequest<{ user: { id: string; name?: string | null } }>("/api/manus/session");
+  const session = await manusRecordRequest<{ user: { id: string; name?: string | null; email?: string | null } }>("/api/manus/session");
   const marker = localStorage.getItem("_ast_manus_open_id");
   if (marker !== session.user.id) {
     const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter((key): key is string => Boolean(key?.startsWith("_local_data_") || key?.startsWith("_local_storage_")));
     keys.forEach(key => localStorage.removeItem(key));
     localStorage.setItem("_ast_manus_open_id", session.user.id);
   }
+  Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+    .filter((key): key is string => Boolean(key?.startsWith("_local_storage_")))
+    .forEach(key => localStorage.removeItem(key));
   await Promise.all([...MANUS_COLLECTIONS].map(async collection => {
     const rows = await manusRecordRequest<Record<string, unknown>[]>(`/api/manus/records/${encodeURIComponent(collection)}`);
     saveTableData(collection, rows);
   }));
+  const localSession: LocalSession = {
+    userId: session.user.id,
+    email: session.user.email || `${session.user.id}@manus.local`,
+    accessToken: "manus-cookie-session",
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  };
+  localStorage.setItem("_local_auth_session", JSON.stringify(localSession));
   return session.user;
 }
 
@@ -357,38 +367,51 @@ class LocalQueryBuilder {
   update(data: Record<string, unknown>): this { this.isUpdateOp = true; this.updateData = data; return this; }
   delete(): this { this.isDeleteOp = true; return this; }
 
-  private execute(): QueryResult {
+  private async execute(): Promise<QueryResult> {
     if (this.isInsertOp) return this.execInsert();
     if (this.isUpdateOp) return this.execUpdate();
     if (this.isDeleteOp) return this.execDelete();
     return this.execSelect();
   }
 
-  private execInsert(): QueryResult {
+  private async execInsert(): Promise<QueryResult> {
     const rows = getTableData(this.table);
     const newRow: Record<string, unknown> = { ...(this.insertData || {}), id: (this.insertData?.id as string) || uid(), created_at: now(), updated_at: now() };
+    try {
+      await persistManusRecord(this.table, newRow);
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error("No se pudo guardar en Manus."), count: null };
+    }
     rows.push(newRow); saveTableData(this.table, rows);
-    persistManusRecord(this.table, newRow);
     if (this.singleMode) return { data: this.project(newRow), error: null, count: null };
     return { data: [this.project(newRow)], error: null, count: null };
   }
 
-  private execUpdate(): QueryResult {
+  private async execUpdate(): Promise<QueryResult> {
     const rows = getTableData<Record<string, unknown>>(this.table);
     const filtered = applyFilters(rows, this.filters);
-    for (const row of filtered) Object.assign(row, this.updateData || {}, { updated_at: now() });
-    saveTableData(this.table, rows);
-    filtered.forEach(row => persistManusRecord(this.table, row));
-    if (this.singleMode) return { data: filtered.length ? this.project(filtered[0]) : null, error: null, count: null };
-    return { data: filtered.map(r => this.project(r)), error: null, count: null };
+    const changed: Record<string, unknown>[] = filtered.map(row => ({ ...row, ...(this.updateData ?? {}), updated_at: now() }));
+    try {
+      await Promise.all(changed.map(row => persistManusRecord(this.table, row)));
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error("No se pudo actualizar en Manus."), count: null };
+    }
+    const changes = new Map(changed.map(row => [row.id, row]));
+    saveTableData(this.table, rows.map(row => changes.get(row.id) ?? row));
+    if (this.singleMode) return { data: changed.length ? this.project(changed[0]) : null, error: null, count: null };
+    return { data: changed.map(r => this.project(r)), error: null, count: null };
   }
 
-  private execDelete(): QueryResult {
+  private async execDelete(): Promise<QueryResult> {
     const rows = getTableData<Record<string, unknown>>(this.table);
     const filtered = applyFilters(rows, this.filters);
     const deletedIds = new Set(filtered.map(r => r.id));
+    try {
+      await Promise.all(filtered.map(row => removeManusRecord(this.table, row.id)));
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error("No se pudo eliminar en Manus."), count: null };
+    }
     saveTableData(this.table, rows.filter(r => !deletedIds.has(r.id)));
-    filtered.forEach(row => removeManusRecord(this.table, row.id));
     return { data: filtered.map(r => this.project(r)), error: null, count: null };
   }
 
@@ -424,7 +447,7 @@ class LocalQueryBuilder {
   }
 
   then<TResult1 = QueryResult>(resolve?: ((v: QueryResult) => TResult1 | PromiseLike<TResult1>) | null, reject?: ((r: unknown) => TResult1 | PromiseLike<TResult1>) | null): Promise<TResult1> {
-    return Promise.resolve(this.execute()).then(resolve as (v: QueryResult) => TResult1 | PromiseLike<TResult1>, reject);
+    return this.execute().then(resolve as (v: QueryResult) => TResult1 | PromiseLike<TResult1>, reject);
   }
   catch<TResult = never>(reject?: ((r: unknown) => TResult | PromiseLike<TResult>) | null): Promise<QueryResult | TResult> { return this.then(undefined, reject); }
   finally(onFinally?: (() => void) | null): Promise<QueryResult> { return this.then().finally(onFinally!); }
@@ -466,7 +489,7 @@ function makeStorageBucket(bucket: string) {
   return {
     upload: async (path: string, file: File | Blob, _opts?: Record<string, unknown>) => {
       try {
-        // Compress images before storing to avoid localStorage quota issues
+        // Las imágenes se comprimen antes de la transferencia para mantener una carga razonable.
         let finalFile = file;
         if (isImageFile(file)) {
           const maxDim = path.includes('avatar') || path.includes('banner') ? 400 : 1200;
@@ -478,57 +501,22 @@ function makeStorageBucket(bucket: string) {
           reader.onerror = () => reject(new Error('File read failed'));
           reader.readAsDataURL(finalFile);
         });
-
-        // If this key already exists, remove it first to stay under quota
-        const key = `_local_storage_${bucket}_${path}`;
-        const existingSize = localStorage.getItem(key)?.length ?? 0;
-        localStorage.removeItem(key);
-
-        // Try to set; if quota error, evict oldest stored keys
-        try {
-          localStorage.setItem(key, dataUrl);
-        } catch {
-          // Evict old stored media to free space
-          const prefix = '_local_storage_';
-          const keys: { k: string; ts: number }[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k?.startsWith(prefix)) {
-              try {
-                const raw = localStorage.getItem(k) ?? '';
-                keys.push({ k, ts: raw.length });
-              } catch { /* skip */ }
-            }
-          }
-          // Remove largest files first until we have room
-          keys.sort((a, b) => b.ts - a.ts);
-          for (const entry of keys) {
-            localStorage.removeItem(entry.k);
-            try {
-              localStorage.setItem(key, dataUrl);
-              break;
-            } catch { /* keep evicting */ }
-          }
-        }
-        return { data: { path }, error: null };
+        const stored = await manusRecordRequest<{ key: string; url: string }>("/api/manus/assets", {
+          method: "POST",
+          body: JSON.stringify({ name: `${bucket}-${path.split('/').pop() || 'recurso'}`, data: dataUrl }),
+        });
+        return { data: { path: stored.url }, error: null };
       } catch (e) { return { data: null, error: e as Error }; }
     },
     createSignedUrl: async (path: string, _expiresIn?: number) => {
-      const dataUrl = localStorage.getItem(`_local_storage_${bucket}_${path}`);
-      if (dataUrl) return { data: { signedUrl: dataUrl }, error: null };
-      if (/^https?:\/\//.test(path) || /^data:/.test(path)) return { data: { signedUrl: path }, error: null };
+      if (path.startsWith('/manus-storage/')) return { data: { signedUrl: path }, error: null };
       return { data: null, error: new Error('File not found') };
     },
     getPublicUrl: (path: string) => {
-      const dataUrl = localStorage.getItem(`_local_storage_${bucket}_${path}`);
-      return { data: { publicUrl: dataUrl || '' } };
+      return { data: { publicUrl: path.startsWith('/manus-storage/') ? path : '' } };
     },
     list: async () => ({ data: [], error: null }),
-    remove: async (paths: string | string[]) => {
-      const list = Array.isArray(paths) ? paths : [paths];
-      for (const p of list) localStorage.removeItem(`_local_storage_${bucket}_${p}`);
-      return { data: null, error: null };
-    },
+    remove: async (_paths: string | string[]) => ({ data: null, error: null }),
   };
 }
 

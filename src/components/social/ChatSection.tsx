@@ -69,7 +69,6 @@ import {
 import type { WorkThread } from "@/lib/social/work";
 import { TaskManager, FileManager, ThreadsManager, ThreadView, ProjectsManager } from "./WorkChatPanel";
 import { GlobalSearchPanel } from "./GlobalSearchPanel";
-import { supabase, hasSupabaseConfig, saveSupabaseCredentials } from "@/integrations/supabase/client";
 import { UserName } from "./UserName";
 import { getMyProfile, getMyOrbes, isAdmin, pushNotification, uploadAvatar } from "@/lib/social/api";
 import type { Profile } from "@/lib/social/api";
@@ -113,15 +112,9 @@ function MediaLabel({ m, muted }: { m: Pick<ChatMessage, "media_type" | "media_u
 
 /** Convierte el error técnico del chat en una pista útil para el usuario. */
 function connHint(msg: string): string {
-  if (/invalid api key|apikey|401|invalid key/i.test(msg))
-    return "La anon key guardada no es válida. Cópiala de Supabase → Project Settings → API Keys (empieza por eyJ… o sb_publishable_) y guárdala en ⋮ → Supabase → «Pegar claves». Si el error persiste, usa «Restablecer la conexión» en el login.";
-  if (/infinite recursion|recursion detected|recursive/i.test(msg))
-    return "Hay políticas de seguridad antiguas en las tablas del chat que causan un bucle. Revisa los permisos de la base de datos o contacta con el administrador.";
-  if (/permission denied|row-level security|42501|PGRST301|new row violates|violates row-level/i.test(msg))
-    return "Las tablas existen pero los permisos (RLS) bloquean el chat: revisa los permisos de la base de datos o entra de nuevo con tu cuenta.";
   if (/failed to fetch|networkerror|load failed|network request failed|ERR_/i.test(msg))
-    return "El servidor de Supabase no respondió. No es necesariamente tu internet: puede ser un bloqueo temporal o del dominio en esta vista previa. Reintenta en unos segundos o revisa la URL y la anon key (⋮ → Supabase).";
-  return "Revisa que la URL y la anon key sean correctas (Supabase → Project Settings → API Keys).";
+    return "El servicio de chat de Manus no respondió. Tu mensaje quedará en cola y se reenviará cuando vuelva la conexión.";
+  return "No se pudo completar la operación en Manus. Inicia sesión de nuevo e inténtalo otra vez.";
 }
 
 /** Explica el motivo REAL de un fallo de envío, en lugar de culpar a la conexión del usuario. */
@@ -133,31 +126,10 @@ function sendErrorDetail(err: unknown): { title: string; desc: string; action?: 
       title: "Inicia sesión para enviar mensajes",
       desc:
         code === CHAT_ERR.REAL_AUTH_REQUIRED
-          ? "Tu base de datos está conectada pero esta cuenta es local. Entra con tu cuenta de Supabase (⋮ → Cerrar sesión → login) y vuelve."
+          ? "Esta función requiere la sesión oficial de Manus. Inicia sesión y vuelve a intentarlo."
           : "El chat necesita una sesión activa. Inicia sesión y vuelve.",
     };
   }
-  if (/invalid api key|401|apikey|invalid key/i.test(msg))
-    return {
-      title: "La clave de Supabase no es válida",
-      desc: "Revisa la anon key (empieza por eyJ… o sb_publishable_) en ⋮ → Supabase y guárdala de nuevo.",
-    };
-  if (/permission denied|row-level security|42501|pgrst301|new row violates|infinite recursion/i.test(msg))
-    return {
-      title: "Los permisos bloquean el envío",
-      desc: "Revisa los permisos de la base de datos o entra con tu cuenta de Supabase.",
-    };
-  if (/schema cache/i.test(msg) || /could not find the .* column/i.test(msg) || code === "PGRST204")
-    return {
-      title: "La tabla del chat está desactualizada",
-      desc: "La tabla del chat no está actualizada. Contacta con el administrador para actualizar el esquema.",
-      action: "install",
-    };
-  if (/foreign key|23503|does not exist|undefined_table|42p01/i.test(msg))
-    return {
-      title: "Falta algo en la base de datos",
-      desc: "Parece que tu cuenta no tiene perfil en la base o falta una tabla. Entra con tu cuenta de Supabase.",
-    };
   if (isNetworkError(err))
     return {
       title: "El servidor del chat no respondió",
@@ -292,12 +264,11 @@ function AudioBubble({ url, mine, duration }: { url: string; mine: boolean; dura
   );
 }
 
-/** URL lista para el <img>/<audio>: las URLs http se usan tal cual (legado);
- *  las rutas se resuelven con la firma cacheada (permanente). */
+/** URL lista para el <img>/<audio>, servida por Manus Storage. */
 function resolveMediaUrl(u: string | null | undefined, cache: Map<string, string>): string | null {
   if (!u) return null;
-  if (/^https?:/.test(u)) return u;
-  return cache.get(u) ?? null;
+  if (!u.startsWith("/manus-storage/")) return null;
+  return cache.get(u) ?? u;
 }
 
 /* ─── Tarjeta de perfil compartido: el enlace /profile/<id> se muestra con foto y bio ─── */
@@ -990,6 +961,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
   // Foto / vídeo pendiente de enviar (subida previa + preview)
   const [pendingMedia, setPendingMedia] = useState<{ file: File; preview: string; kind: "image" | "video" } | null>(null);
   const [mediaUploading, setMediaUploading] = useState(false);
+  const isLocal = false;
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
   const [sendingAudio, setSendingAudio] = useState(false);
@@ -997,19 +969,14 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
   const recChunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isLocal, setIsLocal] = useState<boolean>(() => !hasSupabaseConfig());
-  const [connecting, setConnecting] = useState(false);
-  const [connectUrl, setConnectUrl] = useState("https://gxpgczwkovertezeydkt.supabase.co");
-  const [connectKey, setConnectKey] = useState("");
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [initError, setInitError] = useState<"schema" | "conn" | "auth" | "rls" | null>(null);
+  const [initError, setInitError] = useState<"conn" | "auth" | null>(null);
   const [errorDetail, setErrorDetail] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   // Paginación por cursor + scroll infinito
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [unseen, setUnseen] = useState(0);
-  // URLs firmadas de los media de los mensajes (cacheadas: nunca expiran en la base)
+  // URLs de Manus Storage para los medios de los mensajes.
   const [signedMedia, setSignedMedia] = useState<Map<string, string>>(new Map());
   // ¿La tabla del chat está desactualizada (sin la columna media_type)?
   // Avisos del grupo y paquetes de regalo (solo el administrador puede crearlos)
@@ -1189,16 +1156,6 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
     };
   }, [myId]);
 
-  const doConnect = useCallback(() => {
-    const res = saveSupabaseCredentials(connectUrl.trim(), connectKey.trim());
-    if (!res.ok) {
-      setConnectError(res.error ?? "No se pudieron guardar las credenciales");
-      return;
-    }
-    setConnectError(null);
-    window.location.reload();
-  }, [connectUrl, connectKey]);
-
   // Preparar el chat comunitario (solo grupo) + cargar mensajes del hilo activo
   useEffect(() => {
     let cancelled = false;
@@ -1211,9 +1168,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
           const info = await getCommunityChat();
           if (cancelled) return;
           setChatInfo(info);
-          // El aviso de «modo local» depende del modo activo real del chat
-          // (cuenta local + Supabase conectado también opera en local).
-          setIsLocal(!hasSupabaseConfig() || !!info.local);
+          void info.local;
         }
         if (cancelled) return;
         const threadId = activeGroupRef.current ? activeGroupRef.current.chat_id : activeDmRef.current ? activeDmRef.current.chat_id : (chatInfo?.id ?? null);
@@ -1264,14 +1219,8 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
           setInitError("auth");
         } else {
           const msg = (err as Error)?.message ?? "";
-          if (/relation .* does not exist|could not find the table|undefined_table|42p01/i.test(msg)) {
-            setInitError("schema");
-          } else if (/infinite recursion|recursion detected|permission denied|row-level security|42501|PGRST301/i.test(msg)) {
-            // Permisos (RLS) del chat desactualizados: se reparan reinstalando las tablas.
-            setInitError("rls");
-          } else {
-            setInitError("conn");
-          }
+          void msg;
+          setInitError("conn");
         }
         setErrorDetail((err as Error)?.message ?? "");
       } finally {
@@ -1319,15 +1268,10 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
     let cancelled = false;
     (async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user?.email && user.email.toLowerCase() === "linkyteam989@gmail.com") {
-          if (!cancelled) setIsOwner(true);
-          return;
-        }
-        const ok = await isAdmin().catch(() => false);
-        if (!cancelled) setIsOwner(ok);
+        const response = await fetch("/api/manus/session", { credentials: "include" });
+        const payload = await response.json().catch(() => null) as { user?: { email?: string } } | null;
+        const isOwner = response.ok && payload?.user?.email?.toLowerCase() === "linkyteam989@gmail.com";
+        if (!cancelled) setIsOwner(Boolean(isOwner));
       } catch {
         if (!cancelled) setIsOwner(false);
       }
@@ -2678,65 +2622,26 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
         )}
       </header>
 
-      {/* Aviso de modo local */}
-      {isLocal && (
-        <div className="shrink-0 mx-3 mt-2 px-3 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-2">
-          <span className="flex-1 text-[11px] text-amber-700 dark:text-amber-300">
-            {hasSupabaseConfig()
-              ? "Chat local: tu cuenta actual no está en Supabase, así que los mensajes se guardan solo en este dispositivo. Entra con tu cuenta de Supabase (⋮ → Cerrar sesión → login) para compartirlos con la comunidad."
-              : "Modo local: los mensajes no se comparten entre dispositivos. Conecta tu base de datos para el chat comunitario."}
-          </span>
-          {hasSupabaseConfig() ? (
-            <Link
-              to="/auth"
-              className="shrink-0 px-2.5 py-1 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
-            >
-              INICIAR SESIÓN
-            </Link>
-          ) : (
-            <button
-              onClick={() => setConnecting(true)}
-              className="shrink-0 px-2.5 py-1 rounded-lg grad-brand text-primary-foreground text-[10px] font-display tracking-widest active:scale-95 transition"
-            >
-              CONECTAR
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Error de conexión / esquema / sesión del chat */}
       {initError && !chatInfo && !loading && (
         <div className="shrink-0 mx-3 mt-2 px-3 py-3 rounded-xl border border-rose-500/25 bg-rose-500/[0.06] space-y-2.5">
           <div className="flex items-start gap-2.5">
             <WifiOff size={15} className="text-rose-500 shrink-0 mt-0.5" />
             <div className="text-[11px] leading-relaxed text-muted-foreground">
-              {initError === "schema" ? (
-                <>
-                  <span className="font-semibold text-foreground">Faltan tablas del chat</span> en la base
-                  de datos. Revisa la conexión de Supabase y reintenta.
-                </>
-              ) : initError === "rls" ? (
-                <>
-                  <span className="font-semibold text-foreground">Permisos del chat desactualizados</span>{" "}
-                  (políticas antiguas que se bloquean entre sí). Revisa la configuración de permisos de la
-                  base de datos.
-                </>
-              ) : initError === "auth" ? (
+              {initError === "auth" ? (
                 <>
                   <span className="font-semibold text-foreground">Inicia sesión para usar el chat.</span>{" "}
-                  {errorDetail.includes("base de datos está conectada")
-                    ? "Tu base está conectada pero esta cuenta es local: los permisos de Supabase exigen la cuenta real. Entra con ella y vuelve."
-                    : "El chat comunitario necesita una sesión activa."}
+                  El chat comunitario necesita una sesión activa de Manus.
                 </>
               ) : (
                 <>
-                  <span className="font-semibold text-foreground">No se pudo conectar al chat.</span>{" "}
+                  <span className="font-semibold text-foreground">No se pudo abrir el chat.</span>{" "}
                   {connHint(errorDetail)}
                 </>
               )}
             </div>
           </div>
-          {(initError === "conn" || initError === "rls") && errorDetail && (
+          {initError !== "auth" && errorDetail && (
             <p className="text-[10px] font-mono text-muted-foreground/50 break-words bg-black/[0.03] dark:bg-white/[0.04] rounded-lg px-2 py-1.5">
               {errorDetail.slice(0, 220)}
             </p>
@@ -3797,76 +3702,6 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
               >
                 <LogOut size={13} /> SALIR DEL GRUPO
               </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Diálogo de conexión (solo modo local) */}
-
-      <AnimatePresence>
-        {connecting && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md grid place-items-center p-4"
-            onClick={() => setConnecting(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 8 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 8 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm bg-card border border-border rounded-xl p-4 shadow-md"
-            >
-              <div className="text-sm font-semibold mb-0.5">Conectar Supabase</div>
-              <p className="text-[11px] text-muted-foreground mb-3">
-                Pega la URL y la anon key de tu proyecto (están en Keys como V1 y V2). Los mensajes y la comunidad se sincronizarán entre dispositivos.
-              </p>
-              <input
-                value={connectUrl}
-                onChange={(e) => setConnectUrl(e.target.value)}
-                placeholder="https://xxxx.supabase.co"
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
-              />
-              <input
-                value={connectKey}
-                onChange={(e) => {
-                  setConnectKey(e.target.value);
-                  setConnectError(null);
-                }}
-                placeholder="eyJhbGciOi… (anon key, no tu token sbp_…)"
-                className="w-full bg-input/50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 border border-border/60 mb-2"
-              />
-              {connectError && (
-                <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[11px] text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
-                  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                  <span>{connectError}</span>
-                </div>
-              )}
-              <p className="text-[10px] text-muted-foreground/60 leading-relaxed mb-3">
-                ⚠️ <b>No pegues aquí tu token de acceso personal (sbp_…)</b> — la app espera la anon key (el JWT
-                que empieza por{" "}<span className="font-mono">eyJ…</span>, Project Settings → API Keys) y un token
-                sbp_ rompería la conexión con «Invalid API key».
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConnecting(false)}
-                  className="flex-1 py-2 rounded-xl border border-border bg-background text-xs font-display tracking-widest active:scale-[0.98] transition"
-                >
-                  CANCELAR
-                </button>
-                <button
-                  onClick={doConnect}
-                  disabled={!connectUrl.trim() || !connectKey.trim()}
-                  className="flex-1 py-2 rounded-xl grad-brand text-primary-foreground text-xs font-display tracking-widest active:scale-[0.98] transition disabled:opacity-40"
-                >
-                  CONECTAR
-                </button>
-              </div>
             </motion.div>
           </motion.div>
         )}

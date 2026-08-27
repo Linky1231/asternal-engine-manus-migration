@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { invokeLLM, listLLMModels } from "./_core/llm";
 import { storageGetSignedUrl, storagePut } from "./storage";
+import { createManusRecord, listOwnManusRecords } from "./manus-records";
 
 const SOURCE_VERSION_KIND = "asternal-source-version";
 const SOURCE_PROPOSAL_KIND = "asternal-source-proposal";
@@ -41,23 +42,11 @@ export type SourceProposal = {
   warnings: string[];
 };
 
-type InternalProjectRecord = { id: string; name: string; data: unknown; created_at: string; updated_at: string };
+type InternalSourceRecord = { id: string; data: unknown; createdAt: Date; updatedAt: Date };
 type StoredVersionRecord = { __kind: typeof SOURCE_VERSION_KIND; sourceVersion: Omit<SourceVersion, "files"> };
 type StoredProposalRecord = { __kind: typeof SOURCE_PROPOSAL_KIND; sourceProposal: Omit<SourceProposal, "files"> & { proposalKey: string } };
 
 let sourceModel: Promise<string> | undefined;
-
-function restUrl(pathname: string) {
-  const base = process.env.SUPABASE_URL;
-  if (!base) throw new Error("El almacenamiento de versiones no está configurado.");
-  return new URL(pathname, base.replace(/\/$/, "") + "/");
-}
-
-function serviceHeaders(extra: Record<string, string> = {}) {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error("El almacenamiento de versiones no está configurado.");
-  return { apikey: key, Authorization: `Bearer ${key}`, ...extra };
-}
 
 function hash(value: string) { return createHash("sha256").update(value).digest("hex"); }
 function cleanProjectId(value: unknown) {
@@ -89,31 +78,26 @@ export function canWriteSourcePath(filePath: unknown, knownFiles: SourceFileSumm
   return Boolean(existing?.editable) || CREATE_PREFIXES.some(prefix => String(filePath).startsWith(prefix));
 }
 
-function toVersion(record: InternalProjectRecord): SourceVersion | undefined {
+function toVersion(record: InternalSourceRecord): SourceVersion | undefined {
   const data = record.data as Partial<StoredVersionRecord> | null;
   if (data?.__kind !== SOURCE_VERSION_KIND || !data.sourceVersion) return undefined;
   return { ...data.sourceVersion, files: [] };
 }
 
-async function listInternalRecords(ownerId: string): Promise<InternalProjectRecord[]> {
-  const url = restUrl("/rest/v1/user_projects");
-  url.searchParams.set("user_id", `eq.${ownerId}`);
-  url.searchParams.set("select", "id,name,data,created_at,updated_at");
-  url.searchParams.set("order", "created_at.desc");
-  url.searchParams.set("limit", "500");
-  const response = await fetch(url, { headers: serviceHeaders() });
-  if (!response.ok) throw new Error("No se pudieron consultar las versiones privadas.");
-  return (await response.json().catch(() => [])) as InternalProjectRecord[];
+async function listInternalRecords(ownerId: string): Promise<InternalSourceRecord[]> {
+  const records = await listOwnManusRecords(ownerId, "source-internal");
+  return records.filter(record => isInternalSourceRecord(record.data));
 }
 
 async function insertInternalRecord(ownerId: string, name: string, data: StoredVersionRecord | StoredProposalRecord) {
-  const response = await fetch(restUrl("/rest/v1/user_projects"), {
-    method: "POST",
-    headers: serviceHeaders({ "Content-Type": "application/json", Prefer: "return=representation" }),
-    body: JSON.stringify({ id: randomUUID(), user_id: ownerId, name, data }),
+  const record = await createManusRecord({
+    id: randomUUID(),
+    collection: "source-internal",
+    ownerOpenId: ownerId,
+    data: { ...data, label: name },
   });
-  if (!response.ok) throw new Error("No se pudo guardar la versión privada.");
-  return (await response.json().catch(() => [])) as InternalProjectRecord[];
+  if (!record) throw new Error("No se pudo guardar la versión privada.");
+  return record;
 }
 
 async function walkSourceDirectory(absolute: string, relative: string, category: string, editable: boolean, collected: Array<{ path: string; content: string; category: string; editable: boolean }>) {

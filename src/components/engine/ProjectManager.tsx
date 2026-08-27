@@ -15,9 +15,7 @@ import {
   type ProjectMeta,
 } from "@/lib/engine/storage";
 import type { Project } from "@/lib/engine/core";
-import { supabase, hasSupabaseConfig } from "@/integrations/supabase/client";
-import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject } from "@/lib/social/api";
-import { syncAllProjects, withCloudTimeout, deduplicateExactCloudProjects } from "@/lib/engine/cloud-sync";
+import { cloudSaveProject, cloudListProjects, cloudDeleteProject, type CloudProject, syncAllProjects, withCloudTimeout, deduplicateExactCloudProjects } from "@/lib/engine/cloud-sync";
 import { ArrowLeft, Cloud, CloudDownload, CloudUpload, FolderOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 const PROJECT_PAGE_SIZE = 24;
@@ -73,9 +71,9 @@ export function ProjectManager({
   }, [hasMoreProjects, items.length, cloudList.length]);
   const refreshCloud = async () => {
     try {
-      const { data: { session } } = await withCloudTimeout(supabase.auth.getSession(), "La sesión de nube no respondió a tiempo");
-      setSignedIn(!!session);
-      if (!session) { setCloudList([]); return; }
+      const response = await withCloudTimeout(fetch("/api/manus/session", { credentials: "include" }), "La sesión de Manus no respondió a tiempo");
+      if (!response.ok) { setSignedIn(false); setCloudList([]); return; }
+      setSignedIn(true);
       setCloudList(await withCloudTimeout(cloudListProjects(), "La lista de proyectos no respondió a tiempo"));
     } catch (e) { setCloudErr((e as Error).message); }
   };
@@ -85,9 +83,9 @@ export function ProjectManager({
     if (autoSyncStarted.current) return;
     autoSyncStarted.current = true;
     try {
-      const { data: { session } } = await withCloudTimeout(supabase.auth.getSession(), "La sesión de nube no respondió a tiempo");
-      setSignedIn(!!session);
-      if (!session) return;
+      const response = await withCloudTimeout(fetch("/api/manus/session", { credentials: "include" }), "La sesión de Manus no respondió a tiempo");
+      if (!response.ok) { setSignedIn(false); return; }
+      setSignedIn(true);
       setSyncing(true); setCloudErr(null);
       const r = await syncAllProjects();
       refresh();
@@ -368,12 +366,6 @@ export function ProjectManager({
                 </div>
               )}
               {cloudErr && <div className="text-xs text-destructive px-1">{cloudErr}</div>}
-              {!hasSupabaseConfig() && (
-                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-                  ⚠ Modo local: tus juegos se guardan solo en este navegador. Para verlos en otro dispositivo,
-                  conecta la nube con el icono ☁ del inicio (o el tab Keys) y entra con la misma cuenta.
-                </div>
-              )}
               {cloudList.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
                   Nada guardado en la nube todavía. Usa el icono <CloudUpload size={12} className="inline" /> para respaldar un proyecto y acceder a él desde cualquier dispositivo.
@@ -389,7 +381,7 @@ export function ProjectManager({
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{c.name}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {inLocal ? "sincronizado · " : "no descargado · "}actualizado hace {timeAgo(new Date(c.updated_at).getTime())}
+                          {inLocal ? "sincronizado · " : "no descargado · "}actualizado hace {timeAgo(new Date(c.updated_at ?? Date.now()).getTime())}
                         </div>
                       </div>
                       <button

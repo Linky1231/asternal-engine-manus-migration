@@ -12,8 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { generateSmartStatus, type SmartStatus } from "@/lib/social/smart-status";
-import { getTrustPoints, getFollowStats } from "@/lib/social/api";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchFeed, fetchGames, fetchNotifications, getFollowStats, getMyProfile, getTrustPoints } from "@/lib/social/api";
 
 const SEVERITY_CONFIG = {
   normal: {
@@ -62,56 +61,27 @@ export function SmartStatusPanel({ userId }: { userId: string }) {
     (async () => {
       try {
         // Gather data in parallel
-        const [trustPoints, followStats] = await Promise.all([
+        const [trustPoints, followStats, profile, posts, games, notifications] = await Promise.all([
           getTrustPoints(userId).catch(() => 10),
           getFollowStats(userId).catch(() => ({ followers: 0, following: 0, i_follow: false })),
+          getMyProfile().catch(() => null),
+          fetchFeed().catch(() => []),
+          fetchGames().catch(() => []),
+          fetchNotifications().catch(() => []),
         ]);
-
-        // Get user profile data
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("created_at")
-          .eq("id", userId)
-          .maybeSingle();
-
-        // Count games and posts
-        let gamesResult = 0;
-        let postsResult = 0;
-        try {
-          const gr = await (supabase as any).from("games").select("id").eq("author", userId);
-          gamesResult = Array.isArray(gr.data) ? gr.data.length : 0;
-        } catch { /* noop */ }
-        try {
-          const pr = await (supabase as any).from("posts").select("id").eq("author_id", userId);
-          postsResult = Array.isArray(pr.data) ? pr.data.length : 0;
-        } catch { /* noop */ }
-
-        // Get orbes
-        const { data: orbProfile } = await supabase
-          .from("profiles")
-          .select("orbes")
-          .eq("id", userId)
-          .maybeSingle();
+        const profileWithDates = profile as (typeof profile & { created_at?: string | null }) | null;
+        const gamesResult = games.filter(game => game.author_id === userId).length;
+        const postsResult = posts.filter(post => post.author_id === userId).length;
 
         // Calculate days since last login (approximate via updated_at)
-        const lastLoginDays = profile?.created_at
-          ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        const lastLoginDays = profileWithDates?.created_at
+          ? Math.floor((Date.now() - new Date(profileWithDates.created_at).getTime()) / (1000 * 60 * 60 * 24))
           : 0;
 
-        const accountAgeDays = profile?.created_at
-          ? Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24))
+        const accountAgeDays = profileWithDates?.created_at
+          ? Math.floor((Date.now() - new Date(profileWithDates.created_at).getTime()) / (1000 * 60 * 60 * 24))
           : 0;
-
-        // Get notification count
-        let notifCount = 0;
-        try {
-          const nr = await (supabase as any)
-            .from("notifications")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("read", false);
-          notifCount = Array.isArray(nr.data) ? nr.data.length : 0;
-        } catch { /* noop */ }
+        const notifCount = notifications.filter((notification: { read?: boolean }) => notification.read !== true).length;
 
         if (!cancelled) {
           const result = generateSmartStatus({
@@ -121,7 +91,7 @@ export function SmartStatusPanel({ userId }: { userId: string }) {
             gamesCount: gamesResult,
             postsCount: postsResult,
             notificationsUnread: notifCount,
-            orbes: (orbProfile as Record<string, unknown>)?.orbes as number ?? 0,
+            orbes: profile?.orbes ?? 0,
             lastLoginDays,
             accountAgeDays,
             isMod: false,

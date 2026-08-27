@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import { fetchCommunitySettings } from "@/lib/community/settings";
 import type { PostWithMeta } from "@/lib/social/api";
 
@@ -97,14 +96,11 @@ export async function withCommunityRequestDeadline<T>(
 }
 
 async function callCommunityOrion<T>(path: string, body: unknown, options: CommunityRequestOptions = {}): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Inicia sesión para que Orión revise la publicación.");
-
   const response = await withCommunityRequestDeadline(
     (signal) => fetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal,
     }),
