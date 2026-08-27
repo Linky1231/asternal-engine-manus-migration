@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Grid3X3, Play, LibraryBig } from "lucide-react";
+import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
 import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
@@ -26,7 +26,7 @@ import { useT, setLang } from "@/lib/i18n";
 
 
 type Tool = EntityKind | "select" | "erase";
-type Tab = "build" | "inspect" | "ui" | "tiles" | "scenes" | "assets" | "settings";
+type Tab = "build" | "inspect" | "ui" | "scenes" | "assets" | "settings";
 
 const TOOL_LIST: { id: Tool; tKey: string; icon: ReactNode }[] = [
   { id: "select", tKey: "tool.select", icon: <MousePointer2 size={15} strokeWidth={1.9} /> },
@@ -261,7 +261,6 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
     ["build", t("tab.build"), <Boxes size={18} strokeWidth={1.75} key="build" />],
     ["inspect", t("tab.inspect"), <SlidersHorizontal size={18} strokeWidth={1.75} key="inspect" />],
     ["ui", t("tab.ui"), <PanelsTopLeft size={18} strokeWidth={1.75} key="ui" />],
-    ["tiles", "Tiles", <Grid3X3 size={18} strokeWidth={1.75} key="tiles" />],
     ["assets", t("tab.assets"), <ImageIcon size={18} strokeWidth={1.75} key="assets" />],
     ["scenes", t("tab.scenes"), <Layers3 size={18} strokeWidth={1.75} key="scenes" />],
     ["settings", t("tab.settings"), <Settings size={18} strokeWidth={1.75} key="settings" />],
@@ -419,9 +418,6 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
           </>
         )}
 
-        {tab === "tiles" && (
-          <TilemapEditor scene={activeScene} sprites={project.assets?.sprites ?? []} onChange={updateScene} />
-        )}
         {tab === "inspect" && (
           <InspectorPanel
             scene={activeScene}
@@ -441,6 +437,9 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
             project={project}
             onChange={setProject}
             onOpen={(id) => { setProject({ ...project, activeSceneId: id }); setTab("build"); }}
+            onChangeScene={updateScene}
+            selectedEntityId={selectedId}
+            onSelectEntity={(id) => { setSelectedId(id); setTab("inspect"); }}
           />
         )}
 
@@ -496,7 +495,7 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
         )}
 
         {tab === "settings" && (
-          <SettingsPanel project={project} onChange={setProject} />
+          <SettingsPanel project={project} onChange={setProject} scene={activeScene} sprites={project.assets?.sprites ?? []} onChangeScene={updateScene} />
         )}
       </main>
 
@@ -534,7 +533,7 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
 
       {/* Bottom tabs (mobile only) */}
       {!isTablet && (
-      <nav className="grid grid-cols-7 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
+      <nav className="grid grid-cols-6 border-t border-border/70 bg-card pb-[env(safe-area-inset-bottom)]">
         {TABS.map(([id, label, icon]) => (
           <button
             key={id}
@@ -958,11 +957,18 @@ function ScenesPanel({
   project,
   onChange,
   onOpen,
+  onChangeScene,
+  selectedEntityId,
+  onSelectEntity,
 }: {
   project: Project;
   onChange: (p: Project) => void;
   onOpen: (id: string) => void;
+  onChangeScene: (scene: Scene) => void;
+  selectedEntityId: string | null;
+  onSelectEntity: (id: string) => void;
 }) {
+  const activeScene = project.scenes.find(scene => scene.id === project.activeSceneId) ?? project.scenes[0];
   return (
     <div className="h-full overflow-auto p-4 space-y-3">
       <SectionTitle>ESCENAS</SectionTitle>
@@ -1033,19 +1039,74 @@ function ScenesPanel({
       >
         + NUEVA ESCENA
       </button>
+      {activeScene && <SceneHierarchyPanel scene={activeScene} onChangeScene={onChangeScene} selectedEntityId={selectedEntityId} onSelectEntity={onSelectEntity} />}
     </div>
   );
 }
 
 
-function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: Project) => void }) {
+function SceneHierarchyPanel({ scene, onChangeScene, selectedEntityId, onSelectEntity }: { scene: Scene; onChangeScene: (scene: Scene) => void; selectedEntityId: string | null; onSelectEntity: (id: string) => void }) {
+  const [newGroupName, setNewGroupName] = useState("");
+  const groups = [...(scene.hierarchy?.groups ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const entities = [...scene.entities].sort((a, b) => (a.hierarchyOrder ?? 0) - (b.hierarchyOrder ?? 0));
+  const saveGroups = (next: typeof groups) => onChangeScene({ ...scene, hierarchy: { groups: next } });
+  const addGroup = () => {
+    const name = newGroupName.trim() || `Grupo ${groups.length + 1}`;
+    saveGroups([...groups, { id: uid(), name, parentId: null, order: groups.length, collapsed: false }]);
+    setNewGroupName("");
+  };
+  const isDescendant = (candidateId: string, groupId: string): boolean => {
+    const candidate = groups.find(item => item.id === candidateId);
+    return Boolean(candidate?.parentId && (candidate.parentId === groupId || isDescendant(candidate.parentId, groupId)));
+  };
+  const setGroupParent = (id: string, parentId: string | null) => {
+    if (parentId && (parentId === id || isDescendant(parentId, id))) return;
+    saveGroups(groups.map(group => group.id === id ? { ...group, parentId } : group));
+  };
+  const moveGroup = (group: typeof groups[number], direction: -1 | 1) => {
+    const siblings = groups.filter(item => (item.parentId ?? null) === (group.parentId ?? null));
+    const index = siblings.findIndex(item => item.id === group.id);
+    const peer = siblings[index + direction];
+    if (!peer) return;
+    saveGroups(groups.map(item => item.id === group.id ? { ...item, order: peer.order ?? index + direction } : item.id === peer.id ? { ...item, order: group.order ?? index } : item));
+  };
+  const removeGroup = (id: string) => {
+    const parentId = groups.find(group => group.id === id)?.parentId ?? null;
+    const nextGroups = groups.filter(group => group.id !== id).map(group => group.parentId === id ? { ...group, parentId } : group);
+    onChangeScene({ ...scene, hierarchy: { groups: nextGroups }, entities: scene.entities.map(entity => entity.parentGroupId === id ? { ...entity, parentGroupId: parentId } : entity) });
+  };
+  const moveEntity = (entity: Entity, direction: -1 | 1) => {
+    const siblings = entities.filter(item => (item.parentGroupId ?? null) === (entity.parentGroupId ?? null));
+    const index = siblings.findIndex(item => item.id === entity.id);
+    const peer = siblings[index + direction];
+    if (!peer) return;
+    onChangeScene({ ...scene, entities: scene.entities.map(item => item.id === entity.id ? { ...item, hierarchyOrder: peer.hierarchyOrder ?? index + direction } : item.id === peer.id ? { ...item, hierarchyOrder: entity.hierarchyOrder ?? index } : item) });
+  };
+  const renderEntity = (entity: Entity, depth: number) => <div key={entity.id} style={{ paddingLeft: `${depth * 14 + 7}px` }} className={`flex items-center gap-1 rounded-lg border px-1.5 py-1 ${selectedEntityId === entity.id ? "border-primary/55 bg-primary/10" : "border-border/60 bg-background/25"}`}><button type="button" onClick={() => onSelectEntity(entity.id)} className="min-w-0 flex-1 truncate text-left text-[10px] font-mono" title={entity.id}>{entity.name?.trim() || entity.kind} <span className="text-muted-foreground">· {entity.kind}</span></button><select value={entity.parentGroupId ?? "root"} onChange={event => onChangeScene({ ...scene, entities: scene.entities.map(item => item.id === entity.id ? { ...item, parentGroupId: event.target.value === "root" ? null : event.target.value } : item) })} className="max-w-20 rounded border border-border bg-input/60 px-1 py-0.5 text-[9px] font-mono" aria-label="Grupo del objeto"><option value="root">Raíz</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button type="button" onClick={() => moveEntity(entity, -1)} className="px-1 text-[11px] text-muted-foreground hover:text-primary" aria-label="Subir objeto">↑</button><button type="button" onClick={() => moveEntity(entity, 1)} className="px-1 text-[11px] text-muted-foreground hover:text-primary" aria-label="Bajar objeto">↓</button></div>;
+  const renderGroup = (group: typeof groups[number], depth: number): ReactNode => <div key={group.id} className="space-y-1"><div style={{ paddingLeft: `${depth * 14 + 7}px` }} className="flex items-center gap-1 rounded-lg border border-border/70 bg-card px-1.5 py-1.5"><button type="button" onClick={() => saveGroups(groups.map(item => item.id === group.id ? { ...item, collapsed: !item.collapsed } : item))} className="w-4 text-[10px] text-primary" aria-label={group.collapsed ? "Expandir grupo" : "Contraer grupo"}>{group.collapsed ? "▸" : "▾"}</button><input value={group.name} onChange={event => saveGroups(groups.map(item => item.id === group.id ? { ...item, name: event.target.value } : item))} className="min-w-0 flex-1 bg-transparent text-[10px] font-display tracking-wide focus:outline-none" aria-label="Nombre del grupo" /><select value={group.parentId ?? "root"} onChange={event => setGroupParent(group.id, event.target.value === "root" ? null : event.target.value)} className="max-w-20 rounded border border-border bg-input/60 px-1 py-0.5 text-[9px] font-mono" aria-label="Grupo padre"><option value="root">Raíz</option>{groups.filter(item => item.id !== group.id).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" onClick={() => moveGroup(group, -1)} className="px-1 text-[11px] text-muted-foreground hover:text-primary" aria-label="Subir grupo">↑</button><button type="button" onClick={() => moveGroup(group, 1)} className="px-1 text-[11px] text-muted-foreground hover:text-primary" aria-label="Bajar grupo">↓</button><button type="button" onClick={() => removeGroup(group.id)} className="px-1 text-[12px] text-muted-foreground hover:text-destructive" aria-label="Eliminar grupo">×</button></div>{!group.collapsed && <div className="space-y-1">{groups.filter(item => item.parentId === group.id).map(item => renderGroup(item, depth + 1))}{entities.filter(entity => entity.parentGroupId === group.id).map(entity => renderEntity(entity, depth + 1))}</div>}</div>;
+  const rootEntities = entities.filter(entity => !entity.parentGroupId);
+  return <section className="surface rounded-xl p-3 space-y-2"><div><SectionTitle>JERARQUÍA · {scene.name}</SectionTitle><p className="mt-1 text-[10px] font-mono text-muted-foreground">Nodos con nombres e IDs persistentes, listos para edición y automatización futura.</p></div><div className="flex gap-1.5"><input value={newGroupName} onChange={event => setNewGroupName(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addGroup(); }} placeholder="Nuevo grupo" className="min-w-0 flex-1 rounded-lg border border-border bg-input/60 px-2 py-1.5 text-[10px] font-mono" /><button type="button" onClick={addGroup} className="rounded-lg border border-primary/35 bg-primary/10 px-2 text-[10px] font-display text-primary">+ GRUPO</button></div><div className="space-y-1">{groups.filter(group => !group.parentId).map(group => renderGroup(group, 0))}{rootEntities.map(entity => renderEntity(entity, 0))}</div></section>;
+}
+
+function SettingsPanel({ project, onChange, scene, sprites, onChangeScene }: { project: Project; onChange: (p: Project) => void; scene: Scene; sprites: SpriteAsset[]; onChangeScene: (scene: Scene) => void }) {
   useT();
+  const [subsection, setSubsection] = useState<"project" | "tiles">("project");
   const set = (patch: Partial<Project["settings"]>) =>
     onChange({ ...project, settings: { ...project.settings, ...patch } });
+  const subsectionNav = (
+    <div className="grid grid-cols-2 gap-1 rounded-xl border border-border/70 bg-card p-1">
+      <button type="button" onClick={() => setSubsection("project")} aria-pressed={subsection === "project"} className={`rounded-lg px-3 py-2 text-[10px] font-display tracking-widest transition ${subsection === "project" ? "bg-primary/15 text-primary border border-primary/35" : "text-muted-foreground hover:text-foreground"}`}>PROYECTO</button>
+      <button type="button" onClick={() => setSubsection("tiles")} aria-pressed={subsection === "tiles"} className={`rounded-lg px-3 py-2 text-[10px] font-display tracking-widest transition ${subsection === "tiles" ? "bg-primary/15 text-primary border border-primary/35" : "text-muted-foreground hover:text-foreground"}`}>TILES</button>
+    </div>
+  );
 
+  if (subsection === "tiles") {
+    return <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4">{subsectionNav}<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70"><TilemapEditor scene={scene} sprites={sprites} onChange={onChangeScene} /></div></div>;
+  }
 
   return (
     <div className="h-full overflow-auto p-4 space-y-4">
+      {subsectionNav}
       <SectionTitle>PROYECTO</SectionTitle>
       <Field label="Nombre del juego" value={project.name} onChange={v => onChange({ ...project, name: v })} />
 

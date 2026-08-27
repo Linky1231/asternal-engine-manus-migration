@@ -1650,3 +1650,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Incorporar cuerpo físico, masa, fricción, rebote, capas de colisión y triggers compatibles
 - [x] Completar mapeos de input, controles de UI y opciones de audio faltantes
 - [x] Validar persistencia retrocompatible, editor, Play, responsive, pruebas y compilación
+
+# Jerarquía editable del editor y Tiles en Configuraciones
+
+- [x] Auditar la navegación actual, el panel Tiles y los modelos de escena/objeto existentes
+- [x] Diseñar una jerarquía editable y persistente de escena, grupos y objetos con migración compatible
+- [x] Retirar Tiles de la navegación principal e integrarlo como subsección de Configuraciones
+- [x] Implementar la jerarquía en el editor para crear, renombrar, mover y reordenar nodos
+- [x] Añadir regresiones, validar escritorio/móvil, documentar y publicar

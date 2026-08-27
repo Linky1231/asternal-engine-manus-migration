@@ -106,6 +106,29 @@ function normalizeEntity(entity: Entity): Entity {
   };
 }
 
+function normalizeHierarchy(scene: Project["scenes"][number]) {
+  const rawGroups = Array.isArray(scene.hierarchy?.groups) ? scene.hierarchy.groups : [];
+  const ids = new Set(rawGroups.map(group => group?.id).filter((id): id is string => typeof id === "string" && id.length > 0));
+  const groups = rawGroups
+    .filter((group): group is NonNullable<typeof group> => Boolean(group && ids.has(group.id)))
+    .map((group, index) => ({
+      id: group.id,
+      name: group.name?.trim() || `Grupo ${index + 1}`,
+      parentId: group.parentId && group.parentId !== group.id && ids.has(group.parentId) ? group.parentId : null,
+      order: Number.isFinite(group.order) ? Number(group.order) : index,
+      collapsed: Boolean(group.collapsed),
+    }));
+  const groupIds = new Set(groups.map(group => group.id));
+  return {
+    hierarchy: { groups },
+    entities: (scene.entities ?? []).map((entity, index) => ({
+      ...normalizeEntity(entity),
+      parentGroupId: entity.parentGroupId && groupIds.has(entity.parentGroupId) ? entity.parentGroupId : null,
+      hierarchyOrder: Number.isFinite(entity.hierarchyOrder) ? Number(entity.hierarchyOrder) : index,
+    })),
+  };
+}
+
 export function normalizeProject(p: Project): Project {
   if (!p.scenes?.length) return newProject();
   const settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
@@ -123,7 +146,7 @@ export function normalizeProject(p: Project): Project {
     settings: normalizedSettings,
     scenes: p.scenes.map(scene => ({
       ...scene,
-      entities: (scene.entities ?? []).map(normalizeEntity),
+      ...normalizeHierarchy(scene),
       variableTypes: inferVariableTypes(scene.variables, scene.variableTypes),
       camera: scene.camera ?? { mode: "follow-player", deadZone: 0 },
       ui: (scene.ui ?? []).map(element => element.kind === "bar" ? { ...element, initialValue: element.initialValue ?? element.max ?? 1 } : element),

@@ -88,6 +88,10 @@ export interface Entity {
   kind: EntityKind;
   /** Nombre legible, independiente de la clase de objeto. */
   name?: string;
+  /** Grupo autoral al que pertenece el objeto; no altera física ni render. */
+  parentGroupId?: string | null;
+  /** Orden dentro del grupo para navegación y automatización del editor. */
+  hierarchyOrder?: number;
   x: number;
   y: number;
   w: number;
@@ -171,6 +175,20 @@ export interface SceneLayer {
   opacity?: number; // 0..1
 }
 
+/** Carpeta/nodo semántico del editor que puede contener objetos y otros grupos. */
+export interface SceneGroup {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  order?: number;
+  collapsed?: boolean;
+}
+
+/** Árbol de autoría de una escena, separado de física y orden de render. */
+export interface SceneHierarchy {
+  groups: SceneGroup[];
+}
+
 // ---- UI Overlay ----
 export type UIElementKind = "button" | "label" | "image" | "panel" | "bar" | "joystick";
 export type UIAnchor = "tl" | "tc" | "tr" | "cl" | "c" | "cr" | "bl" | "bc" | "br";
@@ -232,6 +250,8 @@ export interface Scene {
   tilemap?: Tilemap;
   /** Cámara por escena: seguimiento existente o posición fija. */
   camera?: { mode?: "follow-player" | "fixed"; x?: number; y?: number; deadZone?: number };
+  /** Jerarquía de grupos disponible para el editor y futuras automatizaciones. */
+  hierarchy?: SceneHierarchy;
 }
 
 export const DEFAULT_LAYER_ID = "default";
