@@ -697,7 +697,10 @@ function ElementInspector({ el, update, remove, clone }: {
             })}
           </div>
           {el.kind === "bar" && (
-            <NumInput label="VALOR MÁX." value={el.max ?? 100} onChange={v => update({ max: v })} />
+            <div className="grid grid-cols-2 gap-2">
+              <NumInput label="VALOR INICIAL" value={el.initialValue ?? el.max ?? 1} onChange={v => update({ initialValue: v })} />
+              <NumInput label="VALOR MÁX." value={el.max ?? 100} onChange={v => update({ max: v })} />
+            </div>
           )}
         </>
       )}
@@ -867,7 +870,8 @@ export function drawUIElement(ctx: CanvasRenderingContext2D, el: UIElement, W: n
     // bg
     ctx.fillStyle = el.bg ?? "rgba(2,6,23,0.6)"; path(); ctx.fill();
     // value
-    let v = 1;
+    const staticMax = Math.max(1, el.max ?? 1);
+    let v = Math.max(0, Math.min(1, (el.initialValue ?? staticMax) / staticMax));
     if (state && el.bind && el.bind !== "none") {
       const max = el.max && el.max > 0
         ? el.max

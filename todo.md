@@ -1634,3 +1634,19 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Validar movimiento, colisiones, responsive, pruebas y build
 - [x] Corregir el orden de inicialización de solids en la estabilización del jugador
 - [x] Ajustar la prueba de spawn estable para aceptar el epsilon físico de resolución de colisiones
+
+# Auditoría integral de capacidades del editor
+
+- [x] Comparar las diez categorías especificadas contra las capacidades existentes del editor
+- [x] Completar metadatos de objeto, escala independiente, variables tipadas y propiedades físicas faltantes
+- [x] Completar capas, forma y modo trigger de colisión sin romper escenas existentes
+- [x] Completar mapeos de input, ajustes de audio, controles de UI y cámara de escena faltantes
+- [x] Validar persistencia retrocompatible, editor, Play, responsive, pruebas y compilación
+
+# Auditoría integral de capacidades del editor
+
+- [x] Comparar objeto, transformación, apariencia, física, colisión, variables, input, audio, UI y escena contra la especificación proporcionada
+- [x] Incorporar nombre, tipo, etiquetas, escala independiente y variables tipadas de objeto
+- [x] Incorporar cuerpo físico, masa, fricción, rebote, capas de colisión y triggers compatibles
+- [x] Completar mapeos de input, controles de UI y opciones de audio faltantes
+- [x] Validar persistencia retrocompatible, editor, Play, responsive, pruebas y compilación

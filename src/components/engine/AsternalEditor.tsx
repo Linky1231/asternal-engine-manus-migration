@@ -5,8 +5,8 @@ import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromClou
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
-import type { AudioAsset, EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer } from "@/lib/engine/core";
-import { newScene, uid, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
+import type { AudioAsset, EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer, VariableType } from "@/lib/engine/core";
+import { DEFAULT_INPUT_MAP, newScene, uid, ensureSceneLayers, DEFAULT_LAYER_ID } from "@/lib/engine/core";
 import { loadProject, loadProjectById, saveProject, saveProjectById, getCurrentProjectId, setCurrentProjectId, initializeStorageOwner, getStorageNamespaceKey } from "@/lib/engine/storage";
 import { useFormFactor } from "@/hooks/use-mobile";
 import { fileToDataURL } from "@/lib/engine/images";
@@ -245,6 +245,8 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
           muted={playProject.settings.muted ?? false}
           music={playProject.settings.music ?? false}
           musicUrl={playProject.settings.musicUrl ?? null}
+          musicLoop={playProject.settings.musicLoop ?? true}
+          inputMap={playProject.settings.inputMap}
           touchControls={playProject.settings.touchControls ?? true}
           autoPause={playProject.settings.autoPause ?? true}
           showHitboxes={playProject.settings.showHitboxes ?? false}
@@ -712,6 +714,25 @@ function InspectorPanel({
         <Slider label={t("scene.startLives")} value={scene.startLives ?? 1} min={1} max={9} step={1}
           onChange={v => onChangeScene({ ...scene, startLives: v })} />
 
+        <SectionTitle>CÁMARA</SectionTitle>
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">MODO</label>
+          <select value={scene.camera?.mode ?? "follow-player"} onChange={e => onChangeScene({ ...scene, camera: { ...scene.camera, mode: e.target.value as "follow-player" | "fixed" } })}
+            className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono">
+            <option value="follow-player">SEGUIR JUGADOR</option>
+            <option value="fixed">POSICIÓN FIJA</option>
+          </select>
+        </div>
+        {(scene.camera?.mode ?? "follow-player") === "fixed" ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Slider label="Cámara X" value={scene.camera?.x ?? 0} min={0} max={scene.width} step={10} onChange={x => onChangeScene({ ...scene, camera: { ...scene.camera, mode: "fixed", x } })} />
+            <Slider label="Cámara Y" value={scene.camera?.y ?? 0} min={0} max={scene.height} step={10} onChange={y => onChangeScene({ ...scene, camera: { ...scene.camera, mode: "fixed", y } })} />
+          </div>
+        ) : (
+          <Slider label="Zona muerta" value={scene.camera?.deadZone ?? 0} min={0} max={300} step={10} onChange={deadZone => onChangeScene({ ...scene, camera: { ...scene.camera, mode: "follow-player", deadZone } })} />
+        )}
+        <VariablesPanel values={scene.variables} types={scene.variableTypes} onChange={(variables, variableTypes) => onChangeScene({ ...scene, variables, variableTypes })} />
+
         <SceneLayersPanel scene={scene} onChangeScene={onChangeScene} />
 
         <div className="pt-4">
@@ -735,12 +756,26 @@ function InspectorPanel({
         <SectionTitle>{ent.kind.toUpperCase()}</SectionTitle>
         <button onClick={() => onSelect(null)} className="text-xs text-muted-foreground">{t("common.back")}</button>
       </div>
+      <SectionTitle>OBJETO</SectionTitle>
+      <Field label="Nombre" value={ent.name ?? ent.kind} onChange={name => update({ name })} />
+      <div>
+        <label className="text-[10px] font-display tracking-widest text-muted-foreground">TIPO</label>
+        <select value={ent.kind} onChange={e => update({ kind: e.target.value as EntityKind })}
+          className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono">
+          {(["player", "platform", "enemy", "coin", "goal", "decor"] as EntityKind[]).map(kind => <option key={kind} value={kind}>{kind.toUpperCase()}</option>)}
+        </select>
+      </div>
+      <Field label="Etiquetas (separadas por comas)" value={(ent.tags ?? []).join(", ")} onChange={value => update({ tags: [...new Set(value.split(",").map(tag => tag.trim()).filter(Boolean))] })} />
+      <SectionTitle>TRANSFORMACIÓN</SectionTitle>
       <div className="grid grid-cols-2 gap-2">
         <Slider label="X" value={ent.x} min={0} max={scene.width} step={10} onChange={v => update({ x: v })} />
         <Slider label="Y" value={ent.y} min={0} max={scene.height} step={10} onChange={v => update({ y: v })} />
         <Slider label="Ancho" value={ent.w} min={8} max={400} step={4} onChange={v => update({ w: v })} />
         <Slider label="Alto" value={ent.h} min={8} max={400} step={4} onChange={v => update({ h: v })} />
+        <Slider label="Escala X" value={Math.round((ent.scaleX ?? 1) * 100)} min={25} max={300} step={5} onChange={v => update({ scaleX: v / 100 })} />
+        <Slider label="Escala Y" value={Math.round((ent.scaleY ?? 1) * 100)} min={25} max={300} step={5} onChange={v => update({ scaleY: v / 100 })} />
       </div>
+      <SectionTitle>APARIENCIA</SectionTitle>
       <div>
         <label className="text-[10px] font-display tracking-widest text-muted-foreground">{t("inspector.color")}</label>
         <input
@@ -763,6 +798,34 @@ function InspectorPanel({
       <ScriptsButton entity={ent} sounds={project?.assets?.sounds ?? []} onUpdate={update} />
       <DialogEditor entity={ent} onUpdate={update} />
       <HitboxEditor entity={ent} onUpdate={update} />
+
+      <SectionTitle>FÍSICA</SectionTitle>
+      <div>
+        <label className="text-[10px] font-display tracking-widest text-muted-foreground">TIPO DE CUERPO</label>
+        <select value={ent.bodyType ?? (ent.gravity || ent.controllable || ent.kind === "enemy" ? "dynamic" : "static")}
+          onChange={e => update({ bodyType: e.target.value as "static" | "dynamic" | "kinematic" })}
+          className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono">
+          <option value="static">ESTÁTICO</option><option value="dynamic">DINÁMICO</option><option value="kinematic">CINEMÁTICO</option>
+        </select>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Slider label="Masa" value={Math.round((ent.mass ?? 1) * 10)} min={1} max={100} step={1} onChange={v => update({ mass: v / 10 })} />
+        <Slider label="Fricción" value={Math.round((ent.friction ?? 0.8) * 100)} min={0} max={100} step={5} onChange={v => update({ friction: v / 100 })} />
+        <Slider label="Rebote" value={Math.round((ent.restitution ?? 0) * 100)} min={0} max={100} step={5} onChange={v => update({ restitution: v / 100 })} />
+      </div>
+
+      <SectionTitle>COLISIÓN</SectionTitle>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-display tracking-widest text-muted-foreground">FORMA</label>
+          <select value={ent.collisionShape ?? "rectangle"} onChange={e => update({ collisionShape: e.target.value as "rectangle" | "circle" })}
+            className="w-full mt-1 bg-input/60 border border-border rounded-md px-2 py-2 text-xs font-mono"><option value="rectangle">RECTÁNGULO</option><option value="circle">CÍRCULO</option></select>
+        </div>
+        <Toggle label="Trigger" on={!!ent.isTrigger} onChange={isTrigger => update({ isTrigger })} />
+        <Slider label="Capa" value={ent.collisionLayer ?? 1} min={1} max={8} step={1} onChange={collisionLayer => update({ collisionLayer })} />
+        <Slider label="Máscara" value={ent.collisionMask ?? 15} min={0} max={15} step={1} onChange={collisionMask => update({ collisionMask })} />
+      </div>
+      <VariablesPanel values={ent.variables} types={ent.variableTypes} onChange={(variables, variableTypes) => update({ variables, variableTypes })} />
 
       <div className="grid grid-cols-2 gap-2">
         <Slider label={t("inspector.depth")} value={ent.z ?? 0} min={-20} max={20} step={1}
@@ -1021,6 +1084,7 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
           on={(project.settings.music ?? false) && !!project.settings.musicUrl}
           onChange={v => set({ music: v })}
         />
+        <Toggle label="Loop música" on={project.settings.musicLoop ?? true} onChange={v => set({ musicLoop: v })} />
       </div>
       <Slider label="Volumen" value={Math.round((project.settings.volume ?? 0.8) * 100)} min={0} max={100} step={5}
         onChange={v => set({ volume: v / 100 })} />
@@ -1064,6 +1128,18 @@ function SettingsPanel({ project, onChange }: { project: Project; onChange: (p: 
 
 
 
+
+      <SectionTitle>CONTROLES</SectionTitle>
+      <p className="text-[10px] font-mono text-muted-foreground">Cada acción combina teclado, botón de gamepad y touch. Separa valores con comas.</p>
+      {(["left", "right", "jump"] as const).map(action => {
+        const binding = project.settings.inputMap?.[action] ?? DEFAULT_INPUT_MAP[action];
+        const updateBinding = (patch: Partial<typeof binding>) => set({ inputMap: { ...project.settings.inputMap, [action]: { ...binding, ...patch } } });
+        return <section key={action} className="panel rounded-lg border border-border/60 p-2 space-y-1.5">
+          <div className="flex items-center justify-between"><span className="text-[10px] font-display tracking-widest text-primary">{action.toUpperCase()}</span><Toggle label="Touch" on={binding.touch ?? true} onChange={touch => updateBinding({ touch })} /></div>
+          <Field label="Teclado" value={(binding.keyboard ?? []).join(", ")} onChange={value => updateBinding({ keyboard: value.split(",").map(key => key.trim()).filter(Boolean) })} />
+          <Field label="Gamepad (botones)" value={(binding.gamepadButtons ?? []).join(", ")} onChange={value => updateBinding({ gamepadButtons: value.split(",").map(button => Number(button.trim())).filter(button => Number.isInteger(button) && button >= 0) })} />
+        </section>;
+      })}
 
       <div className="pt-6 text-center text-[10px] font-mono text-muted-foreground">
         ASTERNAL ENGINE · HECHO PARA MÓVIL
@@ -1121,6 +1197,46 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
         <span className={`block w-3 h-3 rounded-full bg-white shadow-sm transition ${on ? "translate-x-4" : ""}`} />
       </span>
     </button>
+  );
+}
+
+function VariablesPanel({ values, types, onChange }: {
+  values?: Record<string, string | number | boolean>;
+  types?: Record<string, VariableType>;
+  onChange: (values: Record<string, string | number | boolean>, types: Record<string, VariableType>) => void;
+}) {
+  const [newName, setNewName] = useState("");
+  const source = values ?? {};
+  const typeFor = (name: string, value: string | number | boolean): VariableType => types?.[name] ?? (typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "text");
+  const commit = (name: string, type: VariableType, raw: string | number | boolean, renameFrom?: string) => {
+    const clean = name.trim().replace(/\s+/g, "_");
+    if (!clean) return;
+    const nextValues = { ...source };
+    const nextTypes = { ...(types ?? {}) };
+    if (renameFrom && renameFrom !== clean) { delete nextValues[renameFrom]; delete nextTypes[renameFrom]; }
+    nextValues[clean] = type === "number" ? (Number.isFinite(Number(raw)) ? Number(raw) : 0) : type === "boolean" ? Boolean(raw) : String(raw);
+    nextTypes[clean] = type;
+    onChange(nextValues, nextTypes);
+  };
+  const remove = (name: string) => {
+    const nextValues = { ...source }, nextTypes = { ...(types ?? {}) };
+    delete nextValues[name]; delete nextTypes[name]; onChange(nextValues, nextTypes);
+  };
+  return (
+    <section className="panel rounded-lg border border-border/60 p-3 space-y-2">
+      <div className="flex items-center justify-between"><SectionTitle>VARIABLES</SectionTitle><span className="text-[10px] font-mono text-muted-foreground">{Object.keys(source).length}</span></div>
+      {Object.entries(source).map(([name, value]) => {
+        const type = typeFor(name, value);
+        return <div key={name} className="grid grid-cols-[1fr_86px_1fr_24px] gap-1 items-center">
+          <input value={name} onChange={e => commit(e.target.value, type, value, name)} aria-label={`Nombre de ${name}`} className="min-w-0 bg-input/60 border border-border rounded px-1.5 py-1.5 text-[10px] font-mono" />
+          <select value={type} onChange={e => commit(name, e.target.value as VariableType, e.target.value === "number" ? 0 : e.target.value === "boolean" ? false : "", name)} aria-label={`Tipo de ${name}`} className="bg-input/60 border border-border rounded px-1 text-[10px] font-mono"><option value="number">NÚM.</option><option value="text">TEXTO</option><option value="boolean">BOOL</option></select>
+          {type === "boolean" ? <Toggle label={value ? "Sí" : "No"} on={Boolean(value)} onChange={v => commit(name, type, v)} /> : <input type={type === "number" ? "number" : "text"} value={String(value)} onChange={e => commit(name, type, e.target.value)} aria-label={`Valor inicial de ${name}`} className="min-w-0 bg-input/60 border border-border rounded px-1.5 py-1.5 text-[10px] font-mono" />}
+          <button type="button" onClick={() => remove(name)} aria-label={`Eliminar ${name}`} className="text-destructive text-xs">×</button>
+        </div>;
+      })}
+      <div className="flex gap-1"><input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { commit(newName, "number", 0); setNewName(""); } }} placeholder="nueva_variable" className="min-w-0 flex-1 bg-input/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono" /><button type="button" onClick={() => { commit(newName, "number", 0); setNewName(""); }} className="px-2 rounded border border-primary/40 text-primary text-xs">+</button></div>
+      <p className="text-[9px] font-mono text-muted-foreground">Nombre, tipo y valor inicial disponibles para bloques y runtime.</p>
+    </section>
   );
 }
 
@@ -1298,7 +1414,7 @@ function AssetsPanel({
     if (!file) return;
     if (!file.type.startsWith("audio/")) { alert("Selecciona un archivo de audio válido."); return; }
     if (file.size > 8 * 1024 * 1024) { alert("El audio debe pesar menos de 8 MB para mantener el proyecto portable."); return; }
-    const asset: AudioAsset = { id: uid(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 32) || "audio", mimeType: file.type, dataUrl: await fileToDataURL(file) };
+    const asset: AudioAsset = { id: uid(), name: file.name.replace(/\.[^.]+$/, "").slice(0, 32) || "audio", mimeType: file.type, dataUrl: await fileToDataURL(file), volume: 1, loop: false };
     const probeUrl = URL.createObjectURL(file);
     await new Promise<void>(resolve => {
       const probe = new Audio(probeUrl);
@@ -1312,6 +1428,9 @@ function AssetsPanel({
   const removeAudio = (id: string) => {
     if (!confirm("¿Eliminar este audio del proyecto?")) return;
     onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sounds: sounds.filter(sound => sound.id !== id) } });
+  };
+  const updateAudio = (id: string, patch: Partial<AudioAsset>) => {
+    onChange({ ...project, assets: { ...(project.assets ?? { sprites: [] }), sounds: sounds.map(sound => sound.id === id ? { ...sound, ...patch } : sound) } });
   };
   return (
     <div className="h-full overflow-auto p-4 space-y-3">
@@ -1357,8 +1476,8 @@ function AssetsPanel({
           <div className="space-y-1.5">
             {sounds.map(sound => (
               <div key={sound.id} className="flex items-center gap-2 rounded-md border border-border/50 bg-background/40 px-2 py-1.5">
-                <button type="button" onClick={() => playAudioSource(sound.dataUrl)} aria-label={`Preescuchar ${sound.name}`} className="grid place-items-center w-7 h-7 rounded border border-primary/40 text-primary-glow">▶</button>
-                <div className="min-w-0 flex-1"><div className="text-xs truncate text-foreground">{sound.name}</div><div className="text-[9px] text-muted-foreground font-mono">{sound.duration ? `${sound.duration.toFixed(1)} s` : sound.mimeType}</div></div>
+                <button type="button" onClick={() => playAudioSource(sound.dataUrl, sound.volume ?? 1, sound.loop ?? false)} aria-label={`Preescuchar ${sound.name}`} className="grid place-items-center w-7 h-7 rounded border border-primary/40 text-primary-glow">▶</button>
+                <div className="min-w-0 flex-1"><div className="text-xs truncate text-foreground">{sound.name}</div><div className="text-[9px] text-muted-foreground font-mono">{sound.duration ? `${sound.duration.toFixed(1)} s` : sound.mimeType} · {Math.round((sound.volume ?? 1) * 100)}%</div><div className="mt-1 flex gap-1"><input aria-label={`Volumen de ${sound.name}`} type="range" min={0} max={100} step={5} value={Math.round((sound.volume ?? 1) * 100)} onChange={e => updateAudio(sound.id, { volume: Number(e.target.value) / 100 })} className="min-w-0 flex-1 accent-primary" /><button type="button" onClick={() => updateAudio(sound.id, { loop: !(sound.loop ?? false) })} className={`px-1.5 rounded border text-[9px] font-display ${sound.loop ? "border-primary/50 text-primary bg-primary/10" : "border-border text-muted-foreground"}`}>LOOP</button></div></div>
                 <button type="button" onClick={() => removeAudio(sound.id)} aria-label={`Eliminar ${sound.name}`} className="text-destructive text-xs px-1">✕</button>
               </div>
             ))}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Entity, EntityKind, Scene } from "@/lib/engine/core";
-import { KIND_PRESETS, uid, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
+import { aabb, KIND_PRESETS, uid, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
 import { getRenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
 import { drawPlayerPill } from "@/lib/engine/player-visual";
@@ -268,6 +268,14 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
         const flipX = (e.facing === -1) !== !!e.flipX;
         const flipY = !!(e as Entity & { flipY?: boolean }).flipY;
         const rot = ((e.rotation ?? 0) * Math.PI) / 180;
+        const sx = e.scaleX ?? 1, sy = e.scaleY ?? 1;
+        if (sx !== 1 || sy !== 1) {
+          const cx = e.x + e.w / 2;
+          const cy = e.y + e.h / 2;
+          ctx.translate(cx, cy);
+          ctx.scale(sx, sy);
+          ctx.translate(-cx, -cy);
+        }
         if (rot) {
           const cx = e.x + e.w / 2;
           const cy = e.y + e.h / 2;
@@ -306,14 +314,20 @@ export function SceneEditor({ scene, tool, selectedId, onSelect, onChange }: Pro
       }
 
       for (const e of scene.entities) {
-        const hb = e.hitbox;
-        if (!hb) continue;
+        if (!e.hitbox && e.collisionShape !== "circle") continue;
         const isSel = e.id === selectedId;
+        const bounds = aabb(e);
         ctx.save();
         ctx.lineWidth = (isSel ? 2 : 1) / scale;
         ctx.strokeStyle = isSel ? "#f43f5e" : "rgba(244,63,94,0.55)";
         ctx.setLineDash([8 / scale, 6 / scale]);
-        ctx.strokeRect(e.x + hb.x, e.y + hb.y, hb.w, hb.h);
+        if (e.collisionShape === "circle") {
+          ctx.beginPath();
+          ctx.arc(bounds.x + bounds.w / 2, bounds.y + bounds.h / 2, Math.min(bounds.w, bounds.h) / 2, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+        }
         ctx.setLineDash([]);
         ctx.restore();
       }

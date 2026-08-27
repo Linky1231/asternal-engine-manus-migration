@@ -57,12 +57,13 @@ export function playSound(name: SoundName) {
 export const SOUND_NAMES: SoundName[] = ["jump","coin","hit","win","lose","power","laser","blip","thud"];
 
 /** Reproduce un archivo de audio serializado en el proyecto. */
-export function playAudioSource(url: string | null | undefined, gain = 1): boolean {
+export function playAudioSource(url: string | null | undefined, gain = 1, loop = false): boolean {
   if (muted || !url || typeof window === "undefined") return false;
   try {
     const audio = new Audio(url);
     audio.volume = Math.max(0, Math.min(1, volume * gain));
-    audio.addEventListener("ended", () => { audio.removeAttribute("src"); audio.load(); }, { once: true });
+    audio.loop = loop;
+    if (!loop) audio.addEventListener("ended", () => { audio.removeAttribute("src"); audio.load(); }, { once: true });
     void audio.play().catch(() => { /* el navegador puede requerir un gesto */ });
     return true;
   } catch {
@@ -80,18 +81,19 @@ export function vibrate(ms: number) {
 let musicEl: HTMLAudioElement | null = null;
 let musicSrc: string | null = null;
 
-export function startMusic(url?: string | null) {
+export function startMusic(url?: string | null, loop = true) {
   if (muted) { stopMusic(); return; }
   if (!url) { stopMusic(); return; }
   if (musicEl && musicSrc === url) {
     musicEl.volume = volume;
+    musicEl.loop = loop;
     if (musicEl.paused) musicEl.play().catch(() => {});
     return;
   }
   stopMusic();
   try {
     const a = new Audio(url);
-    a.loop = true;
+    a.loop = loop;
     a.volume = volume;
     a.play().catch(() => {});
     musicEl = a;

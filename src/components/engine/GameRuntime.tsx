@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { AudioAsset, Entity, RuntimeInput, RuntimeState, Scene, SpriteAsset, UIElement } from "@/lib/engine/core";
-import { stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
+import type { AudioAsset, Entity, InputBinding, RuntimeInput, RuntimeState, Scene, SpriteAsset, UIElement } from "@/lib/engine/core";
+import { DEFAULT_INPUT_MAP, stepScene, newRuntimeState, resolveUIRect, sortedForRender, isOnHiddenLayer, layerOpacityFor } from "@/lib/engine/core";
 import { getRenderableImage, type RenderableImage } from "@/lib/engine/images";
 import { currentFrameRenderable } from "@/lib/engine/animations";
 import { createScriptRunner } from "@/lib/engine/scripts";
@@ -20,6 +20,8 @@ interface Props {
   muted?: boolean;
   music?: boolean;
   musicUrl?: string | null;
+  musicLoop?: boolean;
+  inputMap?: Partial<Record<"left" | "right" | "jump", InputBinding>>;
   touchControls?: boolean;
   autoPause?: boolean;
   showHitboxes?: boolean;
@@ -28,7 +30,7 @@ interface Props {
 
 export function GameRuntime({
   scene, sounds = [], sprites = [], fpsCap, showHUD,
-  showFPS = true, volume = 0.8, muted = false, music = false, musicUrl = null,
+  showFPS = true, volume = 0.8, muted = false, music = false, musicUrl = null, musicLoop = true, inputMap,
   touchControls = true, autoPause = true, showHitboxes = false,
   onExit,
 }: Props) {
@@ -41,10 +43,10 @@ export function GameRuntime({
   useEffect(() => { setVolume(volume); }, [volume]);
   useEffect(() => { setMuted(muted); }, [muted]);
   useEffect(() => {
-    if (music && !muted && musicUrl) startMusic(musicUrl);
+    if (music && !muted && musicUrl) startMusic(musicUrl, musicLoop);
     else stopMusic();
     return () => stopMusic();
-  }, [music, muted, musicUrl]);
+  }, [music, muted, musicUrl, musicLoop]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -63,7 +65,7 @@ export function GameRuntime({
       },
       playProjectSound: (audioId: string) => {
         const asset = sounds.find(item => item.id === audioId);
-        if (asset) playAudioSource(asset.dataUrl);
+        if (asset) playAudioSource(asset.dataUrl, asset.volume ?? 1, asset.loop ?? false);
       },
       restart: () => {
         work = JSON.parse(JSON.stringify(initial));
@@ -183,9 +185,23 @@ export function GameRuntime({
       const player = work.entities.find((e) => e.controllable);
       let camX = state.cameraX;
       let camY = 0;
-      if (player) {
-        camX = player.x + player.w / 2 - viewW / 2;
-        camY = player.y + player.h / 2 - viewH / 2;
+      const camera = work.camera;
+      if (camera?.mode === "fixed") {
+        camX = (camera.x ?? viewW / 2) - viewW / 2;
+        camY = (camera.y ?? viewH / 2) - viewH / 2;
+        if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
+        else camX = (work.width - viewW) / 2;
+        if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
+        else camY = (work.height - viewH) / 2;
+        camX = Math.round(camX * scale) / scale;
+        camY = Math.round(camY * scale) / scale;
+        state.cameraX = camX;
+      } else if (player) {
+        const playerX = player.x + player.w / 2, playerY = player.y + player.h / 2;
+        const deadZone = Math.max(0, camera?.deadZone ?? 0);
+        const centerX = state.cameraX + viewW / 2;
+        camX = deadZone > 0 && playerX >= centerX - deadZone && playerX <= centerX + deadZone ? state.cameraX : playerX - viewW / 2;
+        camY = playerY - viewH / 2;
         if (work.width > viewW) camX = Math.max(0, Math.min(work.width - viewW, camX));
         else camX = (work.width - viewW) / 2;
         if (work.height > viewH) camY = Math.max(0, Math.min(work.height - viewH, camY));
@@ -371,15 +387,57 @@ export function GameRuntime({
   // pressing JUMP while moving the joystick keeps both active.
   const btnSrc = useRef({ left: false, right: false, jump: false });
   const joySrc = useRef({ left: false, right: false, jump: false });
+  const keySrc = useRef({ left: false, right: false, jump: false });
+  const gamepadSrc = useRef({ left: false, right: false, jump: false });
+  const bindingFor = (action: "left" | "right" | "jump") => ({
+    keyboard: inputMap?.[action]?.keyboard ?? DEFAULT_INPUT_MAP[action].keyboard,
+    gamepadButtons: inputMap?.[action]?.gamepadButtons ?? DEFAULT_INPUT_MAP[action].gamepadButtons,
+    touch: inputMap?.[action]?.touch ?? DEFAULT_INPUT_MAP[action].touch,
+  });
   const recomputeInput = () => {
-    inputRef.current.left = btnSrc.current.left || joySrc.current.left;
-    inputRef.current.right = btnSrc.current.right || joySrc.current.right;
-    inputRef.current.jump = btnSrc.current.jump || joySrc.current.jump;
+    inputRef.current.left = btnSrc.current.left || joySrc.current.left || keySrc.current.left || gamepadSrc.current.left;
+    inputRef.current.right = btnSrc.current.right || joySrc.current.right || keySrc.current.right || gamepadSrc.current.right;
+    inputRef.current.jump = btnSrc.current.jump || joySrc.current.jump || keySrc.current.jump || gamepadSrc.current.jump;
   };
   const press = (k: keyof RuntimeInput, v: boolean) => {
     btnSrc.current[k] = v;
     recomputeInput();
   };
+
+  useEffect(() => {
+    const held = new Set<string>();
+    const syncKeyboard = () => {
+      (Object.keys(keySrc.current) as (keyof RuntimeInput)[]).forEach(action => {
+        keySrc.current[action] = bindingFor(action).keyboard.some(key => held.has(key));
+      });
+      recomputeInput();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const enabled = (Object.keys(DEFAULT_INPUT_MAP) as (keyof RuntimeInput)[]).some(action => bindingFor(action).keyboard.includes(event.key));
+      if (!enabled) return;
+      held.add(event.key); syncKeyboard(); event.preventDefault();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (!held.delete(event.key)) return;
+      syncKeyboard(); event.preventDefault();
+    };
+    const onBlur = () => { held.clear(); syncKeyboard(); };
+    let frame = 0;
+    const pollGamepads = () => {
+      const pads = typeof navigator !== "undefined" && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      (Object.keys(gamepadSrc.current) as (keyof RuntimeInput)[]).forEach(action => {
+        const buttons = bindingFor(action).gamepadButtons;
+        gamepadSrc.current[action] = pads.some(pad => buttons.some(index => Boolean(pad?.buttons[index]?.pressed)));
+      });
+      recomputeInput();
+      frame = requestAnimationFrame(pollGamepads);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    frame = requestAnimationFrame(pollGamepads);
+    return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", onBlur); cancelAnimationFrame(frame); };
+  }, [inputMap]);
 
   // UI element hit handling (buttons + joysticks)
   const uiButtons = (scene.ui ?? []).filter(e => e.kind === "button" && (e.visible ?? true));
@@ -442,7 +500,7 @@ export function GameRuntime({
 
   const handleButton = (b: UIElement, down: boolean) => {
     const act = b.action ?? "none";
-    if (act === "left" || act === "right" || act === "jump") press(act, down);
+    if ((act === "left" || act === "right" || act === "jump") && bindingFor(act).touch) press(act, down);
     else if (down && act === "restart") window.dispatchEvent(new CustomEvent("asternal:restart"));
     else if (down && act === "exit") onExit();
     else if (down && act === "event" && b.eventName) window.dispatchEvent(new CustomEvent("asternal:ui-event", { detail: b.eventName }));
@@ -508,10 +566,10 @@ export function GameRuntime({
       {showDefaultTouch && (
         <div className="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between select-none">
           <div className="flex gap-3">
-            {!hasCustomInput("left") && <TouchBtn label="◀" onDown={() => press("left", true)} onUp={() => press("left", false)} />}
-            {!hasCustomInput("right") && <TouchBtn label="▶" onDown={() => press("right", true)} onUp={() => press("right", false)} />}
+            {!hasCustomInput("left") && bindingFor("left").touch && <TouchBtn label="◀" onDown={() => press("left", true)} onUp={() => press("left", false)} />}
+            {!hasCustomInput("right") && bindingFor("right").touch && <TouchBtn label="▶" onDown={() => press("right", true)} onUp={() => press("right", false)} />}
           </div>
-          {!hasCustomInput("jump") && <TouchBtn label="JUMP" big onDown={() => press("jump", true)} onUp={() => press("jump", false)} />}
+          {!hasCustomInput("jump") && bindingFor("jump").touch && <TouchBtn label="JUMP" big onDown={() => press("jump", true)} onUp={() => press("jump", false)} />}
         </div>
       )}
 
@@ -610,6 +668,14 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: numbe
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   const rot = ((e.rotation ?? 0) * Math.PI) / 180;
+  const sx = e.scaleX ?? 1, sy = e.scaleY ?? 1;
+  if (sx !== 1 || sy !== 1) {
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(sx, sy);
+    ctx.translate(-cx, -cy);
+  }
   if (rot) {
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;
@@ -643,6 +709,13 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, time: numbe
   // fallback shape — reset flip/translate but keep rotation, so redraw at absolute coords
   ctx.restore();
   ctx.save();
+  if (sx !== 1 || sy !== 1) {
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(sx, sy);
+    ctx.translate(-cx, -cy);
+  }
   if (rot) {
     const cx = e.x + e.w / 2;
     const cy = e.y + e.h / 2;

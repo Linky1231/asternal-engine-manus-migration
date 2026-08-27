@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Project } from "./core";
+import type { Entity, Project, VariableType } from "./core";
 import { DEFAULT_SETTINGS, newProject, uid } from "./core";
 
 const LEGACY_KEY = "asternal:project";
@@ -79,14 +79,56 @@ function writeLegacyIndex(items: ProjectMeta[]) {
   localStorage.setItem(LEGACY_INDEX_KEY, JSON.stringify(items));
 }
 
-function normalize(p: Project): Project {
+function inferVariableTypes(values: Record<string, string | number | boolean> | undefined, saved: Record<string, VariableType> | undefined) {
+  return Object.fromEntries(Object.entries(values ?? {}).map(([name, value]) => [
+    name,
+    saved?.[name] ?? (typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "text"),
+  ])) as Record<string, VariableType>;
+}
+
+function normalizeEntity(entity: Entity): Entity {
+  const inferredBody = entity.gravity || entity.controllable || entity.kind === "enemy" ? "dynamic" : "static";
+  return {
+    ...entity,
+    name: entity.name?.trim() || entity.kind,
+    tags: Array.isArray(entity.tags) ? [...new Set(entity.tags.map(tag => String(tag).trim()).filter(Boolean))] : [],
+    scaleX: entity.scaleX ?? 1,
+    scaleY: entity.scaleY ?? 1,
+    bodyType: entity.bodyType ?? inferredBody,
+    mass: entity.mass ?? 1,
+    friction: entity.friction ?? 0.8,
+    restitution: entity.restitution ?? 0,
+    collisionShape: entity.collisionShape ?? "rectangle",
+    collisionLayer: entity.collisionLayer ?? 1,
+    collisionMask: entity.collisionMask ?? 15,
+    isTrigger: entity.isTrigger ?? false,
+    variableTypes: inferVariableTypes(entity.variables, entity.variableTypes),
+  };
+}
+
+export function normalizeProject(p: Project): Project {
   if (!p.scenes?.length) return newProject();
-  if (!p.assets) p.assets = { sprites: [] };
-  if (!p.assets.sprites) p.assets.sprites = [];
-  p.settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
-  if (!p.settings.perfOptimized) p.settings = { ...p.settings, fpsCap: 60, perfOptimized: true };
-  if (!p.settings.fpsDefault60Applied) p.settings = { ...p.settings, fpsCap: 60, fpsDefault60Applied: true };
-  return p;
+  const settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
+  const normalizedSettings = {
+    ...settings,
+    ...(settings.perfOptimized ? {} : { fpsCap: 60 as const, perfOptimized: true }),
+    ...(settings.fpsDefault60Applied ? {} : { fpsCap: 60 as const, fpsDefault60Applied: true }),
+  };
+  return {
+    ...p,
+    assets: {
+      sprites: p.assets?.sprites ?? [],
+      sounds: (p.assets?.sounds ?? []).map(sound => ({ ...sound, volume: sound.volume ?? 1, loop: sound.loop ?? false })),
+    },
+    settings: normalizedSettings,
+    scenes: p.scenes.map(scene => ({
+      ...scene,
+      entities: (scene.entities ?? []).map(normalizeEntity),
+      variableTypes: inferVariableTypes(scene.variables, scene.variableTypes),
+      camera: scene.camera ?? { mode: "follow-player", deadZone: 0 },
+      ui: (scene.ui ?? []).map(element => element.kind === "bar" ? { ...element, initialValue: element.initialValue ?? element.max ?? 1 } : element),
+    })),
+  };
 }
 
 function migrateLegacyProject() {
@@ -94,7 +136,7 @@ function migrateLegacyProject() {
   try {
     const raw = localStorage.getItem(LEGACY_KEY);
     if (!raw) return;
-    const p = normalize(JSON.parse(raw));
+    const p = normalizeProject(JSON.parse(raw));
     const id = uid();
     localStorage.setItem(LEGACY_ITEM_PREFIX + id, JSON.stringify(p));
     writeLegacyIndex([{ id, name: p.name || "Untitled Game", updatedAt: Date.now() }]);
@@ -215,7 +257,7 @@ export function loadProjectById(id: string): Project | null {
   try {
     const raw = localStorage.getItem(itemKey(id));
     if (!raw) return null;
-    const p = normalize(JSON.parse(raw));
+    const p = normalizeProject(JSON.parse(raw));
     const migrationKey = key("fps60-migration:v2");
     if (!localStorage.getItem(migrationKey)) {
       p.settings = { ...p.settings, fpsCap: 60 };

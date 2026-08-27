@@ -88,7 +88,7 @@ export type BlockKind =
 
 export type ScriptTarget = "self" | "other" | "scene";
 export type VariableScope = "entity" | "scene";
-export type GenericProperty = "x" | "y" | "vx" | "vy" | "w" | "h" | "opacity" | "rotation" | "visible" | "solid" | "gravity" | "controllable" | "hazard" | "collectible" | "goal";
+export type GenericProperty = "x" | "y" | "vx" | "vy" | "w" | "h" | "scaleX" | "scaleY" | "opacity" | "rotation" | "mass" | "friction" | "restitution" | "collisionLayer" | "collisionMask" | "visible" | "solid" | "gravity" | "controllable" | "hazard" | "collectible" | "goal" | "isTrigger";
 export type VariableOperator = "eq" | "neq" | "gte" | "lte";
 
 export interface Block {
@@ -256,6 +256,11 @@ function variableBag(ctx: ExecCtx, scope: VariableScope = "entity") {
   return (ctx.self.variables ??= {});
 }
 
+function variableTypeBag(ctx: ExecCtx, scope: VariableScope = "entity") {
+  if (scope === "scene") return (ctx.scene.variableTypes ??= {});
+  return (ctx.self.variableTypes ??= {});
+}
+
 function targetFor(ctx: ExecCtx, target: ScriptTarget = "self"): Entity | Scene | null {
   if (target === "scene") return ctx.scene;
   if (target === "other") return ctx.other ?? null;
@@ -268,7 +273,9 @@ export function applyGenericProperty(target: Entity | Scene, property: GenericPr
   const previous = typeof record[property] === "number" ? record[property] as number : 0;
   const next = mode === "change" ? previous + value : value;
   if (property === "w" || property === "h") record[property] = Math.max(1, next);
+  else if (property === "scaleX" || property === "scaleY" || property === "mass") record[property] = Math.max(0.1, next);
   else if (property === "opacity") record[property] = Math.max(0, Math.min(1, next > 1 ? next / 100 : next));
+  else if (property === "friction" || property === "restitution") record[property] = Math.max(0, Math.min(1, next > 1 ? next / 100 : next));
   else record[property] = next;
 }
 
@@ -425,13 +432,16 @@ function execBlock(b: Block, ctx: ExecCtx) {
       break;
     }
     case "setVariable": {
-      variableBag(ctx, b.scope)[b.text?.trim() || "variable"] = b.value ?? 0;
+      const key = b.text?.trim() || "variable";
+      variableBag(ctx, b.scope)[key] = b.value ?? 0;
+      variableTypeBag(ctx, b.scope)[key] = "number";
       break;
     }
     case "changeVariable": {
       const bag = variableBag(ctx, b.scope);
       const key = b.text?.trim() || "variable";
       bag[key] = nextVariableValue(typeof bag[key] === "number" ? bag[key] : undefined, b.value ?? 1);
+      variableTypeBag(ctx, b.scope)[key] = "number";
       break;
     }
     case "setProperty":

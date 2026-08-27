@@ -33,6 +33,10 @@ export interface AudioAsset {
   mimeType: string;
   dataUrl: string;
   duration?: number;
+  /** Ganancia propia del recurso, multiplicada por el volumen global. */
+  volume?: number;
+  /** Permite que el clip se use en repetición desde los bloques de audio. */
+  loop?: boolean;
 }
 
 export interface Hitbox {
@@ -43,6 +47,9 @@ export interface Hitbox {
 }
 
 export type PowerupKind = "speed" | "djump" | "invuln";
+export type VariableType = "number" | "text" | "boolean";
+export type BodyType = "static" | "dynamic" | "kinematic";
+export type CollisionShape = "rectangle" | "circle";
 
 export interface MovingSpec { axis: "x" | "y"; range: number; speed: number; _origin?: number; _dir?: number }
 export interface CrumbleSpec { delay: number; respawn: number; _t?: number; _state?: "idle" | "break" | "gone"; _rt?: number }
@@ -79,6 +86,8 @@ export interface DialogSpec {
 export interface Entity {
   id: string;
   kind: EntityKind;
+  /** Nombre legible, independiente de la clase de objeto. */
+  name?: string;
   x: number;
   y: number;
   w: number;
@@ -100,8 +109,28 @@ export interface Entity {
   scripts?: Script[];
   /** Datos de autoría libres para que los scripts no dependan de casos por tipo. */
   variables?: Record<string, string | number | boolean>;
+  /** Esquema persistente de variables iniciales; saves previos infieren el tipo del valor. */
+  variableTypes?: Record<string, VariableType>;
   tags?: string[];
   hitbox?: Hitbox | null;
+  /** Escala relativa al tamaño guardado. El valor 1 conserva el comportamiento existente. */
+  scaleX?: number;
+  scaleY?: number;
+  /** Cuerpo estático, dinámico con gravedad o cinemático controlado por scripts/behaviors. */
+  bodyType?: BodyType;
+  /** Masa relativa usada al recibir impulsos. */
+  mass?: number;
+  /** Fricción normalizada 0..1 aplicada sobre una superficie. */
+  friction?: number;
+  /** Rebote normalizado 0..1 aplicado al impacto con sólidos. */
+  restitution?: number;
+  /** Forma de contacto; la resolución conserva AABB para estabilidad. */
+  collisionShape?: CollisionShape;
+  /** Bit de capa y máscara que filtran contactos físicos. */
+  collisionLayer?: number;
+  collisionMask?: number;
+  /** Detecta solapamiento sin aplicar empuje. */
+  isTrigger?: boolean;
   // advanced behaviors
   value?: number;
   moving?: MovingSpec | null;
@@ -169,6 +198,8 @@ export interface UIElement {
   eventName?: string;
   bind?: UIBind;
   max?: number;
+  /** Valor de la barra cuando no está ligada a un estado del runtime. */
+  initialValue?: number;
   visible?: boolean;
 }
 
@@ -191,6 +222,7 @@ export interface Scene {
   entities: Entity[];
   /** Estado compartido por escena, accesible desde los bloques visuales. */
   variables?: Record<string, string | number | boolean>;
+  variableTypes?: Record<string, VariableType>;
   timeLimit?: number;            // seconds; 0 = no limit
   parallax?: ParallaxLayer[];    // deprecated — ignored at runtime, kept for older saves
   layers?: SceneLayer[];         // Z-ordered scene layers
@@ -198,6 +230,8 @@ export interface Scene {
   ui?: UIElement[];
   /** Capa de tiles opcional; se renderiza debajo de entidades y convive con bgImageMode 9-slicing. */
   tilemap?: Tilemap;
+  /** Cámara por escena: seguimiento existente o posición fija. */
+  camera?: { mode?: "follow-player" | "fixed"; x?: number; y?: number; deadZone?: number };
 }
 
 export const DEFAULT_LAYER_ID = "default";
@@ -249,13 +283,28 @@ export interface ProjectSettings {
   music?: boolean;
   musicUrl?: string | null;       // dataURL or URL to custom audio file
   musicName?: string | null;      // display name of the uploaded track
+  musicLoop?: boolean;
   touchControls?: boolean;
   autoPause?: boolean;
   showHitboxes?: boolean;
   language?: "es" | "en" | "pt" | "fr" | "de";
   perfOptimized?: boolean;
   fpsDefault60Applied?: boolean;
+  inputMap?: Partial<Record<RuntimeAction, InputBinding>>;
 }
+
+export type RuntimeAction = "left" | "right" | "jump";
+export interface InputBinding {
+  keyboard?: string[];
+  gamepadButtons?: number[];
+  touch?: boolean;
+}
+
+export const DEFAULT_INPUT_MAP: Record<RuntimeAction, Required<InputBinding>> = {
+  left: { keyboard: ["ArrowLeft", "a", "A"], gamepadButtons: [14], touch: true },
+  right: { keyboard: ["ArrowRight", "d", "D"], gamepadButtons: [15], touch: true },
+  jump: { keyboard: ["ArrowUp", "w", "W", " "], gamepadButtons: [0], touch: true },
+};
 
 export interface Project {
   name: string;
@@ -275,18 +324,19 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   volume: 0.8,
   muted: false,
   music: false,
+  musicLoop: true,
   touchControls: true,
   autoPause: true,
   showHitboxes: false,
 };
 
 export const KIND_PRESETS: Record<EntityKind, Omit<Entity, "id" | "x" | "y">> = {
-  player: { kind: "player", w: 40, h: 56, vx: 0, vy: 0, color: "#38bdf8", solid: true, gravity: true, controllable: true, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
-  platform: { kind: "platform", w: 40, h: 40, vx: 0, vy: 0, color: "#1e3a8a", solid: true, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
-  enemy: { kind: "enemy", w: 40, h: 40, vx: 60, vy: 0, color: "#f43f5e", solid: false, gravity: true, controllable: false, collectible: false, hazard: true, goal: false, visible: true, opacity: 1, texture: null },
-  coin: { kind: "coin", w: 22, h: 22, vx: 0, vy: 0, color: "#fbbf24", solid: false, gravity: false, controllable: false, collectible: true, hazard: false, goal: false, visible: true, opacity: 1, texture: null },
-  goal: { kind: "goal", w: 36, h: 64, vx: 0, vy: 0, color: "#7dd3fc", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: true, visible: true, opacity: 1, texture: null },
-  decor: { kind: "decor", w: 64, h: 64, vx: 0, vy: 0, color: "#a78bfa", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, z: -1 },
+  player: { kind: "player", name: "Jugador", w: 40, h: 56, vx: 0, vy: 0, color: "#38bdf8", solid: true, gravity: true, controllable: true, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "dynamic", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
+  platform: { kind: "platform", name: "Plataforma", w: 40, h: 40, vx: 0, vy: 0, color: "#1e3a8a", solid: true, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
+  enemy: { kind: "enemy", name: "Enemigo", w: 40, h: 40, vx: 60, vy: 0, color: "#f43f5e", solid: false, gravity: true, controllable: false, collectible: false, hazard: true, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "dynamic", mass: 1, friction: 0.6, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
+  coin: { kind: "coin", name: "Moneda", w: 22, h: 22, vx: 0, vy: 0, color: "#fbbf24", solid: false, gravity: false, controllable: false, collectible: true, hazard: false, goal: false, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "circle", collisionLayer: 1, collisionMask: 15, isTrigger: true },
+  goal: { kind: "goal", name: "Meta", w: 36, h: 64, vx: 0, vy: 0, color: "#7dd3fc", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: true, visible: true, opacity: 1, texture: null, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: true },
+  decor: { kind: "decor", name: "Decoración", w: 64, h: 64, vx: 0, vy: 0, color: "#a78bfa", solid: false, gravity: false, controllable: false, collectible: false, hazard: false, goal: false, visible: true, opacity: 1, texture: null, z: -1, scaleX: 1, scaleY: 1, bodyType: "static", mass: 1, friction: 0.8, restitution: 0, collisionShape: "rectangle", collisionLayer: 1, collisionMask: 15, isTrigger: false },
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -327,13 +377,34 @@ export function newProject(): Project {
 // --- Physics: AABB ---
 export function aabb(e: Entity) {
   const hb = e.hitbox;
-  if (hb) return { x: e.x + hb.x, y: e.y + hb.y, w: hb.w, h: hb.h };
-  return { x: e.x, y: e.y, w: e.w, h: e.h };
+  const source = hb ? { x: e.x + hb.x, y: e.y + hb.y, w: hb.w, h: hb.h } : { x: e.x, y: e.y, w: e.w, h: e.h };
+  const sx = Math.max(0.1, e.scaleX ?? 1), sy = Math.max(0.1, e.scaleY ?? 1);
+  return { x: source.x + (source.w - source.w * sx) / 2, y: source.y + (source.h - source.h * sy) / 2, w: source.w * sx, h: source.h * sy };
 }
 
 export function intersects(a: Entity, b: Entity) {
   const A = aabb(a), B = aabb(b);
+  if (a.collisionShape === "circle" || b.collisionShape === "circle") {
+    const circle = a.collisionShape === "circle" ? A : B;
+    const rect = a.collisionShape === "circle" ? B : A;
+    const radius = Math.min(circle.w, circle.h) / 2;
+    const cx = circle.x + circle.w / 2, cy = circle.y + circle.h / 2;
+    const nearestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+    const nearestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+    return (cx - nearestX) ** 2 + (cy - nearestY) ** 2 < radius ** 2;
+  }
   return A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y;
+}
+
+export function collidesByLayer(a: Entity, b: Entity) {
+  const aLayer = a.collisionLayer ?? 1, bLayer = b.collisionLayer ?? 1;
+  const aMask = a.collisionMask ?? 15, bMask = b.collisionMask ?? 15;
+  return (aMask & bLayer) !== 0 && (bMask & aLayer) !== 0;
+}
+
+function resolvedBodyType(e: Entity): BodyType {
+  if (e.bodyType) return e.bodyType;
+  return e.gravity || e.controllable || e.kind === "enemy" ? "dynamic" : "static";
 }
 
 export interface RuntimeInput {
@@ -492,8 +563,8 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
     }
   }
 
-  const solids = scene.entities.filter((e) => e.solid);
-  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble);
+  const solids = scene.entities.filter((e) => e.solid && !e.isTrigger);
+  const interactables = scene.entities.filter((e) => e.collectible || e.hazard || e.goal || e.switchId || e.checkpoint || e.crumble || e.isTrigger);
 
   // Stabilize a player that starts exactly on a platform before input is applied.
   // This prevents the first joystick sample from combining with a tiny gravity overlap.
@@ -522,17 +593,17 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
       // Ground = snappy, air = floaty. Slippery overrides ground accel.
       const floorEnt = (e as Entity & { _floor?: Entity })._floor;
       const slippery = !!(floorEnt && floorEnt.slippery);
-      const groundAccel = slippery ? 6 : 22;
+      const groundAccel = slippery ? 6 : 8 + (floorEnt?.friction ?? 0.8) * 18;
       const airAccel = 10;
       const accel = wasGrounded ? groundAccel : airAccel;
       e.vx += (target - e.vx) * Math.min(1, accel * dt);
       // friction when no input and grounded
       if (wasGrounded && !input.left && !input.right && !slippery) {
-        e.vx *= Math.max(0, 1 - 18 * dt);
+        e.vx *= Math.max(0, 1 - (4 + (floorEnt?.friction ?? 0.8) * 18) * dt);
         if (Math.abs(e.vx) < 4) e.vx = 0;
       }
     }
-    if (e.gravity) {
+    if (e.gravity && resolvedBodyType(e) === "dynamic") {
       e.vy += scene.gravity * dt;
       if (e.vy > TERMINAL) e.vy = TERMINAL;
     }
@@ -573,7 +644,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
   const EPS = 0.001;
 
   for (const e of scene.entities) {
-    if (e.kind === "platform") continue;
+    if (resolvedBodyType(e) === "static") continue;
     e.x += e.vx * dt;
     e.y += e.vy * dt;
   }
@@ -582,7 +653,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
   // controllable (player). Pickups (coin/goal) and hazard enemies w/o gravity
   // are skipped so they remain in place for the interaction loop.
   const collidesWithSolids = (e: Entity) =>
-    e.kind !== "platform" && (e.gravity || e.controllable || e.kind === "enemy");
+    resolvedBodyType(e) !== "static" && (e.gravity || e.controllable || e.kind === "enemy" || resolvedBodyType(e) === "dynamic");
 
   for (let iter = 0; iter < 4; iter++) {
     let anyHit = false;
@@ -592,7 +663,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         if (o === e || !o.solid) continue;
         // Hazards never push the player physically — interaction loop handles damage.
         // (But enemy-vs-platform must still resolve so enemies don't fall through.)
-        if ((o.hazard && e.controllable) || (e.hazard && o.controllable)) continue;
+        if ((o.hazard && e.controllable) || (e.hazard && o.controllable) || !collidesByLayer(e, o)) continue;
         if (!intersects(e, o)) continue;
         anyHit = true;
         const A = aabb(e), B = aabb(o);
@@ -615,7 +686,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
             if (o.spring) {
               e.vy = -(o.spring.force || 720);
             } else {
-              if (e.vy > 0) e.vy = 0;
+              if (e.vy > 0) e.vy = e.restitution && e.restitution > 0 ? -e.vy * e.restitution : 0;
               grounded.add(e.id);
               groundedOn.set(e.id, o);
             }
@@ -627,11 +698,11 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
           if (pushLeft <= pushRight) {
             e.x -= pushLeft + EPS;
             if (e.kind === "enemy") e.vx = -Math.abs(e.vx || 60);
-            else if (e.vx > 0) e.vx = 0;
+            else if (e.vx > 0) e.vx = e.restitution && e.restitution > 0 ? -e.vx * e.restitution : 0;
           } else {
             e.x += pushRight + EPS;
             if (e.kind === "enemy") e.vx = Math.abs(e.vx || 60);
-            else if (e.vx < 0) e.vx = 0;
+            else if (e.vx < 0) e.vx = e.restitution && e.restitution > 0 ? -e.vx * e.restitution : 0;
           }
         }
       }
@@ -730,7 +801,7 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
         if (!o.dialog || o === e) continue;
         if (o.dialog.once && o._dialogPlayed) continue;
         if (o.dialog.trigger !== "touch" && o.dialog.trigger !== "interact") continue;
-        if (!intersects(e, o)) continue;
+        if (!intersects(e, o) || !collidesByLayer(e, o)) continue;
         if (o.dialog.trigger === "interact" && !jumpEdge) continue;
         startDialog(state, o);
         break;
@@ -764,8 +835,9 @@ export function stepScene(scene: Scene, input: RuntimeInput, state: RuntimeState
           // Knockback player away from hazard so they don't get stuck inside
           const A = aabb(e), B = aabb(o);
           const dirX = (A.x + A.w / 2) < (B.x + B.w / 2) ? -1 : 1;
-          e.vx = dirX * 260;
-          e.vy = -320;
+          const impulse = 1 / Math.max(0.1, e.mass ?? 1);
+          e.vx = dirX * 260 * impulse;
+          e.vy = -320 * impulse;
           if (state.lives > 1) { state.lives -= 1; state.invulnT = 1.2; if (state.checkpoint) { e.x = state.checkpoint.x; e.y = state.checkpoint.y; e.vx = 0; e.vy = 0; } }
           else state.dead = true;
         }
@@ -824,7 +896,7 @@ export function newUIElement(kind: UIElementKind): UIElement {
     case "panel":
       return { ...base, anchor: "tc", x: -120, y: 12, w: 240, h: 40, bg: "rgba(2,6,23,0.6)", border: "#7dd3fc", radius: 8 };
     case "bar":
-      return { ...base, anchor: "tl", x: 16, y: 52, w: 180, h: 14, bg: "rgba(2,6,23,0.6)", color: "#22c55e", border: "#7dd3fc", radius: 6, bind: "lives", max: 3 };
+      return { ...base, anchor: "tl", x: 16, y: 52, w: 180, h: 14, bg: "rgba(2,6,23,0.6)", color: "#22c55e", border: "#7dd3fc", radius: 6, bind: "lives", max: 3, initialValue: 3 };
     case "joystick":
       return { ...base, anchor: "bl", x: 24, y: -160, w: 140, h: 140, bg: "rgba(2,6,23,0.4)", border: "#7dd3fc", color: "#7dd3fc", radius: 999 };
   }
