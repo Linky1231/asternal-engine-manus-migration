@@ -815,7 +815,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => setTextInput(null)} className="text-[10px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
-                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--gradient-asternal)" }}>Add</button>
+                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--primary)" }}>Add</button>
               </div>
             </div>
           )}
@@ -915,7 +915,7 @@ export function PaintEditor({ onSave, onClose, size: initialSize = 512 }: Props)
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold tracking-wider text-foreground/80 inline-flex items-center gap-1.5"><Layers size={11} /> CAPAS · {layers.length}</span>
                 <div className="flex gap-1">
-                  <button onClick={addLayer} className="text-[9px] font-semibold px-2 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1" style={{ background: "var(--gradient-asternal)" }}><Plus size={11} strokeWidth={2.5} /> Nueva</button>
+                  <button onClick={addLayer} className="text-[9px] font-semibold px-2 py-1 rounded-lg text-primary-foreground active:scale-95 transition inline-flex items-center gap-1" style={{ background: "var(--primary)" }}><Plus size={11} strokeWidth={2.5} /> Nueva</button>
                   <button onClick={flatten} className="text-[9px] font-medium px-2 py-1 rounded-lg border border-border bg-muted text-foreground/80 active:scale-95 transition">Aplanar</button>
                 </div>
               </div>

@@ -804,7 +804,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
               </div>
               <div className="flex gap-1.5">
                 <button onClick={() => setTextInput(null)} className="text-[10px] font-medium px-2 py-1.5 rounded-lg border border-border bg-muted flex-1">Cancel</button>
-                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--gradient-asternal)" }}>Add</button>
+                <button onClick={commitText} className="text-[10px] font-semibold px-2 py-1.5 rounded-lg text-primary-foreground flex-1" style={{ background: "var(--primary)" }}>Add</button>
               </div>
             </div>
           )}
@@ -819,7 +819,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                   <Layers size={13} /> CAPAS · {layers.length}
                 </span>
                 <div className="flex gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "var(--gradient-asternal)" }}>
+                  <button onClick={(e) => { e.stopPropagation(); addLayer(); }} className="w-7 h-7 rounded-md flex items-center justify-center text-primary-foreground active:scale-95 transition" style={{ background: "var(--primary)" }}>
                     <Plus size={13} strokeWidth={2} />
                   </button>
                   <button onClick={() => setLayersOpen(false)} className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted/80 border border-border/40 transition">
@@ -871,7 +871,7 @@ export function GalleryCanvasPanel({ onSave, onClose }: Props) {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                   }`}
                   style={tool === t.id ? {
-                    background: "var(--gradient-asternal)",
+                    background: "var(--primary)",
                     boxShadow: "inset 0 1px 0 oklch(1 0 0 / 0.25), 0 2px 8px -2px oklch(0.66 0.18 252 / 0.5)",
                   } : undefined}
                 >{t.icon}</button>

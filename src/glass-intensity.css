@@ -14,15 +14,15 @@
   --plus-aurora-edge: #30ABAD;
 }
 
-/* Todos los controles azules usan el mismo degradado, sin cambiar de tono al interactuar. */
+/* Los controles azules usan una superficie sólida y suave, sin degradado. */
 :is(button, a)[class*="bg-primary"],
 .btn-grad,
-.grad-brand {
+:is(button, a).grad-brand {
   isolation: isolate;
   overflow: hidden;
   border: 1px solid oklch(1 0 0 / 0.42) !important;
   background-color: var(--primary) !important;
-  background-image: var(--asternal-control-gradient) !important;
+  background-image: none !important;
   background-blend-mode: normal;
   color: var(--primary-foreground, #fff) !important;
   box-shadow: 0 6px 14px -10px oklch(0.45 0.14 263 / 0.62) !important;
@@ -33,21 +33,21 @@
 
 :is(button, a)[class*="bg-primary"]::after,
 .btn-grad::after,
-.grad-brand::after {
+:is(button, a).grad-brand::after {
   content: none;
   display: none;
 }
 
 :is(button, a)[class*="bg-primary"]:hover,
 .btn-grad:hover,
-.grad-brand:hover {
+:is(button, a).grad-brand:hover {
   border-color: oklch(1 0 0 / 0.68) !important;
   box-shadow: 0 8px 18px -10px oklch(0.45 0.14 263 / 0.72) !important;
 }
 
 :is(button, a)[class*="bg-primary"]:active,
 .btn-grad:active,
-.grad-brand:active {
+:is(button, a).grad-brand:active {
   transform: translateY(1px) scale(0.975);
   box-shadow: inset 0 2px 5px oklch(0.24 0.06 260 / 0.22), 0 4px 10px -8px oklch(0.38 0.1 260 / 0.5) !important;
 }
@@ -135,7 +135,7 @@
   position: relative;
   overflow: hidden;
   background-color: var(--primary) !important;
-  background-image: var(--asternal-control-gradient) !important;
+  background-image: none !important;
   border-color: oklch(0.68 0.09 242 / 0.42) !important;
   box-shadow: 0 5px 12px -9px oklch(0.31 0.07 260 / 0.52) !important;
   backdrop-filter: none;
@@ -143,7 +143,7 @@
 
 :is(button, a)[class*="bg-primary/"]:hover {
   border-color: oklch(1 0 0 / 0.84) !important;
-  background-image: var(--asternal-control-gradient) !important;
+  background-image: none !important;
   box-shadow: 0 7px 15px -9px oklch(0.31 0.07 260 / 0.62) !important;
 }
 
@@ -237,9 +237,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 .plus-page .btn-grad,
-.plus-page .grad-brand {
+.plus-page :is(button, a).grad-brand {
   background-color: var(--plus-aurora-solid) !important;
-  background-image: var(--plus-aurora-gradient) !important;
+  background-image: none !important;
   border-color: rgb(233 255 255 / 0.58) !important;
   box-shadow:
     inset 0 1.5px 0 rgb(255 255 255 / 0.38),
@@ -248,8 +248,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 .plus-page .btn-grad:hover,
-.plus-page .grad-brand:hover {
-  background-image: var(--plus-aurora-gradient) !important;
+.plus-page :is(button, a).grad-brand:hover {
+  background-image: none !important;
   border-color: rgb(239 255 255 / 0.78) !important;
   box-shadow:
     inset 0 1.5px 0 rgb(255 255 255 / 0.5),
@@ -269,8 +269,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 .plus-page .plus-choice {
   border-color: oklch(0.58 0.08 258 / 0.54) !important;
-  background: linear-gradient(135deg, oklch(0.24 0.04 258 / 0.92), oklch(0.17 0.03 258 / 0.9)) !important;
+  background: var(--surface-2) !important;
+  background-image: none !important;
   box-shadow: inset 0 1px 0 oklch(0.98 0.02 252 / 0.12), 0 7px 15px -15px oklch(0.02 0.02 258 / 0.62);
+}
+
+.plus-page .plus-choice:hover {
+  background: color-mix(in oklab, var(--surface-2) 76%, var(--primary) 24%) !important;
 }
 
 .plus-page .plus-choice.border-primary,

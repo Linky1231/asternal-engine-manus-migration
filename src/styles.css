@@ -290,17 +290,18 @@
   color: transparent;
 }
 
-/* La CTA principal de la pantalla: ÚNICO uso dominante del degradado. */
+/* CTA y controles de marca: superficie sólida, suave y sin degradado. */
 @utility btn-grad {
-  background: var(--gradient-asternal);
+  background: var(--primary);
   color: var(--color-primary-foreground);
-  border: 1px solid oklch(0.98 0.02 252 / 0.22);
-  box-shadow: var(--glass-highlight), 0 10px 24px -13px oklch(0.47 0.14 263 / 0.65);
-  transition: transform 120ms var(--ease-out-expo);
+  border: 1px solid color-mix(in oklab, var(--primary-glow) 42%, transparent);
+  box-shadow: 0 8px 18px -14px color-mix(in oklab, var(--primary) 72%, transparent);
+  transition: background-color 140ms var(--ease-out-expo), border-color 140ms var(--ease-out-expo), box-shadow 140ms var(--ease-out-expo), transform 120ms var(--ease-out-expo);
 }
 .btn-grad:hover {
-  border-color: oklch(0.96 0.04 252 / 0.48);
-  box-shadow: var(--glass-highlight), var(--shadow-glow);
+  background: color-mix(in oklab, var(--primary) 88%, white 12%);
+  border-color: color-mix(in oklab, var(--primary-glow) 64%, transparent);
+  box-shadow: 0 10px 22px -16px color-mix(in oklab, var(--primary) 78%, transparent);
 }
 .btn-grad:active {
   transform: scale(0.97);
@@ -409,13 +410,14 @@
   background-size: 28px 28px;
 }
 
-/* ============ Refinamiento visual blanco (grano + tiles) ============ */
+/* ============ Refinamiento visual de superficies y tiles ============ */
 
-/* UN solo tipo de degradado en toda la app: el oficial de Asternal (135°
-   cobalto → azur) en sus tres intensidades + la firma en hairline. Cualquier
-   superficie de marca usa estas clases; no se mezclan ángulos ni familias. */
+/* Los controles interactivos usan grad-brand como superficie sólida. Las
+   variantes soft/deep quedan reservadas a paneles decorativos y halos; así la
+   jerarquía no compite con la zona de acción. */
 .grad-brand {
-  background-image: var(--gradient-asternal);
+  background-color: var(--primary);
+  background-image: none;
 }
 .grad-brand-soft {
   background-image: var(--gradient-asternal-soft);
@@ -1002,6 +1004,47 @@
 /* Alturas de 100% del viewport dinámico (evita el salto con la barra del navegador). */
 @utility h-dvh {
   height: 100dvh;
+}
+
+/* Compositor de Chats: en móvil la escritura mantiene prioridad visual y las
+   acciones auxiliares pasan a una fila táctil independiente. */
+@media (max-width: 640px) {
+  .chat-composer {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: end;
+    gap: 6px;
+  }
+
+  .chat-composer > .flex-1 {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chat-composer-text {
+    grid-column: 1 / 5;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+  }
+
+  .chat-composer-send {
+    grid-column: 5;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .chat-composer-tool {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chat-composer-mic {
+    grid-column: 5;
+  }
 }
 
 /* Punto de ruptura universal: pantallas muy pequeñas (<360px). */

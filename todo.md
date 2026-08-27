@@ -1578,3 +1578,11 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Mejorar pantallas y componentes prioritarios sin cambiar la lógica funcional
 - [x] Validar contraste, foco, responsive, tests, build y regresiones visuales
 - [x] Actualizar la regresión de Buscar para reflejar el nuevo espaciado visual de sus pestañas
+
+
+# Botones suaves, bombilla de Login y compositor móvil de Chats
+
+- [x] Sustituir degradados de botones por superficies suaves manteniendo estados, contraste y textura activa como fallback compatible
+- [x] Corregir el color y tratamiento visual de la bombilla en la pantalla de Login
+- [x] Reorganizar los botones del compositor de Chats en móvil para preservar una zona de escritura amplia y usable
+- [x] Validar accesibilidad, responsive, pruebas y build

@@ -14,6 +14,8 @@ const profile = readFileSync(resolve(root, "src/components/social/ProfilePanel.t
 const styles = readFileSync(resolve(root, "src/styles.css"), "utf8");
 const subPageHeader = readFileSync(resolve(root, "src/components/social/SubPageHeader.tsx"), "utf8");
 const button = readFileSync(resolve(root, "client/src/components/ui/button.tsx"), "utf8");
+const auth = readFileSync(resolve(root, "src/routes/auth.tsx"), "utf8");
+const chat = readFileSync(resolve(root, "src/components/social/ChatSection.tsx"), "utf8");
 
 describe("UI contrast and consistency", () => {
   it("uses one PlayButton in Home and the internal game card", () => {
@@ -52,5 +54,18 @@ describe("UI contrast and consistency", () => {
     expect(postCard).toContain("ui-panel");
     expect(postCard).not.toContain("bg-violet-500");
     expect(postCard).not.toContain("bg-rose-500");
+  });
+
+  it("keeps interactive controls solid and the mobile chat composer usable", () => {
+    expect(styles).toContain("background: var(--primary);");
+    expect(styles).toContain(".chat-composer {");
+    expect(glass).toContain("background-image: none !important;");
+    expect(glass).toContain(":is(button, a).grad-brand");
+    expect(auth).toContain('stopColor="#ffe8a1"');
+    expect(auth).toContain('stroke="#d29a3b"');
+    expect(chat).toContain('className="chat-composer relative flex flex-wrap');
+    expect(chat).toContain("chat-composer-text");
+    expect(chat).toContain("chat-composer-send");
+    expect(chat).not.toContain('background: "var(--gradient-asternal)"');
   });
 });

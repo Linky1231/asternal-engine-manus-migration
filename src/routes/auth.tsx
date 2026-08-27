@@ -96,22 +96,22 @@ function IdeaBulb() {
   return (
     <svg
       viewBox="0 0 160 190"
-      className="w-[168px] h-[200px] drop-shadow-[0_20px_24px_rgba(68,137,214,0.30)]"
+      className="w-[168px] h-[200px] drop-shadow-[0_20px_28px_rgba(244,190,74,0.32)]"
       aria-hidden
     >
       <defs>
         <linearGradient id="idea-bulb-glass" x1="48" y1="34" x2="112" y2="142" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#eff9ff" />
-          <stop offset="0.48" stopColor="#a9d9ff" />
-          <stop offset="1" stopColor="#3d83d3" />
+          <stop stopColor="#fffdf0" />
+          <stop offset="0.45" stopColor="#ffe8a1" />
+          <stop offset="1" stopColor="#f0b94f" />
         </linearGradient>
         <linearGradient id="idea-bulb-base" x1="58" y1="143" x2="102" y2="168" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#dff1ff" />
-          <stop offset="1" stopColor="#4f91d4" />
+          <stop stopColor="#fff0b8" />
+          <stop offset="1" stopColor="#d9983d" />
         </linearGradient>
       </defs>
-      <circle cx="80" cy="87" r="62" fill="#77bdf2" opacity="0.16" />
-      <g stroke="#68abe7" strokeWidth="5" strokeLinecap="round" opacity="0.9">
+      <circle cx="80" cy="87" r="62" fill="#ffd166" opacity="0.20" />
+      <g stroke="#f3c55f" strokeWidth="5" strokeLinecap="round" opacity="0.9">
         <path d="M80 14v12" />
         <path d="m38 31 9 9" />
         <path d="M22 77h13" />
@@ -121,13 +121,13 @@ function IdeaBulb() {
       <path
         d="M80 31c-29 0-51 23-51 52 0 20 11 37 29 47v12h44v-12c18-10 29-27 29-47 0-29-22-52-51-52Z"
         fill="url(#idea-bulb-glass)"
-        stroke="#4786c8"
+        stroke="#d29a3b"
         strokeWidth="3"
       />
-      <path d="M63 91c5 4 9 11 10 24M97 91c-5 4-9 11-10 24M73 115h14" fill="none" stroke="#477bb3" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M63 91c5 4 9 11 10 24M97 91c-5 4-9 11-10 24M73 115h14" fill="none" stroke="#a66d2c" strokeWidth="3.5" strokeLinecap="round" />
       <path d="M57 58c7-12 18-18 31-18" fill="none" stroke="#fff" strokeWidth="8" strokeLinecap="round" opacity="0.78" />
-      <rect x="57" y="141" width="46" height="12" rx="6" fill="url(#idea-bulb-base)" stroke="#4f87c0" strokeWidth="2" />
-      <path d="M65 158h30M68 166h24" stroke="#4f87c0" strokeWidth="5" strokeLinecap="round" />
+      <rect x="57" y="141" width="46" height="12" rx="6" fill="url(#idea-bulb-base)" stroke="#bd8130" strokeWidth="2" />
+      <path d="M65 158h30M68 166h24" stroke="#bd8130" strokeWidth="5" strokeLinecap="round" />
     </svg>
   );
 }

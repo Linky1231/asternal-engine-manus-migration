@@ -176,7 +176,7 @@ function PlusPage() {
             style={{
               borderColor: "var(--primary)",
               color: me?.show_plus_badge ? "var(--primary-foreground)" : "var(--primary)",
-              background: me?.show_plus_badge ? "var(--gradient-asternal)" : "var(--surface-2)",
+              background: me?.show_plus_badge ? "var(--primary)" : "var(--surface-2)",
             }}>
             {me?.show_plus_badge ? "✓ VISIBLE" : "OCULTA"}
           </button>

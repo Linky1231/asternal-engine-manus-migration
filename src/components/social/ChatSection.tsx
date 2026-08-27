@@ -2519,7 +2519,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
               <div
                 className="rounded-full grid place-items-center shrink-0 font-display font-semibold text-primary-foreground"
-                style={{ width: 36, height: 36, fontSize: 15, background: "var(--gradient-asternal)" }}
+                style={{ width: 36, height: 36, fontSize: 15, background: "var(--primary)" }}
               >
                 {view === "dms" ? <MessageCircle size={16} /> : view === "groups" ? <Users2 size={16} /> : <Users size={16} />}
               </div>
@@ -3064,7 +3064,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
 
       {/* ───── Barra de escritura ───── */}
       <div className="shrink-0 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-1.5">
-        <div className="relative flex items-end gap-2 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
+        <div className="chat-composer relative flex flex-wrap items-end gap-2 bg-card border border-border rounded-xl px-3 py-2 shadow-sm">
           {recording ? (
             /* ── Grabando: timer + cancelar + enviar ── */
             <div className="flex-1 flex items-center gap-2 py-1">
@@ -3095,7 +3095,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
             onClick={() => photoInputRef.current?.click()}
             disabled={mediaUploading}
             title="Enviar foto"
-            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "image" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+            className={`chat-composer-tool w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition-colors shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "image" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
           >
             <ImagePlus size={18} />
           </button>
@@ -3103,14 +3103,14 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
             onClick={() => videoInputRef.current?.click()}
             disabled={mediaUploading}
             title="Enviar vídeo"
-            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "video" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+            className={`chat-composer-tool w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition-colors shrink-0 disabled:opacity-40 ${pendingMedia?.kind === "video" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
           >
             <Film size={18} />
           </button>
           <button
             onClick={() => void sharePortfolioInCurrentChat()}
             title="Compartir Portafolio"
-            className="w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+            className="chat-composer-tool w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition-colors shrink-0 text-muted-foreground hover:bg-primary/10 hover:text-primary"
           >
             <Briefcase size={17} />
           </button>
@@ -3138,7 +3138,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
           />
           <button
             onClick={() => setStickersOpen((o) => !o)}
-            className={`w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition shrink-0 ${stickersOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
+            className={`chat-composer-tool w-9 h-9 rounded-xl grid place-items-center active:scale-95 transition-colors shrink-0 ${stickersOpen ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted/60"}`}
           >
             <SmilePlus size={18} />
           </button>
@@ -3196,7 +3196,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
             enterKeyHint="send"
             rows={1}
             placeholder="Escribe un mensaje… usa @ para mencionar"
-            className="flex-1 resize-none bg-transparent outline-none text-sm leading-snug py-1.5 max-h-[120px] placeholder:text-muted-foreground/60"
+            className="chat-composer-text flex-1 resize-none bg-transparent outline-none text-sm leading-snug py-1.5 max-h-[120px] placeholder:text-muted-foreground/60"
           />
           {/* Sugerencias de menciones @usuario */}
           <AnimatePresence>
@@ -3231,7 +3231,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
           <button
             onClick={() => void (pendingMedia ? sendPendingMedia() : handleSend())}
             disabled={!draft.trim() && !pendingMedia}
-            className="w-9 h-9 rounded-xl grad-brand text-primary-foreground grid place-items-center active:scale-95 transition shrink-0 disabled:opacity-40 disabled:active:scale-100"
+            className="chat-composer-send w-9 h-9 rounded-xl grad-brand text-primary-foreground grid place-items-center active:scale-95 transition-colors shrink-0 disabled:opacity-40 disabled:active:scale-100"
           >
             <Send size={15} />
           </button>
@@ -3239,7 +3239,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
             onClick={() => void startRecording()}
             disabled={sendingAudio}
             title="Grabar audio de voz"
-            className="w-9 h-9 rounded-xl border border-border/70 grid place-items-center text-muted-foreground hover:text-rose-500 hover:border-rose-400/40 active:scale-95 transition shrink-0 disabled:opacity-40"
+            className="chat-composer-mic chat-composer-tool w-9 h-9 rounded-xl border border-border/70 grid place-items-center text-muted-foreground hover:text-primary hover:border-primary/40 active:scale-95 transition-colors shrink-0 disabled:opacity-40"
           >
             <Mic size={16} />
           </button>
@@ -3372,7 +3372,7 @@ export default function ChatSection({ myId, onClose, initialText, initialView }:
                 <button
                   onClick={() => cgAvatarRef.current?.click()}
                   className="relative w-16 h-16 rounded-full overflow-hidden grid place-items-center shrink-0 font-display font-semibold text-primary-foreground active:scale-95 transition border-2 border-primary/30"
-                  style={{ background: "var(--gradient-asternal)" }}
+                  style={{ background: "var(--primary)" }}
                 >
                   {cgAvatarPreview ? (
                     <img src={cgAvatarPreview} alt="" className="w-full h-full object-cover" />
