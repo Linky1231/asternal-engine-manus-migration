@@ -13,23 +13,17 @@ import type { Project } from "./core";
 
 export type CloudProject = { id: string; name: string; data: unknown; updated_at: string | number | null };
 
-async function manusProjectRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "No se pudo sincronizar con Manus.");
-  return body as T;
-}
-
+// Cloud sync is disabled — projects are stored locally only.
 export async function cloudListProjects(): Promise<CloudProject[]> {
-  return manusProjectRequest<CloudProject[]>("/api/manus/projects");
+  return [];
 }
 
 export async function cloudSaveProject(input: { id?: string | null; name: string; data: unknown }): Promise<CloudProject> {
-  return manusProjectRequest<CloudProject>("/api/manus/projects", { method: "POST", body: JSON.stringify(input) });
+  return { id: input.id ?? crypto.randomUUID(), name: input.name, data: input.data, updated_at: Date.now() };
 }
 
-export async function cloudDeleteProject(id: string): Promise<void> {
-  await manusProjectRequest<{ success: true }>(`/api/manus/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+export async function cloudDeleteProject(_id: string): Promise<void> {
+  // No-op: local-only storage.
 }
 
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();

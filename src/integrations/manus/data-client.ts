@@ -40,48 +40,17 @@ const MANUS_COLLECTIONS = new Set([
 
 function isManusCollection(table: string): boolean { return MANUS_COLLECTIONS.has(table); }
 
-async function manusRecordRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : "No se pudo sincronizar con Manus.");
-  return body as T;
+async function persistManusRecord(_table: string, _row: Record<string, unknown>): Promise<void> {
+  // No-op: data is stored locally in localStorage only.
 }
 
-async function persistManusRecord(table: string, row: Record<string, unknown>): Promise<void> {
-  if (!isManusCollection(table) || !row.id) return;
-  await manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}`, {
-    method: "POST",
-    body: JSON.stringify({ id: row.id, data: row }),
-  });
+async function removeManusRecord(_table: string, _id: unknown): Promise<void> {
+  // No-op: data is stored locally in localStorage only.
 }
 
-async function removeManusRecord(table: string, id: unknown): Promise<void> {
-  if (!isManusCollection(table) || typeof id !== "string") return;
-  await manusRecordRequest(`/api/manus/records/${encodeURIComponent(table)}/${encodeURIComponent(id)}`, { method: "DELETE" });
-}
-
-/** Carga en local las colecciones asociadas a la sesión oficial de Manus. */
+/** No-op: data is local-only, no cloud hydration needed. */
 export async function hydrateManusCollections(): Promise<{ id: string; name?: string | null; email?: string | null } | null> {
-  if (typeof window === "undefined") return null;
-  const session = await manusRecordRequest<{ user: { id: string; name?: string | null; email?: string | null } }>("/api/manus/session");
-  const marker = localStorage.getItem("_ast_manus_open_id");
-  if (marker !== session.user.id) {
-    const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)).filter((key): key is string => Boolean(key?.startsWith("_local_data_") || key?.startsWith("_local_storage_")));
-    keys.forEach(key => localStorage.removeItem(key));
-    localStorage.setItem("_ast_manus_open_id", session.user.id);
-  }
-  Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
-    .filter((key): key is string => Boolean(key?.startsWith("_local_storage_")))
-    .forEach(key => localStorage.removeItem(key));
-  await Promise.all([...MANUS_COLLECTIONS].map(async collection => {
-    const rows = await manusRecordRequest<Record<string, unknown>[]>(`/api/manus/records/${encodeURIComponent(collection)}`);
-    saveTableData(collection, rows);
-  }));
-  return session.user;
+  return null;
 }
 
 function applyFilters(rows: Record<string, unknown>[], filters: QueryFilter[]): Record<string, unknown>[] {
@@ -158,13 +127,16 @@ function orFilter(rows: Record<string, unknown>[], filterString: string): Record
 type AuthCallback = (event: string, session: Record<string, unknown> | null) => void;
 type ManusUserPayload = { id?: string; openId?: string; email?: string | null; name?: string | null };
 
+const GOOGLE_SESSION_KEY = "_ast_google_session";
+
 async function getOfficialSession() {
   try {
-    const result = await manusRecordRequest<{ user?: ManusUserPayload }>("/api/manus/session");
-    const user = result.user;
-    const id = user?.openId ?? user?.id;
+    const stored = localStorage.getItem(GOOGLE_SESSION_KEY);
+    if (!stored) return null;
+    const user = JSON.parse(stored) as ManusUserPayload;
+    const id = user.openId ?? user.id;
     if (!id) return null;
-    return { user: { id, email: user?.email ?? null, user_metadata: { name: user?.name ?? null } } };
+    return { user: { id, email: user.email ?? null, user_metadata: { name: user.name ?? null } } };
   } catch {
     return null;
   }
@@ -176,12 +148,12 @@ const manusAuth = {
     const session = await getOfficialSession();
     return { data: { user: session?.user ?? null }, error: null };
   },
-  setSession: async (_input: unknown) => ({ data: { session: null }, error: new Error("La sesión se administra mediante Manus.") }),
-  signUp: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Manus.") }),
-  signInWithPassword: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Manus.") }),
-  signInWithOAuth: async () => ({ data: null, error: new Error("Usa el acceso oficial de Manus.") }),
+  setSession: async (_input: unknown) => ({ data: { session: null }, error: new Error("La sesión se administra mediante Google.") }),
+  signUp: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Google.") }),
+  signInWithPassword: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Google.") }),
+  signInWithOAuth: async () => ({ data: null, error: new Error("Usa el botón de Google.") }),
   signOut: async () => {
-    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
+    localStorage.removeItem(GOOGLE_SESSION_KEY);
     return { error: null };
   },
   resetPasswordForEmail: async (_email: string) => ({ data: null, error: new Error("Asternal no administra contraseñas.") }),
@@ -375,19 +347,19 @@ function makeStorageBucket(bucket: string) {
           reader.onerror = () => reject(new Error('File read failed'));
           reader.readAsDataURL(finalFile);
         });
-        const stored = await manusRecordRequest<{ key: string; url: string }>("/api/manus/assets", {
-          method: "POST",
-          body: JSON.stringify({ name: `${bucket}-${path.split('/').pop() || 'recurso'}`, data: dataUrl }),
-        });
-        return { data: { path: stored.url }, error: null };
+        const assetKey = `${bucket}/${path}`;
+        localStorage.setItem(`_local_storage_${assetKey}`, dataUrl);
+        return { data: { path: assetKey }, error: null };
       } catch (e) { return { data: null, error: e as Error }; }
     },
     createSignedUrl: async (path: string, _expiresIn?: number) => {
-      if (path.startsWith('/manus-storage/')) return { data: { signedUrl: path }, error: null };
+      const stored = localStorage.getItem(`_local_storage_${path}`);
+      if (stored) return { data: { signedUrl: stored }, error: null };
       return { data: null, error: new Error('File not found') };
     },
     getPublicUrl: (path: string) => {
-      return { data: { publicUrl: path.startsWith('/manus-storage/') ? path : '' } };
+      const stored = localStorage.getItem(`_local_storage_${path}`);
+      return { data: { publicUrl: stored ?? '' } };
     },
     list: async () => ({ data: [], error: null }),
     remove: async (_paths: string | string[]) => ({ data: null, error: null }),

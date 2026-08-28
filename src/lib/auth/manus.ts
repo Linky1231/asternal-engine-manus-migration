@@ -1,44 +1,135 @@
-import { encodeOAuthState, MULTIMODAL_LINK_COOKIE, OAUTH_STATE_COOKIE } from "../../../shared/const";
+/**
+ * Google OAuth authentication via Google Identity Services (GIS).
+ * Replaces the previous Manus OAuth system.
+ */
 
 export type ManusSessionUser = {
   openId?: string;
   id?: string;
   name?: string | null;
   email?: string | null;
+  picture?: string | null;
 };
 
-/** Recupera la identidad vigente desde la cookie segura de Manus. */
-export async function getManusSessionUser(): Promise<ManusSessionUser | null> {
-  const response = await fetch("/api/manus/session", { credentials: "include" });
-  if (!response.ok) return null;
-  const payload = await response.json().catch(() => null) as { user?: ManusSessionUser } | null;
-  return payload?.user ?? null;
+const STORAGE_KEY = "_ast_google_session";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare global {
+  interface Window {
+    google?: any;
+  }
 }
 
-/** Devuelve el identificador estable del usuario Manus si hay sesión activa. */
+let scriptPromise: Promise<void> | null = null;
+
+function loadGoogleScript(): Promise<void> {
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
+    if (document.getElementById("google-gsi-script")) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "google-gsi-script";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      scriptPromise = null;
+      reject(new Error("No se pudo cargar Google Identity Services."));
+    };
+    document.head.appendChild(script);
+  });
+  return scriptPromise;
+}
+
+function decodeJwt(token: string): Record<string, unknown> | null {
+  try {
+    const payload = token.split(".")[1];
+    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+type AuthCallback = (user: ManusSessionUser) => void;
+let activeCallback: AuthCallback | null = null;
+
+function handleCredentialResponse(response: { credential: string }) {
+  const payload = decodeJwt(response.credential);
+  if (!payload) return;
+  const user: ManusSessionUser = {
+    openId: payload.sub as string,
+    id: payload.sub as string,
+    name: (payload.name as string) ?? null,
+    email: (payload.email as string) ?? null,
+    picture: (payload.picture as string) ?? null,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  activeCallback?.(user);
+}
+
+/**
+ * Initializes Google Identity Services.
+ * @param onSuccess Called when a user successfully signs in.
+ */
+export async function initGoogleAuth(onSuccess?: AuthCallback): Promise<void> {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  if (!clientId) throw new Error("Falta VITE_GOOGLE_CLIENT_ID.");
+
+  activeCallback = onSuccess ?? null;
+  await loadGoogleScript();
+
+  window.google?.accounts?.id?.initialize({
+    client_id: clientId,
+    callback: handleCredentialResponse,
+  });
+}
+
+/**
+ * Renders the standard "Continue with Google" button inside the given element.
+ */
+export async function renderGoogleButton(
+  element: HTMLElement,
+  onSuccess: AuthCallback,
+): Promise<void> {
+  await initGoogleAuth(onSuccess);
+  window.google?.accounts?.id?.renderButton(element, {
+    theme: "outline",
+    size: "large",
+    text: "continue_with",
+    shape: "pill",
+    width: 360,
+  });
+}
+
+/** Reads the stored Google session from localStorage (no network call). */
+export async function getManusSessionUser(): Promise<ManusSessionUser | null> {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored) as ManusSessionUser;
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  return null;
+}
+
+/** Returns the stable user ID from the session, if any. */
 export function getManusUserId(user: ManusSessionUser | null): string | null {
   return user?.openId ?? user?.id ?? null;
 }
 
-/** Inicia el OAuth de Manus y marca el retorno como vinculación multimodal. */
+/** Triggers the Google One Tap prompt. */
 export function startMultimodalLogin(): void {
-  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL as string | undefined;
-  const appId = import.meta.env.VITE_APP_ID as string | undefined;
-  if (!oauthPortalUrl || !appId) throw new Error("Falta la configuración OAuth de Manus.");
+  window.google?.accounts?.id?.prompt();
+}
 
-  // El callback debe pertenecer al origen que realmente abrió el OAuth.
-  // No se adivina ni se sustituye por un dominio fijo: el portal valida esta
-  // URI y el backend recibe el mismo host que estableció las cookies.
-  const redirectUri = `${window.location.origin}/api/oauth/callback`;
-  const nonce = crypto.randomUUID();
-  document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
-  document.cookie = `${MULTIMODAL_LINK_COOKIE}=1; Path=/; Max-Age=600; SameSite=None; Secure`;
-
-  const state = encodeOAuthState({ redirectUri, nonce });
-  const url = new URL(`${oauthPortalUrl}/app-auth`);
-  url.searchParams.set("appId", appId);
-  url.searchParams.set("redirectUri", redirectUri);
-  url.searchParams.set("state", state);
-  url.searchParams.set("type", "signIn");
-  window.location.href = url.toString();
+/** Clears the stored Google session. */
+export async function signOut(): Promise<void> {
+  localStorage.removeItem(STORAGE_KEY);
+  window.google?.accounts?.id?.disableAutoSelect?.();
 }

@@ -1,17 +1,8 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import {
-  Gamepad2, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2,
-  Check, AlertCircle, Sparkles, RefreshCw,
-} from "lucide-react";
+import { Gamepad2, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { IDEA_HERO_COPY } from "@/lib/auth/idea-hero";
-import {
-  AUTH_FIELD_FOCUS_CLASS,
-  AUTH_FIELD_FOCUS_ICON_CLASS,
-  AUTH_FIELD_INPUT_FOCUS_CLASS,
-} from "@/lib/auth/field-focus";
-import { friendlyAuthError } from "@/lib/auth/friendly-error";
-import { startMultimodalLogin } from "@/lib/auth/manus";
+import { getManusSessionUser, renderGoogleButton, type ManusSessionUser } from "@/lib/auth/manus";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -45,22 +36,6 @@ function ConfettiBurst({ active }: { active: boolean }) {
         />
       ))}
     </div>
-  );
-}
-
-/* ─── Twinkling star ─── */
-function Star({ index }: { index: number }) {
-  const size = 1 + (index % 2);
-  const x = `${(index * 37 + 13) % 100}%`;
-  const y = `${(index * 23 + 5) % 100}%`;
-  return (
-    <div className="absolute rounded-full pointer-events-none"
-      style={{
-        width: size, height: size, left: x, top: y,
-        background: "oklch(0.72 0.14 235)",
-        animation: `twinkle ${3 + (index % 4)}s ease-in-out ${index * 0.35}s infinite`,
-      }}
-    />
   );
 }
 
@@ -137,133 +112,22 @@ function HeroScene() {
     <div className="relative w-full h-[230px] lg:h-[440px] select-none pointer-events-none">
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 origin-center scale-[0.6] lg:scale-100" style={{ willChange: "transform" }}>
         <div className="relative w-[460px] h-[460px]">
-
-          {/* Ambient glows */}
           <div className="absolute left-1/2 top-[59%] -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full"
             style={{ background: "oklch(0.55 0.15 262 / 0.10)" }} />
           <div className="absolute left-1/2 top-[59%] -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full"
             style={{ background: "oklch(0.72 0.14 235 / 0.08)" }} />
-
-
           <div className="absolute left-1/2 top-[46%] -translate-x-1/2">
             <div className="relative z-10 flex justify-center" style={{ animation: "bob 4s ease-in-out infinite", willChange: "transform" }}>
               <IdeaBulb />
             </div>
           </div>
-
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── useFieldState ─── */
-function useFieldState(initial = "") {
-  const [value, setValue] = useState(initial);
-  const [focused, setFocused] = useState(false);
-  const [touched, setTouched] = useState(false);
-  const hasValue = value.trim().length > 0;
-  const showLabel = focused || hasValue;
-  return { value, setValue, focused, setFocused, touched, setTouched, hasValue, showLabel };
-}
-
-/* ─── FloatInput ─── */
-function FloatInput({
-  label, icon: Icon, type, value, onChange, onFocus, onBlur,
-  focused, hasValue, placeholder, autoComplete, maxLength, minLength,
-  inputRef, children, error,
-}: {
-  label: string; icon: React.ElementType; type: string;
-  value: string; onChange: (v: string) => void;
-  onFocus?: () => void; onBlur?: () => void;
-  focused: boolean; hasValue: boolean;
-  placeholder?: string; autoComplete?: string;
-  maxLength?: number; minLength?: number;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
-  children?: React.ReactNode;
-  error?: string | null;
-}) {
-  const isEmail = type === "email";
-  const isValidEmail = isEmail && hasValue && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const isValidPassword = type === "password" && hasValue && value.length >= 6;
-  const showLabelLocal = focused || hasValue;
-
-  return (
-    <div className="space-y-1">
-      <div className="relative group/input">
-        <div className={`glass-control relative isolate flex items-center overflow-hidden rounded-xl ${
-          focused
-            ? AUTH_FIELD_FOCUS_CLASS
-            : error
-              ? 'border-destructive/40 ring-[3px] ring-destructive/[0.04]'
-              : ''
-        }`}>
-          <span className={`relative z-10 flex w-10 shrink-0 justify-center pointer-events-none transition-colors duration-200 ${focused ? AUTH_FIELD_FOCUS_ICON_CLASS : error ? 'text-destructive/50' : 'text-muted-foreground/30'}`}>
-            <Icon size={14} />
-          </span>
-          <div className="relative flex-1">
-            <input ref={inputRef as React.RefObject<HTMLInputElement>}
-              type={type} value={value} onChange={e => onChange(e.target.value)}
-              onFocus={onFocus} onBlur={onBlur}
-              placeholder={focused ? placeholder || "" : " "}
-              autoComplete={autoComplete} maxLength={maxLength} minLength={minLength} required
-              className={`w-full bg-transparent px-2.5 pt-4 pb-1.5 text-sm outline-none transition-all duration-200 placeholder:text-muted-foreground/20 ${AUTH_FIELD_INPUT_FOCUS_CLASS}`}
-            />
-            <label className={`absolute left-2.5 transition-all duration-200 pointer-events-none select-none origin-left ${
-              showLabelLocal
-                ? 'top-0.5 text-[10px] font-medium translate-y-0'
-                : 'top-1/2 -translate-y-1/2 text-sm text-muted-foreground/40'
-            } ${focused ? 'text-primary/70' : error ? 'text-destructive/60' : 'text-muted-foreground/50'}`}>
-              {label}
-            </label>
-          </div>
-          {hasValue && !focused && (
-            <span className="pr-3 shrink-0 text-emerald-500">
-              {(isEmail && isValidEmail) || (type === "password" && isValidPassword) || (type === "text" && hasValue)
-                ? <Check size={14} /> : null}
-            </span>
-          )}
-          {children}
-        </div>
-        {error && (
-          <p className="text-[11px] text-destructive/80 mt-1 flex items-center gap-1.5 px-1">
-            <AlertCircle size={11} className="shrink-0" /> {error}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ─── PasswordStrength ─── */
-function PasswordStrength({ password }: { password: string }) {
-  if (!password) return null;
-  const len = password.length;
-  const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-  const score = [len >= 6, len >= 10, hasUpper && hasLower, hasDigit, hasSpecial].filter(Boolean).length;
-  const strength = score <= 1 ? "weak" : score <= 3 ? "medium" : "strong";
-  const colors = {
-    weak: { bg: "bg-destructive/15", fill: "bg-destructive/70", text: "text-destructive/70" },
-    medium: { bg: "bg-amber-100", fill: "bg-amber-400", text: "text-amber-600" },
-    strong: { bg: "bg-emerald-100", fill: "bg-emerald-500", text: "text-emerald-600" },
-  };
-  const c = colors[strength];
-  return (
-    <div className="px-1 mt-1.5 space-y-1">
-      <div className="flex gap-1">
-        {[1, 2, 3].map(i => (
-          <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-500 ${i <= score ? c.fill : c.bg}`} />
-        ))}
-      </div>
-      <p className={`text-[10px] font-medium tracking-wide ${c.text} capitalize`}>{strength}</p>
-    </div>
-  );
-}
-
-/* ─── Logo (rediseñado) ─── */
+/* ─── Logo ─── */
 function Logo({ loaded }: { loaded: boolean }) {
   return (
     <div style={{ animation: loaded ? 'scale-in 700ms 0ms cubic-bezier(0.16,1,0.3,1) both' : 'none' }}>
@@ -288,56 +152,44 @@ function Logo({ loaded }: { loaded: boolean }) {
 function AuthPage() {
   const navigate = useNavigate();
   const { returnTo } = useSearch({ from: "/auth" });
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const email = useFieldState();
-  const password = useFieldState();
-  const username = useFieldState();
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
-  const [showPw, setShowPw] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [multimodalState, setMultimodalState] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [multimodalMessage, setMultimodalMessage] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const usernameRef = useRef<HTMLInputElement>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
+  // Check for existing Google session → redirect if already logged in.
   useEffect(() => {
-    fetch("/api/manus/session", { credentials: "include" })
-      .then(response => response.ok ? response.json() : null)
-      .then(payload => { if (payload?.user) navigate({ to: returnTo || "/" }); })
-      .catch(() => { /* La pantalla mantiene disponible el acceso oficial. */ });
+    getManusSessionUser().then(user => {
+      if (user) navigate({ to: returnTo || "/" });
+    });
     requestAnimationFrame(() => setLoaded(true));
   }, [navigate, returnTo]);
 
+  // Initialize and render the Google sign-in button.
   useEffect(() => {
-    if (window.location.search.includes("multimodal=1")) window.history.replaceState({}, "", "/auth");
-  }, []);
+    if (!googleBtnRef.current) return;
+    let cancelled = false;
 
-  const launchMultimodalLogin = () => {
-    setMultimodalState("loading");
-    setMultimodalMessage("Abriendo el acceso seguro de Manus…");
-    try { startMultimodalLogin(); }
-    catch (error) {
-      setMultimodalState("error");
-      setMultimodalMessage(error instanceof Error ? error.message : "No se pudo abrir Manus.");
-    }
-  };
+    renderGoogleButton(googleBtnRef.current, (_user: ManusSessionUser) => {
+      if (!cancelled) navigate({ to: returnTo || "/" });
+    }).then(() => {
+      if (!cancelled) setGoogleReady(true);
+    }).catch((err: unknown) => {
+      if (!cancelled) {
+        setGoogleError(err instanceof Error ? err.message : "No se pudo cargar Google Sign-In.");
+      }
+    });
 
+    return () => { cancelled = true; };
+  }, [navigate, returnTo]);
 
   return (
     <div className="min-h-dvh w-full flex flex-col bg-background overflow-y-auto relative">
-
-      <ConfettiBurst active={!!successMsg} />
+      <ConfettiBurst active={false} />
 
       {/* ─── Background layers ─── */}
       <div className="fixed inset-0 pointer-events-none select-none overflow-hidden" style={{ transform: "translateZ(0)" }}>
-        {/* Base glow */}
         <div className="absolute inset-0 grad-brand-soft" />
-        {/* Mesh blobs */}
-        {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="dot-grid-auth" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
@@ -350,39 +202,25 @@ function AuthPage() {
 
       {/* ═══════ CONTENT ═══════ */}
       <div className="relative z-10 flex-1 flex flex-col">
-
-        {/* Header: logo memorable */}
         <header className="w-full px-5 pt-4 sm:pt-6 flex justify-center">
           <Logo loaded={loaded} />
         </header>
 
-        {/* Main grid */}
         <div className="flex-1 w-full max-w-6xl mx-auto grid lg:grid-cols-[1.05fr_1fr] items-center gap-2 lg:gap-14 px-5 pb-10 pt-3">
-
           {/* ─── BRAND + HERO ─── */}
           <div className="order-1 flex flex-col items-center text-center">
-
-            {/* Hero visual — estrella de la página */}
             <div className="w-full" style={{
               animation: loaded ? 'scale-in 1100ms 100ms cubic-bezier(0.16,1,0.3,1) both' : 'none',
             }}>
               <HeroScene />
             </div>
-
-            {/* Personality line */}
-            <div style={{
-              animation: loaded ? 'fade-in-up 500ms 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
-            }}>
+            <div style={{ animation: loaded ? 'fade-in-up 500ms 300ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
               <div className="glass-control inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-display font-medium tracking-wide text-primary/80 -mt-1 lg:-mt-3">
                 <Sparkles size={12} className="text-accent" />
                 {IDEA_HERO_COPY.eyebrow}
               </div>
             </div>
-
-            {/* Headline corta y directa */}
-            <div style={{
-              animation: loaded ? 'fade-in-up 600ms 420ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
-            }}>
+            <div style={{ animation: loaded ? 'fade-in-up 600ms 420ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
               <h1 className="text-[clamp(1.8rem,3.6vw,2.9rem)] font-display font-bold tracking-tight leading-[1.08] text-foreground mt-4 mb-3 max-w-lg mx-auto">
                 {IDEA_HERO_COPY.titleLead}{" "}
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -390,16 +228,11 @@ function AuthPage() {
                 </span>
               </h1>
             </div>
-
-            {/* Descripción breve */}
-            <div style={{
-              animation: loaded ? 'fade-in-up 600ms 540ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
-            }}>
+            <div style={{ animation: loaded ? 'fade-in-up 600ms 540ms cubic-bezier(0.22,1,0.36,1) both' : 'none' }}>
               <p className="text-[15px] leading-relaxed text-muted-foreground/80 max-w-md mx-auto mb-8">
                 {IDEA_HERO_COPY.description}
               </p>
             </div>
-
           </div>
 
           {/* ─── AUTH CARD ─── */}
@@ -407,54 +240,62 @@ function AuthPage() {
             <div className="w-full max-w-[400px]" style={{
               animation: loaded ? 'fade-in-up 800ms 700ms cubic-bezier(0.22,1,0.36,1) both' : 'none',
             }}>
-                {/* Tarjeta premium: borde degradado + sombras en capas + radius 24px */}
-                <div className="glass-surface relative rounded-3xl">
-                  <div className="relative rounded-3xl p-7 overflow-hidden group/form-card">
+              <div className="glass-surface relative rounded-3xl">
+                <div className="relative rounded-3xl p-7 overflow-hidden group/form-card">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
+                  <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-primary/5 blur-2xl rounded-full pointer-events-none" />
 
-                    {/* Shine superior */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
-                    {/* Glow interno */}
-                    <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-primary/5 blur-2xl rounded-full pointer-events-none" />
-
-                    {/* Header */}
-                    <div className="text-center mb-6 relative">
-                      <div className="w-12 h-12 rounded-2xl grad-brand grid place-items-center mx-auto mb-3  relative">
-                        <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-125 animate-pulse" style={{ animationDuration: '3s' }} />
-                        <Gamepad2 size={22} className="text-white relative" />
-                      </div>
-                      <h2 className="text-lg font-display font-semibold tracking-tight text-foreground mb-0.5">
-                        {mode === "signin" ? "Bienvenido de nuevo" : "Crea tu cuenta"}
-                      </h2>
-                      <p className="text-sm text-muted-foreground/70">
-                        {mode === "signin" ? "Accede a tu estudio en la nube" : "Únete a la comunidad Asternal"}
-                      </p>
+                  {/* Header */}
+                  <div className="text-center mb-6 relative">
+                    <div className="w-12 h-12 rounded-2xl grad-brand grid place-items-center mx-auto mb-3 relative">
+                      <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-lg scale-125 animate-pulse" style={{ animationDuration: '3s' }} />
+                      <Gamepad2 size={22} className="text-white relative" />
                     </div>
+                    <h2 className="text-lg font-display font-semibold tracking-tight text-foreground mb-0.5">
+                      Bienvenido a Asternal
+                    </h2>
+                    <p className="text-sm text-muted-foreground/70">
+                      Accede con tu cuenta de Google
+                    </p>
+                  </div>
 
-                    <div className="space-y-3">
-                      <button type="button" aria-label="Continuar con Google" onClick={launchMultimodalLogin} disabled={multimodalState === "loading"} className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-slate-300/30 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70">
-                        {multimodalState === "loading" ? <Loader2 size={18} className="animate-spin text-slate-500" /> : (
-                          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.71-.06-1.4-.18-2.06H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.7 2.91-4.2 2.91-7.23Z" /><path fill="#34A853" d="M12 21.72c2.63 0 4.84-.87 6.45-2.37l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.72Z" /><path fill="#FBBC05" d="M6.54 13.79a5.85 5.85 0 0 1 0-3.58V7.68H3.3a9.73 9.73 0 0 0 0 8.64l3.24-2.53Z" /><path fill="#EA4335" d="M12 6.18c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.25 14.63 2.28 12 2.28a9.74 9.74 0 0 0-8.7 5.4l3.24 2.53C7.31 7.9 9.46 6.18 12 6.18Z" /></svg>
-                        )}
-                        {multimodalState === "loading" ? "Conectando…" : "Continuar con Google"}
-                      </button>
-                      <p className="px-3 text-center text-xs leading-relaxed text-muted-foreground/75">Tu acceso se administra de forma segura con Manus. No necesitas crear otra contraseña en Asternal.</p>
-                      {multimodalMessage && <p className={`text-center text-[10px] ${multimodalState === "error" ? "text-red-200" : "text-cyan-100"}`} role="status">{multimodalMessage}</p>}
-                    </div>
-
-                    <div className="mt-5 pt-4 border-t border-border/40">
-                      {returnTo && returnTo.startsWith("/profile/") && (
-                        <div className="mb-3 p-3 rounded-xl border border-primary/20 bg-primary/[0.04] text-center">
-                          <p className="text-[11px] text-primary font-medium">
-                            Inicia sesión o crea una cuenta para ver este perfil
-                          </p>
-                          <p className="text-[9px] text-muted-foreground mt-1 font-mono">
-                            Serás redirigido al perfil después de iniciar sesión
-                          </p>
+                  <div className="space-y-3">
+                    {/* Google Identity Services renders the button here */}
+                    <div ref={googleBtnRef} className="flex justify-center min-h-[44px]">
+                      {!googleReady && !googleError && (
+                        <div className="inline-flex h-11 items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 size={16} className="animate-spin" />
+                          Cargando…
                         </div>
                       )}
                     </div>
+
+                    {googleError && (
+                      <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                        <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                        <span>{googleError}</span>
+                      </div>
+                    )}
+
+                    <p className="px-3 text-center text-xs leading-relaxed text-muted-foreground/75">
+                      Tu acceso se administra de forma segura con Google. No necesitas crear otra contraseña en Asternal.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-border/40">
+                    {returnTo && returnTo.startsWith("/profile/") && (
+                      <div className="mb-3 p-3 rounded-xl border border-primary/20 bg-primary/[0.04] text-center">
+                        <p className="text-[11px] text-primary font-medium">
+                          Inicia sesión para ver este perfil
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-1 font-mono">
+                          Serás redirigido al perfil después de iniciar sesión
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
             </div>
           </div>
         </div>

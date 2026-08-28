@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Profile } from "@/lib/social/api";
-import { getManusSessionUser, startMultimodalLogin } from "@/lib/auth/manus";
+import { getManusSessionUser, signOut } from "@/lib/auth/manus";
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
@@ -15,14 +15,17 @@ export function useAuth() {
       const hasSession = !!sessionUser;
       setIsAuthenticated(hasSession);
       if (hasSession) {
-        import("@/lib/social/api").then(({ getMyProfile }) => {
-          getMyProfile().then(p => {
-            if (mounted) {
-              setUser(p as Profile | null);
-              setIsLoading(false);
-            }
-          }).catch(() => { if (mounted) setIsLoading(false); });
-        });
+        // Build a minimal profile from the Google session data.
+        const profile: Profile = {
+          id: sessionUser!.openId ?? sessionUser!.id ?? "",
+          username: (sessionUser!.name ?? sessionUser!.email ?? "user").toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 32),
+          display_name: sessionUser!.name ?? null,
+          avatar_url: sessionUser!.picture ?? null,
+          bio: null,
+          show_orbes: true,
+        };
+        setUser(profile);
+        setIsLoading(false);
       } else {
         setIsLoading(false);
       }
@@ -36,11 +39,12 @@ export function useAuth() {
   const signIn = async (_method?: string, _formData?: FormData) => {
     void _method;
     void _formData;
-    startMultimodalLogin();
+    // The auth page handles the Google sign-in flow.
+    window.location.href = "/auth";
   };
 
-  const signOut = async () => {
-    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
+  const signOutUser = async () => {
+    await signOut();
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -50,6 +54,6 @@ export function useAuth() {
     isAuthenticated,
     user,
     signIn,
-    signOut,
+    signOut: signOutUser,
   };
 }

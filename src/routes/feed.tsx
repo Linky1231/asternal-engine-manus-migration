@@ -65,7 +65,7 @@ function FeedPage() {
   }, [navigate, reload]);
 
   const logout = async () => {
-    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
+    localStorage.removeItem("_ast_google_session");
     navigate({ to: "/auth" });
   };
 
