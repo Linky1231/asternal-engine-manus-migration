@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { isMod as checkMod, getMyProfile, type Profile } from "@/lib/social/api";
+import { getManusSessionUser, getManusUserId } from "@/lib/auth/manus";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Mi perfil · Asternal" }] }),
@@ -21,9 +21,9 @@ function ProfilePage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth", search: { returnTo: "/profile" } }); return; }
-      setMyId(session.user.id);
+      const userId = getManusUserId(await getManusSessionUser().catch(() => null));
+      if (!userId) { navigate({ to: "/auth", search: { returnTo: "/profile" } }); return; }
+      setMyId(userId);
       setMe(await getMyProfile());
       setMod(await checkMod());
     })();

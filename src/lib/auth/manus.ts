@@ -1,5 +1,25 @@
 import { encodeOAuthState, MULTIMODAL_LINK_COOKIE, OAUTH_STATE_COOKIE } from "../../../shared/const";
 
+export type ManusSessionUser = {
+  openId?: string;
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+};
+
+/** Recupera la identidad vigente desde la cookie segura de Manus. */
+export async function getManusSessionUser(): Promise<ManusSessionUser | null> {
+  const response = await fetch("/api/manus/session", { credentials: "include" });
+  if (!response.ok) return null;
+  const payload = await response.json().catch(() => null) as { user?: ManusSessionUser } | null;
+  return payload?.user ?? null;
+}
+
+/** Devuelve el identificador estable del usuario Manus si hay sesión activa. */
+export function getManusUserId(user: ManusSessionUser | null): string | null {
+  return user?.openId ?? user?.id ?? null;
+}
+
 /** Inicia el OAuth de Manus y marca el retorno como vinculación multimodal. */
 export function startMultimodalLogin(): void {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL as string | undefined;

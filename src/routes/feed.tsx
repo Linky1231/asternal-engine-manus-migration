@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { fetchFeed, getMyProfile, isMod, type PostWithMeta, type Profile } from "@/lib/social/api";
+import { getManusSessionUser, getManusUserId } from "@/lib/auth/manus";
 import { PostComposer } from "@/components/social/PostComposer";
 import { orderFeedPosts } from "@/lib/social/feed-order";
 import { PostCard } from "@/components/social/PostCard";
@@ -54,9 +54,10 @@ function FeedPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
-      setMyId(session.user.id);
+      const user = await getManusSessionUser().catch(() => null);
+      const userId = getManusUserId(user);
+      if (!userId) { navigate({ to: "/auth" }); return; }
+      setMyId(userId);
       setMe(await getMyProfile());
       setMod(await isMod());
       await reload();
@@ -64,7 +65,7 @@ function FeedPage() {
   }, [navigate, reload]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
     navigate({ to: "/auth" });
   };
 

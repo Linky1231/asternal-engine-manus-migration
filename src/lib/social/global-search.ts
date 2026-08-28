@@ -17,7 +17,7 @@ import {
   listAllThreadMessages,
   type WorkFile,
 } from "./work";
-import { supabase } from "@/integrations/supabase/client";
+import { manusData as supabase } from "@/integrations/manus/data-client";
 
 export type SearchScope = "all" | "community" | "work";
 

@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { manusData as supabase } from "@/integrations/manus/data-client";
 import type { Entity, Project, VariableType } from "./core";
 import { DEFAULT_SETTINGS, newProject, uid } from "./core";
 

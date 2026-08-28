@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { SubPageHeader } from "@/components/social/SubPageHeader";
 import { ProfilePanel } from "@/components/social/ProfilePanel";
 import { isMod as checkMod } from "@/lib/social/api";
+import { getManusSessionUser, getManusUserId } from "@/lib/auth/manus";
 
 export const Route = createFileRoute("/profile/$userId")({
   head: () => ({ meta: [{ title: "Perfil · Asternal" }] }),
@@ -18,9 +18,9 @@ function ProfileByIdPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth", search: { returnTo: `/profile/${userId}` } }); return; }
-      setMyId(session.user.id);
+      const myId = getManusUserId(await getManusSessionUser().catch(() => null));
+      if (!myId) { navigate({ to: "/auth", search: { returnTo: `/profile/${userId}` } }); return; }
+      setMyId(myId);
       setMod(await checkMod());
     })();
   }, [navigate]);

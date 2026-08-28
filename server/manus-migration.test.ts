@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const root = resolve(import.meta.dirname, "..");
 const read = (relative: string) => readFileSync(resolve(root, relative), "utf8");
 
-describe("migración de Supabase a Manus", () => {
+describe("migración de servicios externos a Manus", () => {
   it("declara un registro propietario para los datos limpios de Asternal", () => {
     const schema = read("drizzle/schema.ts");
     expect(schema).toContain('mysqlTable("asternal_records"');
@@ -23,7 +23,7 @@ describe("migración de Supabase a Manus", () => {
   });
 
   it("desconecta las credenciales externas y sincroniza proyectos por Manus", () => {
-    const client = read("src/integrations/supabase/client.ts");
+    const client = read("src/integrations/manus/data-client.ts");
     const projectSync = read("src/lib/engine/cloud-sync.ts");
     expect(client).not.toContain("createClient<Database>");
     expect(client).not.toContain("supabase.co");
@@ -62,5 +62,44 @@ describe("migración de Supabase a Manus", () => {
     expect(chatClient).not.toMatch(/SUPABASE|supabase/i);
     expect(server).toContain('app.post("/api/manus/chats/:chatId/messages"');
     expect(server).toContain('app.post("/api/manus/chat-polls/:pollId/vote"');
+  });
+
+  it("procesa compras y donaciones de Orbes únicamente en el servidor de Manus", () => {
+    const marketplace = read("server/manus-marketplace.ts");
+    const socialApi = read("src/lib/social/api.ts");
+    const server = read("server/_core/index.ts");
+
+    expect(marketplace).toContain("db.transaction");
+    expect(marketplace).toContain("adjustBalance");
+    expect(server).toContain('app.post("/api/manus/marketplace/purchase"');
+    expect(server).toContain('app.post("/api/manus/marketplace/donations"');
+    expect(server).toContain('app.post("/api/manus/marketplace/plus-claim"');
+    expect(socialApi).toContain('"/api/manus/marketplace/purchase"');
+    expect(socialApi).toContain('"/api/manus/marketplace/donations"');
+    expect(socialApi).toContain('"/api/manus/marketplace/plus-claim"');
+    expect(socialApi).not.toContain('rpc("purchase_game"');
+  });
+
+  it("expone operaciones protegidas de eventos, notificaciones, foro y reventa sin RPC heredadas", () => {
+    const server = read("server/_core/index.ts");
+    const socialApi = read("src/lib/social/api.ts");
+    const forumClient = read("src/lib/social/forum-storage.ts");
+    const forumService = read("server/manus-forum.ts");
+    const communitySettings = read("src/lib/community/settings.ts");
+
+    expect(server).toContain('app.get("/api/manus/events"');
+    expect(server).toContain('app.post("/api/manus/notifications"');
+    expect(server).toContain('app.post("/api/manus/forum/threads/:threadId/vote"');
+    expect(server).toContain('app.post("/api/manus/marketplace/artwork-resale"');
+    expect(socialApi).toContain('"/api/manus/events"');
+    expect(socialApi).toContain('"/api/manus/notifications"');
+    expect(socialApi).toContain('"/api/manus/marketplace/artwork-resale"');
+    expect(forumClient).toContain('`/api/manus/forum/threads/${encodeURIComponent(threadId)}/vote`');
+    expect(forumClient).not.toContain(".rpc(");
+    expect(forumService).toContain("voteForumThreadForUser");
+    expect(forumService).toContain("touchForumThreadForUser");
+    expect(server).toContain('app.put("/api/manus/community/settings"');
+    expect(communitySettings).toContain('"/api/manus/community/settings"');
+    expect(communitySettings).not.toContain(".from(\"posts\")");
   });
 });

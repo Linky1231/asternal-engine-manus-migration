@@ -36,6 +36,7 @@ const COLLECTION_CONFIG = {
   event_submissions: { visibility: "public", ownerFields: ["user_id"] },
   event_participants: { visibility: "public", ownerFields: ["user_id"] },
   trust_points_history: { visibility: "private", ownerFields: ["user_id"] },
+  community_settings: { visibility: "public", ownerFields: ["created_by"] },
 } as const satisfies Record<string, CollectionConfig>;
 
 export type ManusCollection = keyof typeof COLLECTION_CONFIG;

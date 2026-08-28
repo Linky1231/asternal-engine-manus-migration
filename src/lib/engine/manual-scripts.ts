@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import type { Entity } from "./core";
 
 export type SourceFileSummary = { path: string; category: string; editable: boolean; sha256: string; size: number };
@@ -21,11 +20,10 @@ export type SourceProposal = {
 };
 
 async function request<T>(pathname: string, init: RequestInit): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error("Inicia sesión para usar Scripts manuales.");
   const response = await fetch(pathname, {
     ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, ...(init.headers ?? {}) },
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
   });
   const payload = await response.json().catch(() => ({})) as T | { error?: string };
   const errorMessage = (payload as { error?: unknown }).error;

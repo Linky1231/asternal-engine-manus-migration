@@ -13,6 +13,10 @@ import { createManusRecord, deleteOwnManusRecord, getOwnManusRecord, listOwnManu
 import { getManusCollection, isPublicManusCollection, normalizeManusRecordPayload } from "../manus-collections";
 import { storagePut } from "../storage";
 import { addGroupMemberForUser, claimOrbGiftForUser, closeChatPollForUser, createAnnouncementForUser, createChatPollForUser, createGroupChatForUser, createOrbGiftForUser, deleteGroupChatForUser, expireOrbGiftsForUser, getChatPollForUser, getChatReadAtForUser, getCommunityChatForUser, getOrCreateDmForUser, getOrbGiftForUser, leaveGroupChatForUser, listChatMessagesForUser, listDmChatsForUser, listGroupChatsForUser, listGroupMembersForUser, listMutualFollowProfilesForUser, markChatReadForUser, removeGroupMemberForUser, sendChatMessageForUser, setGroupRoleForUser, updateGroupChatForUser, voteChatPollForUser } from "../manus-chat";
+import { claimPlusOrbesForUser, donateOrbsForUser, purchasePostForUser, resellArtworkForUser } from "../manus-marketplace";
+import { isAdminForUser, listManagedUsersForAdmin, setModeratorForAdmin, setVerifiedForAdmin } from "../manus-admin";
+import { createEventForUser, deleteEventForUser, joinEventForUser, leaveEventForUser, listEventParticipantsForUser, listEventsForUser, submitToEventForUser, updateEventStatusForUser } from "../manus-events";
+import { incrementForumThreadView, touchForumThreadForUser, voteForumPostForUser, voteForumThreadForUser } from "../manus-forum";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -71,6 +75,38 @@ app.post("/api/manus/assets", async (req, res) => {
   }
 });
 
+app.post("/api/manus/notifications", async (req, res) => {
+  try {
+    const actor = await sdk.authenticateRequest(req);
+    const targetOpenId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
+    const type = typeof req.body?.type === "string" ? req.body.type : "";
+    const allowedTypes = new Set(["comment", "reply", "reaction", "repost", "mention", "follow", "like", "favorite", "game"]);
+    if (!targetOpenId || targetOpenId.length > 128 || !allowedTypes.has(type) || targetOpenId === actor.openId) {
+      return res.status(204).end();
+    }
+    const profiles = await listPublicManusRecords("profiles");
+    if (!profiles.some(profile => profile.ownerOpenId === targetOpenId)) return res.status(204).end();
+    const maybeId = (value: unknown) => typeof value === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(value) ? value : null;
+    await createManusRecord({
+      id: crypto.randomUUID(),
+      collection: "notifications",
+      ownerOpenId: targetOpenId,
+      visibility: "private",
+      data: {
+        user_id: targetOpenId,
+        actor_id: actor.openId,
+        type,
+        post_id: maybeId(req.body?.postId),
+        comment_id: maybeId(req.body?.commentId),
+        read: false,
+      },
+    });
+    res.status(201).json({ ok: true });
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo crear la notificación." });
+  }
+});
+
 app.post("/api/manus/game-plays", async (req, res) => {
   try {
     const user = await sdk.authenticateRequest(req);
@@ -104,6 +140,215 @@ app.get("/api/manus/game-plays", async (req, res) => {
     res.json({ counts, cloud: true });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "No se pudo calcular el ranking." });
+  }
+});
+
+app.post("/api/manus/marketplace/purchase", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    const kind = req.body?.kind === "game" || req.body?.kind === "artwork" ? req.body.kind : null;
+    if (!kind) return res.status(400).json({ error: "El tipo de compra no es válido." });
+    res.json(await purchasePostForUser(user.openId, { postId: req.body?.postId, kind }));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo completar la compra." });
+  }
+});
+
+app.post("/api/manus/marketplace/donations", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await donateOrbsForUser(user.openId, { postId: req.body?.postId, amount: req.body?.amount }));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo completar la donación." });
+  }
+});
+
+app.post("/api/manus/marketplace/plus-claim", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await claimPlusOrbesForUser(user.openId));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo reclamar la recompensa Plus." });
+  }
+});
+
+app.post("/api/manus/marketplace/artwork-resale", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await resellArtworkForUser(user.openId, { postId: req.body?.postId, price: req.body?.price }));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo actualizar la reventa de la obra." });
+  }
+});
+
+app.get("/api/manus/community/settings", async (_req, res) => {
+  try {
+    const settings = await listPublicManusRecords("community_settings");
+    const record = settings.find(item => item.id === "community_about_settings");
+    res.json(record ? normalizeRecordPayload(record.id, record.data) : null);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "No se pudieron leer los ajustes comunitarios." });
+  }
+});
+
+app.put("/api/manus/community/settings", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!(await isAdminForUser(user.openId))) return res.status(403).json({ error: "Solo la administración puede actualizar estos ajustes." });
+    const content = typeof req.body?.content === "string" ? req.body.content : "";
+    if (!content || content.length > 100_000) return res.status(400).json({ error: "El contenido de ajustes no es válido." });
+    const id = "community_about_settings";
+    const data = { content, category: "system", post_type: "about_settings", created_by: user.openId };
+    const record = await updateOwnManusRecord({ id, ownerOpenId: user.openId, data, visibility: "public" })
+      ?? await createManusRecord({ id, collection: "community_settings", ownerOpenId: user.openId, visibility: "public", data });
+    res.json(normalizeRecordPayload(record.id, record.data));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudieron guardar los ajustes comunitarios." });
+  }
+});
+
+app.post("/api/manus/forum/threads/:threadId/vote", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await voteForumThreadForUser(user.openId, req.params.threadId, req.body?.vote));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo registrar el voto del hilo." });
+  }
+});
+
+app.post("/api/manus/forum/posts/:postId/vote", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await voteForumPostForUser(user.openId, req.params.postId, req.body?.vote));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo registrar el voto de la respuesta." });
+  }
+});
+
+app.post("/api/manus/forum/threads/:threadId/views", async (req, res) => {
+  try {
+    await sdk.authenticateRequest(req);
+    res.json(await incrementForumThreadView(req.params.threadId));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo registrar la visita." });
+  }
+});
+
+app.post("/api/manus/forum/threads/:threadId/touch", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await touchForumThreadForUser(user.openId, req.params.threadId, req.body?.change));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo actualizar la actividad del hilo." });
+  }
+});
+
+app.get("/api/manus/admin/status", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json({ is_admin: await isAdminForUser(user.openId) });
+  } catch (error) {
+    res.status(401).json({ error: error instanceof Error ? error.message : "No se pudo verificar la sesión." });
+  }
+});
+
+app.get("/api/manus/admin/users", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await listManagedUsersForAdmin(user.openId, req.query.search));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudo consultar la administración." });
+  }
+});
+
+app.put("/api/manus/admin/users/:userId/moderator", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await setModeratorForAdmin(user.openId, req.params.userId, req.body?.enabled));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudo actualizar la moderación." });
+  }
+});
+
+app.put("/api/manus/admin/users/:userId/verified", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await setVerifiedForAdmin(user.openId, req.params.userId, req.body?.enabled));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudo actualizar la verificación." });
+  }
+});
+
+app.get("/api/manus/events", async (req, res) => {
+  try {
+    let openId: string | null = null;
+    try { openId = (await sdk.authenticateRequest(req)).openId; } catch { /* La agenda es pública. */ }
+    res.json(await listEventsForUser(openId));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "No se pudieron consultar los eventos." });
+  }
+});
+
+app.post("/api/manus/events", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.status(201).json(await createEventForUser(user.openId, req.body ?? {}));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo crear el evento." });
+  }
+});
+
+app.patch("/api/manus/events/:eventId/status", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await updateEventStatusForUser(user.openId, req.params.eventId, req.body?.status));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudo actualizar el evento." });
+  }
+});
+
+app.delete("/api/manus/events/:eventId", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await deleteEventForUser(user.openId, req.params.eventId));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudo eliminar el evento." });
+  }
+});
+
+app.post("/api/manus/events/:eventId/submissions", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.status(201).json(await submitToEventForUser(user.openId, req.params.eventId, req.body?.postId));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo enviar el juego." });
+  }
+});
+
+app.post("/api/manus/events/:eventId/participants", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await joinEventForUser(user.openId, req.params.eventId));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo registrar la participación." });
+  }
+});
+
+app.delete("/api/manus/events/:eventId/participants/me", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await leaveEventForUser(user.openId, req.params.eventId));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "No se pudo cancelar la participación." });
+  }
+});
+
+app.get("/api/manus/events/:eventId/participants", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    res.json(await listEventParticipantsForUser(user.openId, req.params.eventId));
+  } catch (error) {
+    res.status(403).json({ error: error instanceof Error ? error.message : "No se pudieron consultar los participantes." });
   }
 });
 

@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Avatar } from "@/components/social/Avatar";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   isMod, isAdmin, listManagedUsers, setUserModerator, type ManagedUser,
   listBannedEmails, banEmail, unbanEmail, type BannedEmail,
   getTrustPoints, deductTrustPoints, restoreTrustPoints, DEFAULT_TRUST_POINTS,
 } from "@/lib/social/api";
+import { getManusSessionUser } from "@/lib/auth/manus";
 import {
   getForumThreads, getForumCategories, deleteForumThread,
   createForumCategory, deleteForumCategory,
@@ -90,8 +90,7 @@ function AdminPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      if (!await getManusSessionUser().catch(() => null)) { navigate({ to: "/auth" }); return; }
       const isA = await isAdmin();
       const isM = await isMod();
       setAdmin(isA);

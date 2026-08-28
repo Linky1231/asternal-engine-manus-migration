@@ -3,7 +3,7 @@ import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
-import { hydrateManusCollections, supabase } from "@/integrations/supabase/client";
+import { hydrateManusCollections, manusData as supabase } from "@/integrations/manus/data-client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { orderFeedPosts } from "@/lib/social/feed-order";

@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 
 import { SubPageHeader } from "@/components/social/SubPageHeader";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getMyProfile, claimPlusOrbes, updatePlusSettings,
   isPlusActive,
   type Profile, type SocialLinks,
 } from "@/lib/social/api";
+import { getManusSessionUser } from "@/lib/auth/manus";
 
 
 export const Route = createFileRoute("/plus")({
@@ -72,8 +72,7 @@ function PlusPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      if (!await getManusSessionUser().catch(() => null)) { navigate({ to: "/auth" }); return; }
       const p = await getMyProfile();
       setMe(p);
       setSocials((p?.social_links as SocialLinks) ?? {});

@@ -1,6 +1,25 @@
 // @ts-nocheck — Local DB adapter (types differ from Supabase generics)
-import { supabase, isSchemaMissing } from "@/integrations/supabase/client";
+import { manusData as supabase, isCollectionUnavailable as isSchemaMissing } from "@/integrations/manus/data-client";
 import { DEFAULT_COVER_FRAME, type CoverFrame, withCoverFrame } from "./cover-frame";
+
+async function marketplaceRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({})) as T & { error?: unknown };
+  if (!response.ok) throw new Error(typeof payload.error === "string" ? payload.error : "No se pudo completar la operación de Orbes.");
+  return payload;
+}
+
+async function manusJsonRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, { credentials: "include", ...init });
+  const payload = await response.json().catch(() => ({})) as T & { error?: unknown };
+  if (!response.ok) throw new Error(typeof payload.error === "string" ? payload.error : "No se pudo completar la operación en Manus.");
+  return payload;
+}
 
 export type SocialLinks = {
   youtube?: string;
@@ -595,7 +614,7 @@ export async function blockUser(blockedId: string) {
 
 export type NotifType = "comment" | "reply" | "reaction" | "repost" | "mention" | "follow" | "like" | "favorite" | "game";
 
-/** Crea una notificación para otro usuario (best-effort). `push_notification` (SQL, security definer) aplica las reglas de «solo lo importante». */
+/** Crea una notificación para otro usuario mediante el servicio protegido de Manus. */
 export async function pushNotification(opts: {
   userId: string;
   type: NotifType;
@@ -604,15 +623,16 @@ export async function pushNotification(opts: {
   actorId?: string;
 }): Promise<void> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.rpc("push_notification", {
-      _user_id: opts.userId,
-      _actor_id: opts.actorId ?? user.id,
-      _type: opts.type,
-      _post_id: opts.postId ?? null,
-      _comment_id: opts.commentId ?? null,
-    } as never);
+    await manusJsonRequest("/api/manus/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: opts.userId,
+        type: opts.type,
+        postId: opts.postId ?? null,
+        commentId: opts.commentId ?? null,
+      }),
+    });
   } catch {
     /* best effort */
   }
@@ -812,9 +832,7 @@ export async function updateGame(postId: string, input: {
 }
 
 export async function purchaseGame(postId: string): Promise<{ ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }> {
-  const { data, error } = await supabase.rpc("purchase_game" as never, { _post_id: postId } as never);
-  if (error) throw error;
-  return (data as { ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }) ?? { ok: false };
+  return marketplaceRequest("/api/manus/marketplace/purchase", { postId, kind: "game" });
 }
 
 export async function getMyOrbes(): Promise<number> {
@@ -880,68 +898,11 @@ export async function donateOrbs(
   amount: number,
 ): Promise<{ ok: boolean; balance?: number; error?: string }> {
   if (amount <= 0 || !Number.isFinite(amount)) return { ok: false, error: "Cantidad inválida" };
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
-
-  // 1. Get the post author
-  const { data: post, error: postErr } = await supabase
-    .from("posts")
-    .select("author_id")
-    .eq("id", postId)
-    .single();
-  if (postErr || !post) return { ok: false, error: "Juego no encontrado" };
-
-  const authorId = (post as { author_id: string }).author_id;
-  if (authorId === user.id) return { ok: false, error: "No puedes donar orbes a tu propio juego" };
-
-  // 2. Check donor balance
-  const { data: donorProfile } = await supabase
-    .from("profiles")
-    .select("orbes")
-    .eq("id", user.id)
-    .maybeSingle();
-  const donorBalance = (donorProfile as { orbes?: number } | null)?.orbes ?? 0;
-  if (donorBalance < amount) return { ok: false, error: "No tienes suficientes orbes" };
-
-  // 3. Deduct from donor
-  const { error: deductErr } = await supabase
-    .from("profiles")
-    .update({ orbes: donorBalance - amount })
-    .eq("id", user.id);
-  if (deductErr) return { ok: false, error: "Error al descontar orbes" };
-
-  // 4. Credit author
-  const { data: authorProfile } = await supabase
-    .from("profiles")
-    .select("orbes")
-    .eq("id", authorId)
-    .maybeSingle();
-  const authorBalance = (authorProfile as { orbes?: number } | null)?.orbes ?? 0;
-  const { error: creditErr } = await supabase
-    .from("profiles")
-    .update({ orbes: authorBalance + amount })
-    .eq("id", authorId);
-  if (creditErr) return { ok: false, error: "Error al acreditar orbes" };
-
-  // 5. Record donor transaction (negative)
-  await supabase.from("orbe_transactions" as never).insert({
-    user_id: user.id,
-    amount: -amount,
-    kind: "adjustment" as never,
-    post_id: postId,
-    description: `Donación a juego`,
-  } as never);
-
-  // 6. Record author transaction (positive)
-  await supabase.from("orbe_transactions" as never).insert({
-    user_id: authorId,
-    amount: amount,
-    kind: "adjustment" as never,
-    post_id: postId,
-    description: `Donación recibida de un jugador`,
-  } as never);
-
-  return { ok: true, balance: donorBalance - amount };
+  try {
+    return await marketplaceRequest("/api/manus/marketplace/donations", { postId, amount });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "No se pudo completar la donación." };
+  }
 }
 
 
@@ -1055,40 +1016,36 @@ export async function cloudDeleteProject(id: string): Promise<void> {
 }
 
 // ---------- Admin ----------
-export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; trust_points: number | null };
+export type ManagedUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; is_mod: boolean; is_admin: boolean; is_verified?: boolean; trust_points: number | null };
 
 export async function isAdmin(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-  return (data ?? []).some(r => r.role === "admin");
+  try {
+    const response = await fetch("/api/manus/admin/status", { credentials: "include" });
+    const payload = await response.json().catch(() => null) as { is_admin?: boolean } | null;
+    return response.ok && payload?.is_admin === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function listManagedUsers(search?: string): Promise<ManagedUser[]> {
-  let q = supabase.from("profiles").select("id,username,display_name,avatar_url,trust_points").limit(200);
-  if (search) q = q.ilike("username", `%${search}%`);
-  const { data: profs, error } = await q;
-  if (error) throw error;
-  const ids = (profs ?? []).map(p => p.id);
-  if (!ids.length) return [];
-  const { data: roles } = await supabase.from("user_roles").select("user_id,role").in("user_id", ids);
-  const rmap = new Map<string, string[]>();
-  (roles ?? []).forEach(r => {
-    const arr = rmap.get(r.user_id) ?? [];
-    arr.push(r.role);
-    rmap.set(r.user_id, arr);
-  });
-  return (profs ?? []).map(p => {
-    const rs = rmap.get(p.id) ?? [];
-    return { ...p, is_mod: rs.includes("moderator"), is_admin: rs.includes("admin") };
-  });
+  const params = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  const response = await fetch(`/api/manus/admin/users${params}`, { credentials: "include" });
+  const payload = await response.json().catch(() => null) as ManagedUser[] | { error?: string } | null;
+  if (!response.ok || !Array.isArray(payload)) throw new Error(!Array.isArray(payload) && typeof payload?.error === "string" ? payload.error : "No se pudo consultar la administración.");
+  return payload;
 }
 
 export async function setUserModerator(userId: string, on: boolean): Promise<void> {
-  if (on) {
-    await supabase.from("user_roles").insert({ user_id: userId, role: "moderator" });
-  } else {
-    await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "moderator");
+  const response = await fetch(`/api/manus/admin/users/${encodeURIComponent(userId)}/moderator`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled: on }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? "No se pudo actualizar la moderación.");
   }
 }
 
@@ -1387,9 +1344,7 @@ export async function votePoll(pollId: string, optionIndex: number): Promise<voi
 
 // ============ PLUS FEATURES ============
 export async function claimPlusOrbes(): Promise<{ ok: boolean; amount?: number; reason?: string; next_at?: string }> {
-  const { data, error } = await supabase.rpc("claim_plus_orbes" as never);
-  if (error) throw error;
-  return (data as { ok: boolean; amount?: number; reason?: string; next_at?: string }) ?? { ok: false };
+  return marketplaceRequest("/api/manus/marketplace/plus-claim", {});
 }
 
 export async function updatePlusSettings(patch: {
@@ -1418,11 +1373,10 @@ export async function updatePlusSettings(patch: {
   return data as Profile;
 }
 
-// Activate Plus for N months (extends expiry). Server function verifies auth.
+// Plus no tiene suscripción de pago en Asternal; se mantiene la respuesta para la UI heredada.
 export async function activatePlus(months: number = 1): Promise<{ ok: boolean; expires_at?: string }> {
-  const { data, error } = await supabase.rpc("activate_plus" as never, { _months: months } as never);
-  if (error) throw error;
-  return (data as { ok: boolean; expires_at?: string }) ?? { ok: false };
+  void months;
+  return { ok: true };
 }
 
 // Dev-only helper to force-disable Plus (simulate expiration).
@@ -1508,9 +1462,10 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export async function purchaseArtwork(postId: string): Promise<{ ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }> {
-  const { data, error } = await supabase.rpc("purchase_artwork" as never, { _post_id: postId } as never);
-  if (error) throw error;
-  return (data as { ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }) ?? { ok: false };
+  return marketplaceRequest<{ ok: boolean; paid?: number; balance?: number; free?: boolean; already_owned?: boolean }>("/api/manus/marketplace/purchase", {
+    postId,
+    kind: "artwork",
+  });
 }
 
 /**
@@ -1518,12 +1473,10 @@ export async function purchaseArtwork(postId: string): Promise<{ ok: boolean; pa
  * price = 0 retira la obra de la venta.
  */
 export async function resellArtwork(postId: string, price: number): Promise<{ ok: boolean; on_sale?: boolean; error?: string }> {
-  const { data, error } = await supabase.rpc("resell_artwork" as never, {
-    _post_id: postId,
-    _price: Math.max(0, Math.floor(price)),
-  } as never);
-  if (error) throw error;
-  return (data as { ok: boolean; on_sale?: boolean; error?: string }) ?? { ok: false };
+  return marketplaceRequest<{ ok: boolean; on_sale?: boolean; error?: string }>("/api/manus/marketplace/artwork-resale", {
+    postId,
+    price: Math.max(0, Math.floor(price)),
+  });
 }
 
 /**
@@ -1583,51 +1536,7 @@ export type EventItem = {
 };
 
 export async function fetchEvents(): Promise<EventItem[]> {
-  const { data, error } = await supabase
-    .from("events" as never)
-    .select("*")
-    .order("starts_at", { ascending: false });
-  if (error) throw error;
-  const now = new Date().toISOString();
-  const { data: { user } } = await supabase.auth.getUser();
-  const me = user?.id ?? null;
-  const events = (data ?? []) as EventItem[];
-  // Enrich with submission counts and my submissions
-  const enriched: EventItem[] = [];
-  for (const ev of events) {
-    const { count: subs } = await supabase
-      .from("event_submissions" as never)
-      .select("*", { count: "exact", head: true })
-      .eq("event_id", ev.id);
-    const { data: parts } = await supabase
-      .rpc("count_event_participants" as never, { _event_id: ev.id } as never);
-    let mySub = null;
-    let myRegistered = false;
-    if (me) {
-      const { data: subData } = await supabase
-        .from("event_submissions" as never)
-        .select("id,post_id,status")
-        .eq("event_id", ev.id)
-        .eq("author_id", me)
-        .maybeSingle();
-      mySub = subData as { id: string; post_id: string; status: string } | null;
-      const { data: regRow } = await supabase
-        .from("event_participants" as never)
-        .select("id")
-        .eq("event_id", ev.id)
-        .eq("user_id", me)
-        .maybeSingle();
-      myRegistered = !!regRow;
-    }
-    enriched.push({
-      ...ev,
-      submission_count: subs ?? 0,
-      participant_count: Number(parts ?? 0),
-      my_registered: myRegistered,
-      my_submission: mySub,
-    });
-  }
-  return enriched;
+  return manusJsonRequest<EventItem[]>("/api/manus/events");
 }
 
 export async function createEvent(input: {
@@ -1640,57 +1549,31 @@ export async function createEvent(input: {
   prize_description?: string | null;
   rules?: string | null;
 }): Promise<EventItem> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  const { data, error } = await supabase
-    .from("events" as never)
-    .insert({
-      title: input.title,
-      description: input.description,
-      banner_url: input.banner_url ?? null,
-      starts_at: input.starts_at,
-      ends_at: input.ends_at,
-      prize_pool: input.prize_pool ?? null,
-      prize_description: input.prize_description ?? null,
-      rules: input.rules ?? null,
-      created_by: user.id,
-      status: new Date(input.starts_at) > new Date() ? "upcoming" : "active",
-    } as never)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as EventItem;
+  return manusJsonRequest<EventItem>("/api/manus/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 export async function submitToEvent(eventId: string, postId: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  const { error } = await supabase
-    .from("event_submissions" as never)
-    .insert({
-      event_id: eventId,
-      post_id: postId,
-      author_id: user.id,
-      status: "submitted",
-    } as never);
-  if (error) throw error;
+  await manusJsonRequest(`/api/manus/events/${encodeURIComponent(eventId)}/submissions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId }),
+  });
 }
 
 export async function updateEventStatus(eventId: string, status: "upcoming" | "active" | "completed"): Promise<void> {
-  const { error } = await supabase
-    .from("events" as never)
-    .update({ status } as never)
-    .eq("id", eventId);
-  if (error) throw error;
+  await manusJsonRequest(`/api/manus/events/${encodeURIComponent(eventId)}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {
-  // RLS: solo el staff (admin) puede borrar eventos (política events_delete).
-  const { error } = await supabase
-    .from("events" as never)
-    .delete()
-    .eq("id", eventId);
-  if (error) throw error;
+  await manusJsonRequest(`/api/manus/events/${encodeURIComponent(eventId)}`, { method: "DELETE" });
 }
 
 export type EventParticipant = {
@@ -1701,24 +1584,19 @@ export type EventParticipant = {
   joined_at: string;
 };
 
-// Inscribirse a un evento (idempotente; el RPC rechaza eventos finalizados).
+// Inscribirse a un evento de Manus; la ruta es idempotente.
 export async function joinEvent(eventId: string): Promise<void> {
-  const { error } = await supabase.rpc("join_event" as never, { _event_id: eventId } as never);
-  if (error) throw error;
+  await manusJsonRequest(`/api/manus/events/${encodeURIComponent(eventId)}/participants`, { method: "POST" });
 }
 
-// Desinscribirse de un evento.
+// Desinscribirse de un evento de Manus.
 export async function leaveEvent(eventId: string): Promise<void> {
-  const { error } = await supabase.rpc("leave_event" as never, { _event_id: eventId } as never);
-  if (error) throw error;
+  await manusJsonRequest(`/api/manus/events/${encodeURIComponent(eventId)}/participants/me`, { method: "DELETE" });
 }
 
-// Lista de inscritos (avatar, nombre, fecha): SOLO staff — el RPC lanza
-// not_authorized para el resto.
+// Lista de inscritos visible solo para moderación mediante Manus.
 export async function listEventParticipants(eventId: string): Promise<EventParticipant[]> {
-  const { data, error } = await supabase.rpc("list_event_participants" as never, { _event_id: eventId } as never);
-  if (error) throw error;
-  return (data ?? []) as EventParticipant[];
+  return manusJsonRequest<EventParticipant[]>(`/api/manus/events/${encodeURIComponent(eventId)}/participants`);
 }
 
 // ============ FOLLOWS ============

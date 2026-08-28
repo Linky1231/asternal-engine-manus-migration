@@ -4,7 +4,21 @@
  * Backend: Supabase (sincronizado entre todos los dispositivos).
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { manusData } from "@/integrations/manus/data-client";
+
+const supabase = manusData;
+
+async function forumRequest<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await response.json().catch(() => ({})) as T & { error?: unknown };
+  if (!response.ok) throw new Error(typeof payload.error === "string" ? payload.error : "No se pudo completar la operación del foro.");
+  return payload;
+}
 
 /* ─── Types ─── */
 
@@ -346,9 +360,8 @@ export async function getForumThread(threadId: string): Promise<(ForumThread & {
 }
 
 export async function voteForumThread(threadId: string, userId: string, vote: "up" | "down"): Promise<{ upvotes: number; downvotes: number }> {
-  const { data } = await supabase.rpc("forum_vote_thread", { _thread_id: threadId, _user_id: userId, _vote: vote });
-  const r = (data as { upvotes?: number; downvotes?: number } | null) ?? {};
-  return { upvotes: r.upvotes ?? 0, downvotes: r.downvotes ?? 0 };
+  void userId;
+  return forumRequest<{ upvotes: number; downvotes: number }>(`/api/manus/forum/threads/${encodeURIComponent(threadId)}/vote`, { vote });
 }
 
 export async function createForumThread(
@@ -393,7 +406,7 @@ export async function createForumThread(
 
 export async function incrementThreadView(threadId: string): Promise<void> {
   try {
-    await supabase.rpc("forum_bump_views", { _thread_id: threadId });
+    await forumRequest(`/api/manus/forum/threads/${encodeURIComponent(threadId)}/views`);
   } catch { /* ignore */ }
 }
 
@@ -468,7 +481,7 @@ export async function createForumPost(
     edited_at: null,
   } as never).select().single();
   if (error) throw error;
-  await supabase.rpc("forum_touch_thread", { _thread_id: threadId, _author: author.username });
+  await forumRequest(`/api/manus/forum/threads/${encodeURIComponent(threadId)}/touch`, { change: "add" });
   return mapPost(data as PostRow);
 }
 
@@ -482,7 +495,7 @@ export async function deleteForumPost(postId: string): Promise<boolean> {
   const { error } = await supabase.from("forum_posts").delete().eq("id", postId);
   if (!error && post) {
     try {
-      await supabase.rpc("forum_touch_thread", { _thread_id: (post as { thread_id: string }).thread_id, _author: "" });
+      await forumRequest(`/api/manus/forum/threads/${encodeURIComponent((post as { thread_id: string }).thread_id)}/touch`, { change: "remove" });
     } catch { /* ignore */ }
   }
   return !error;
@@ -491,7 +504,6 @@ export async function deleteForumPost(postId: string): Promise<boolean> {
 /* ─── Votes ─── */
 
 export async function voteForumPost(postId: string, userId: string, vote: "up" | "down"): Promise<{ upvotes: number; downvotes: number }> {
-  const { data } = await supabase.rpc("forum_vote_post", { _post_id: postId, _user_id: userId, _vote: vote });
-  const r = (data as { upvotes?: number; downvotes?: number } | null) ?? {};
-  return { upvotes: r.upvotes ?? 0, downvotes: r.downvotes ?? 0 };
+  void userId;
+  return forumRequest<{ upvotes: number; downvotes: number }>(`/api/manus/forum/posts/${encodeURIComponent(postId)}/vote`, { vote });
 }

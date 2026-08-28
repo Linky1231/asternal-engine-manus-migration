@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { fileToDataURL } from "@/lib/engine/images";
 import {
   initForumCategories, getForumCategories, getForumThreads, getForumThread,
@@ -171,24 +170,17 @@ export function ForumSection({ isAdmin: isAdminProp, isMod: isModProp }: { isAdm
   const adminOrMod = !!(isAdminProp || isModProp);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: d }) => {
-      if (d?.session?.user) {
-        setMyId(d.session.user.id);
-        const user = d.session.user;
-        const meta = (user as Record<string, unknown>)?.user_metadata as Record<string, string> | undefined;
-        if (meta?.username) {
-          setMyUsername(meta.username);
-        } else {
-          try {
-            const users = JSON.parse(localStorage.getItem('_local_auth_users') || '[]');
-            const u = users.find((u: Record<string, unknown>) => u.id === user.id);
-            setMyUsername((u?.username as string) ?? user.email?.split("@")[0] ?? "user");
-          } catch {
-            setMyUsername(user.email?.split("@")[0] ?? "user");
-          }
-        }
-      }
-    });
+    let cancelled = false;
+    fetch("/api/manus/session", { credentials: "include" })
+      .then(response => response.ok ? response.json() : null)
+      .then((payload: { user?: { openId?: string; id?: string; name?: string | null; email?: string | null } } | null) => {
+        if (cancelled || !payload?.user) return;
+        const user = payload.user;
+        setMyId(user.openId ?? user.id ?? null);
+        setMyUsername(user.name?.trim() || user.email?.split("@")[0] || "usuario");
+      })
+      .catch(() => { /* El foro seguirá disponible para lectura pública. */ });
+    return () => { cancelled = true; };
   }, []);
 
   const handleCategorySelect = useCallback((id: string, name: string) => {

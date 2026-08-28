@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { Sparkles, TrendingUp, TrendingDown, Gift, Gamepad2, Loader2, Wallet, BarChart3, ExternalLink } from "lucide-react";
 import { SubPageHeader } from "@/components/social/SubPageHeader";
-import { supabase } from "@/integrations/supabase/client";
-import { getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
+import { fetchFeed, getMyProfile, fetchAllOrbeTransactions, type OrbeTx, type Profile } from "@/lib/social/api";
+import { getManusSessionUser } from "@/lib/auth/manus";
 
 export const Route = createFileRoute("/orbes")({
   head: () => ({ meta: [{ title: "Mis Orbes · Asternal" }] }),
@@ -51,8 +51,7 @@ function OrbesPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate({ to: "/auth" }); return; }
+      if (!await getManusSessionUser().catch(() => null)) { navigate({ to: "/auth" }); return; }
       setLoading(true);
       try {
         // Se cargan TODAS las transacciones de la cuenta: las estadísticas se
@@ -65,12 +64,10 @@ function OrbesPage() {
           t.filter(x => x.kind === "game_purchase" && x.post_id).map(x => x.post_id as string)
         )];
         if (ids.length) {
-          const { data: posts } = await supabase
-            .from("posts" as never)
-            .select("id,content" as never)
-            .in("id" as never, ids as never);
+          const idSet = new Set(ids);
+          const posts = (await fetchFeed()).filter(post => idSet.has(post.id));
           const map = new Map<string, string>();
-          for (const pst of (posts ?? []) as { id: string; content: string }[]) {
+          for (const pst of posts) {
             map.set(pst.id, (pst.content.split("\n")[0] || "Juego").replace(/^[🎮🎨]\s*/, "").trim() || "Juego");
           }
           setGameTitles(map);

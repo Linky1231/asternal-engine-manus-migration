@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/social/api";
+import { getManusSessionUser, startMultimodalLogin } from "@/lib/auth/manus";
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
@@ -10,12 +10,11 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    getManusSessionUser().then(sessionUser => {
       if (!mounted) return;
-      const hasSession = !!data.session;
+      const hasSession = !!sessionUser;
       setIsAuthenticated(hasSession);
       if (hasSession) {
-        // Load profile
         import("@/lib/social/api").then(({ getMyProfile }) => {
           getMyProfile().then(p => {
             if (mounted) {
@@ -27,43 +26,23 @@ export function useAuth() {
       } else {
         setIsLoading(false);
       }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      setIsAuthenticated(!!session);
-      if (!session) {
-        setUser(null);
-        setIsLoading(false);
-      }
-    });
+    }).catch(() => { if (mounted) setIsLoading(false); });
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
-  const signIn = async (method: string, formData?: FormData) => {
-    if (method === "email-otp" && formData) {
-      const email = formData.get("email") as string;
-      const code = formData.get("code") as string;
-      if (code) {
-        // OTP code verification - in local mode, this isn't needed
-        // The user is already signed in from the email submission
-        return;
-      }
-      // Send OTP - in local mode we simulate sending
-      await supabase.auth.signInWithPassword({ email, password: "placeholder" });
-    }
-    if (method === "anonymous") {
-      // Anonymous not supported in local mode
-      throw new Error("Anonymous sign-in not available in local mode");
-    }
+  const signIn = async (_method?: string, _formData?: FormData) => {
+    void _method;
+    void _formData;
+    startMultimodalLogin();
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
   return {

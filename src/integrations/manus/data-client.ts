@@ -1,27 +1,8 @@
 /**
- * Asternal Local Database
- * ─────────────────────────
- * Complete localStorage-backed replacement for Supabase.
- * No external services needed. All auth, data, and storage
- * lives in the browser via localStorage.
+ * Adaptador temporal de colecciones de Asternal administradas por Manus.
+ * El navegador solo conserva una caché por cuenta; la identidad se resuelve
+ * siempre a través de la cookie de sesión oficial del servidor.
  */
-
-
-// ───── Types ─────
-
-type LocalUser = {
-  id: string;
-  email: string;
-  passwordHash: string;
-  createdAt: string;
-};
-
-type LocalSession = {
-  userId: string;
-  email: string;
-  accessToken: string;
-  expiresAt: string;
-};
 
 type QueryFilter = {
   type: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'is' | 'in' | 'contains' | 'not';
@@ -41,12 +22,6 @@ type QueryResult = { data: any; error: Error | null; count: number | null };
 function uid(): string { return crypto.randomUUID(); }
 function now(): string { return new Date().toISOString(); }
 
-function simpleHash(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
-  return h.toString(36) + '_' + s.length.toString(36);
-}
-
 function getTableData<T = Record<string, unknown>>(table: string): T[] {
   try { const raw = localStorage.getItem(`_local_data_${table}`); return raw ? JSON.parse(raw) as T[] : []; }
   catch { return []; }
@@ -60,7 +35,7 @@ const MANUS_COLLECTIONS = new Set([
   "profiles", "posts", "comments", "reactions", "reposts", "follows", "notifications", "reports", "blocks",
   "tags", "post_tags", "post_polls", "post_poll_votes", "game_purchases", "game_plays", "orbe_transactions",
   "forum_categories", "forum_threads", "forum_posts", "forum_thread_votes", "forum_votes", "chats", "chat_members",
-  "chat_messages", "stickers", "events", "event_submissions", "event_participants", "trust_points_history",
+  "chat_messages", "stickers", "events", "event_submissions", "event_participants", "trust_points_history", "community_settings",
 ]);
 
 function isManusCollection(table: string): boolean { return MANUS_COLLECTIONS.has(table); }
@@ -106,13 +81,6 @@ export async function hydrateManusCollections(): Promise<{ id: string; name?: st
     const rows = await manusRecordRequest<Record<string, unknown>[]>(`/api/manus/records/${encodeURIComponent(collection)}`);
     saveTableData(collection, rows);
   }));
-  const localSession: LocalSession = {
-    userId: session.user.id,
-    email: session.user.email || `${session.user.id}@manus.local`,
-    accessToken: "manus-cookie-session",
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-  };
-  localStorage.setItem("_local_auth_session", JSON.stringify(localSession));
   return session.user;
 }
 
@@ -187,134 +155,40 @@ function orFilter(rows: Record<string, unknown>[], filterString: string): Record
 
 // ───── Auth ─────
 
-function getAuthUsers(): LocalUser[] {
-  try { return JSON.parse(localStorage.getItem('_local_auth_users') || '[]') as LocalUser[]; }
-  catch { return []; }
-}
-function saveAuthUsers(users: LocalUser[]): void { localStorage.setItem('_local_auth_users', JSON.stringify(users)); }
+type AuthCallback = (event: string, session: Record<string, unknown> | null) => void;
+type ManusUserPayload = { id?: string; openId?: string; email?: string | null; name?: string | null };
 
-function getSession(): LocalSession | null {
+async function getOfficialSession() {
   try {
-    const raw = localStorage.getItem('_local_auth_session');
-    if (!raw) return null;
-    const session = JSON.parse(raw) as LocalSession;
-    if (new Date(session.expiresAt) < new Date()) { localStorage.removeItem('_local_auth_session'); return null; }
-    return session;
-  } catch { return null; }
-}
-function saveSession(user: LocalUser): LocalSession {
-  const s: LocalSession = { userId: user.id, email: user.email, accessToken: simpleHash(user.id + now()), expiresAt: new Date(Date.now() + 7 * 86400000).toISOString() };
-  localStorage.setItem('_local_auth_session', JSON.stringify(s)); return s;
-}
-function clearSession(): void { localStorage.removeItem('_local_auth_session'); }
-
-function ensureProfileExists(userId: string, email: string, username?: string): void {
-  const profiles = getTableData('profiles');
-  if (profiles.find(p => (p as Record<string, unknown>).id === userId)) return;
-  const username_ = username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');    profiles.push({
-    id: userId, username: username_, display_name: null, avatar_url: null, bio: null,
-    banner_url: null, pronouns: null, location: null, status_text: null, status_emoji: null,
-    accent_color: null, favorite_genre: null, custom_title: null, birthday: null,
-    show_orbes: true, theme_mode: 'dark', interests: [], orbes: 100, is_plus: false,
-    show_plus_badge: false, avatar_frame: null, social_links: null, last_plus_claim_at: null,
-    plus_expires_at: null, name_effect: null, profile_background: null, post_effect: null,
-    creator_card_style: null, featured_post_id: null, created_at: now(), updated_at: now(),
-  });
-  saveTableData('profiles', profiles);
-
-  // Auto-assign admin role to the owner email
-  if (email === 'Linkyteam989@gmail.com') {
-    const roles = getTableData<Record<string, unknown>>('user_roles');
-    if (!roles.find(r => r.user_id === userId && r.role === 'admin')) {
-      roles.push({ user_id: userId, role: 'admin' });
-      saveTableData('user_roles', roles);
-    }
+    const result = await manusRecordRequest<{ user?: ManusUserPayload }>("/api/manus/session");
+    const user = result.user;
+    const id = user?.openId ?? user?.id;
+    if (!id) return null;
+    return { user: { id, email: user?.email ?? null, user_metadata: { name: user?.name ?? null } } };
+  } catch {
+    return null;
   }
 }
 
-// ───── Auth handlers ─────
-
-type AuthCallback = (event: string, session: Record<string, unknown> | null) => void;
-let authChangeSubscribers: AuthCallback[] = [];
-function notifyAuth(event: string, s: LocalSession | null): void {
-  const sessionPayload = s ? { user: { id: s.userId, email: s.email }, access_token: s.accessToken, expires_at: new Date(s.expiresAt).getTime() / 1000 } : null;
-  authChangeSubscribers.forEach(cb => cb(event, sessionPayload as never));
-}
-
-function makeUserObj(u: LocalUser): Record<string, unknown> { return { id: u.id, email: u.email }; }
-function makeSessionObj(u: LocalUser, s: LocalSession): Record<string, unknown> {
-  return { user: makeUserObj(u), access_token: s.accessToken, expires_at: new Date(s.expiresAt).getTime() / 1000 };
-
-}
-function makeSignInResult(u: LocalUser, s: LocalSession) {
-  return { data: { user: makeUserObj(u), session: makeSessionObj(u, s) }, error: null };
-}
-
-const localAuth = {
-  getSession: async () => {
-    const s = getSession();
-    return { data: { session: s ? { user: { id: s.userId, email: s.email }, access_token: s.accessToken, expires_at: new Date(s.expiresAt).getTime() / 1000 } : null }, error: null };
-  },
+const manusAuth = {
+  getSession: async () => ({ data: { session: await getOfficialSession() }, error: null }),
   getUser: async () => {
-    const s = getSession();
-    return { data: { user: s ? { id: s.userId, email: s.email } : null }, error: null };
+    const session = await getOfficialSession();
+    return { data: { user: session?.user ?? null }, error: null };
   },
-  setSession: async ({ access_token, expires_at, user }: { access_token: string; refresh_token?: string; expires_at?: number; user?: { id?: string; email?: string; user_metadata?: { username?: string; manus_username?: string } } }) => {
-    if (!user?.id || !user.email) return { data: { session: null }, error: new Error('Sesión Supabase incompleta') };
-    // El enlace server-side crea la identidad real, pero el cliente local de
-    // compatibilidad también necesita materializar el perfil para que la UI no
-    // quede autenticada con un encabezado vacío cuando no hay anon key local.
-    ensureProfileExists(user.id, user.email, user.user_metadata?.username || user.user_metadata?.manus_username);
-    const session: LocalSession = {
-      userId: user.id,
-      email: user.email,
-      accessToken: access_token,
-      expiresAt: new Date((expires_at ?? Math.floor(Date.now() / 1000) + 3600) * 1000).toISOString(),
-    };
-    localStorage.setItem('_local_auth_session', JSON.stringify(session));
-    notifyAuth('SIGNED_IN', session);
-    return { data: { session: { user: { id: user.id, email: user.email }, access_token, expires_at }, error: null } };
+  setSession: async (_input: unknown) => ({ data: { session: null }, error: new Error("La sesión se administra mediante Manus.") }),
+  signUp: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Manus.") }),
+  signInWithPassword: async (_input: unknown) => ({ data: { user: null, session: null }, error: new Error("El acceso se administra mediante Manus.") }),
+  signInWithOAuth: async () => ({ data: null, error: new Error("Usa el acceso oficial de Manus.") }),
+  signOut: async () => {
+    await fetch("/api/manus/logout", { method: "POST", credentials: "include" });
+    return { error: null };
   },
-  signUp: async ({ email, password, options }: { email: string; password: string; options?: { data?: { username?: string } } }) => {
-    const users = getAuthUsers();
-    if (users.find(u => u.email === email.toLowerCase())) return { data: { user: null, session: null }, error: new Error('Este email ya está registrado') };
-    const id = uid();
-    const user: LocalUser = { id, email: email.toLowerCase(), passwordHash: simpleHash(password), createdAt: now() };
-    users.push(user); saveAuthUsers(users);
-    ensureProfileExists(id, email, options?.data?.username);
-    const session = saveSession(user); notifyAuth('SIGNED_IN', session);
-    return makeSignInResult(user, session) as { data: { user: Record<string, unknown>; session: Record<string, unknown> }; error: null };
-  },
-  signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
-    const users = getAuthUsers();
-    const user = users.find(u => u.email === email.toLowerCase());
-    if (!user || user.passwordHash !== simpleHash(password)) return { data: { user: null, session: null }, error: new Error('Email o contraseña incorrectos') };
-    ensureProfileExists(user.id, user.email);
-    const session = saveSession(user); notifyAuth('SIGNED_IN', session);
-    return makeSignInResult(user, session) as { data: { user: Record<string, unknown>; session: Record<string, unknown> }; error: null };
-  },
-  signInWithOAuth: async () => ({ data: null, error: new Error('OAuth no disponible en modo local') }),
-  signOut: async () => { clearSession(); notifyAuth('SIGNED_OUT', null); return { error: null }; },
-  resetPasswordForEmail: async (email: string) => {
-    const users = getAuthUsers();
-    const user = users.find(u => u.email === email.toLowerCase());
-    if (user) localStorage.setItem('_local_auth_reset_token', JSON.stringify({ email: user.email, userId: user.id, expiresAt: new Date(Date.now() + 3600000).toISOString() }));
-    return { data: null, error: null };
-  },
-  updateUser: async ({ password }: { password: string }) => {
-    const s = getSession();
-    if (!s) return { data: { user: null }, error: new Error('No hay sesión activa') };
-    const users = getAuthUsers();
-    const idx = users.findIndex(u => u.id === s.userId);
-    if (idx === -1) return { data: { user: null }, error: new Error('Usuario no encontrado') };
-    users[idx].passwordHash = simpleHash(password); saveAuthUsers(users);
-    return { data: { user: { id: s.userId, email: s.email } }, error: null };
-  },
+  resetPasswordForEmail: async (_email: string) => ({ data: null, error: new Error("Asternal no administra contraseñas.") }),
+  updateUser: async (_input: unknown) => ({ data: { user: null }, error: new Error("Asternal no administra contraseñas.") }),
   onAuthStateChange: (callback: AuthCallback) => {
-    authChangeSubscribers.push(callback);
-    const s = getSession();
-    callback('INITIAL_SESSION', s ? { user: { id: s.userId, email: s.email }, access_token: s.accessToken } as never : null);
-    return { data: { subscription: { unsubscribe: () => { authChangeSubscribers = authChangeSubscribers.filter(cb => cb !== callback); } } } };
+    void getOfficialSession().then(session => callback("INITIAL_SESSION", session));
+    return { data: { subscription: { unsubscribe: () => undefined } } };
   },
 };
 
@@ -535,7 +409,7 @@ const localRpc = async (fn: string, _args?: Record<string, unknown>) => {
       if (!post) return { data: { ok: false }, error: null };
       const price = (post as Record<string, unknown>).price_orbes as number || 0;
       const authorId = (post as Record<string, unknown>).author_id as string;
-      const { data: { user } } = await localAuth.getUser();
+      const { data: { user } } = await manusAuth.getUser();
       if (!user) return { data: { ok: false }, error: null };
       if (user.id === authorId) return { data: { ok: true, free: true, paid: 0 }, error: null };
       const profiles = getTableData('profiles');
@@ -565,7 +439,7 @@ const localRpc = async (fn: string, _args?: Record<string, unknown>) => {
       return { data: { ok: true, paid: price, balance: buyerOrbes - price }, error: null };
     }
     case 'claim_plus_orbes': {
-      const { data: { user } } = await localAuth.getUser();
+      const { data: { user } } = await manusAuth.getUser();
       if (!user) return { data: { ok: false }, error: null };
       const profiles = getTableData('profiles');
       const idx = profiles.findIndex(p => (p as Record<string, unknown>).id === user.id);
@@ -682,7 +556,7 @@ const localRealtime = {
 // ───── LocalClient interface ─────
 
 interface LocalClient {
-  auth: typeof localAuth;
+  auth: typeof manusAuth;
   from(table: string): LocalQueryBuilder;
   storage: typeof localStorageBackend;
   rpc: typeof localRpc;
@@ -694,7 +568,7 @@ interface LocalClient {
 
 function createLocalClient(): LocalClient {
   return {
-    auth: localAuth,
+    auth: manusAuth,
     from: (table: string) => new LocalQueryBuilder(table),
     storage: localStorageBackend,
     rpc: localRpc,
@@ -720,54 +594,11 @@ function createLocalClient(): LocalClient {
   };
 }
 
-/* ───── Real Supabase client (when credentials exist) ─────
- *
- * Las credenciales se resuelven en este orden:
- *   1. Override guardado por el usuario en el diálogo de configuración
- *      (localStorage) — permite conectar sin depender de la inyección de
- *      variables de entorno al compilar.
- *   2. Variables de entorno de Vite (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
- *      inyectadas por el entorno desde el tab Keys.
- *   3. Credenciales por defecto incrustadas aquí (configuración única del
- *      administrador): así TODOS los dispositivos usan la misma base sin que
- *      nadie tenga que pegar claves. La anon key es pública por diseño — la
- *      seguridad real la da RLS en la base de datos.
- */
-
-export type SaveCredentialsResult = { ok: boolean; error?: string };
-
-/** @deprecated La migración a Manus no expone URL ni claves externas. */
-export function getSupabaseUrl(): undefined { return undefined; }
-
-/** @deprecated La migración a Manus no expone URL ni claves externas. */
-export function getSupabaseAnonKey(): undefined { return undefined; }
-
 /**
- * Guarda (o borra) las credenciales escritas a mano en el diálogo de
- * configuración. Valida el formato antes de guardar para evitar guardar un
- * token de acceso personal (sbp_…) como anon key, que rompería toda la app
- * con "Invalid API key".
+ * Detecta errores de colección ausente para degradar a listas vacías mientras
+ * un despliegue de Manus termina de aplicar su estructura de datos.
  */
-export function saveSupabaseCredentials(url: string, anonKey: string): SaveCredentialsResult {
-  void url;
-  void anonKey;
-  return { ok: false, error: "La configuración externa fue retirada; Asternal ahora usa los servicios de Manus." };
-}
-
-export function clearSupabaseCredentials(): void {
-  // No se almacenan credenciales externas en el navegador.
-}
-
-export function hasSupabaseConfig(): boolean {
-  return false;
-}
-
-/**
- * Detecta errores de PostgREST cuando una tabla aún no existe en la base de
- * datos (esquema sin crear). La app usa esto para degradar a listas vacías en
- * lugar de crashear mientras el usuario configura Supabase.
- */
-export function isSchemaMissing(err: unknown): boolean {
+export function isCollectionUnavailable(err: unknown): boolean {
   if (!err) return false;
   const msg = typeof err === "string"
     ? err
@@ -783,17 +614,15 @@ export function isSchemaMissing(err: unknown): boolean {
   );
 }
 
-function createSupabaseClient(): LocalClient {
-  // Adaptador de transición: no realiza llamadas a Supabase. Las colecciones
-  // se migrarán gradualmente a los servicios autenticados de Manus.
+function createManusDataClient(): LocalClient {
   return createLocalClient();
 }
 
-let _supabase: LocalClient | undefined;
+let _manusData: LocalClient | undefined;
 
-export const supabase = new Proxy({} as LocalClient, {
+export const manusData = new Proxy({} as LocalClient, {
   get(_, prop, receiver) {
-    if (!_supabase) _supabase = createSupabaseClient();
-    return Reflect.get(_supabase, prop, receiver);
+    if (!_manusData) _manusData = createManusDataClient();
+    return Reflect.get(_manusData, prop, receiver);
   },
 });

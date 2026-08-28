@@ -1,5 +1,5 @@
 // Play history and likes tracking (localStorage-based)
-import { supabase } from "@/integrations/supabase/client";
+import { manusData as supabase } from "@/integrations/manus/data-client";
 import type { PostWithMeta, PostRow, Profile } from "./api";
 import { signMediaUrls } from "./api";
 import { refreshPlayedGameCoverSessions, type PlayedGameMedia } from "./history-cover";

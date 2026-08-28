@@ -8,7 +8,7 @@ const oauth = readFileSync(resolve(root, "server/_core/oauth.ts"), "utf8");
 const profile = readFileSync(resolve(root, "src/routes/profile.tsx"), "utf8");
 const auth = readFileSync(resolve(root, "src/routes/auth.tsx"), "utf8");
 const helper = readFileSync(resolve(root, "src/lib/auth/manus.ts"), "utf8");
-const supabaseClient = readFileSync(resolve(root, "src/integrations/supabase/client.ts"), "utf8");
+const manusDataClient = readFileSync(resolve(root, "src/integrations/manus/data-client.ts"), "utf8");
 
 describe("Manus multimodal login", () => {
   it("expone la sesión y el cierre de sesión oficiales de Manus sin un puente externo", () => {
@@ -32,10 +32,10 @@ describe("Manus multimodal login", () => {
     expect(readFileSync(resolve(root, "src/routes/index.tsx"), "utf8")).toContain('"/api/manus/session"');
   });
 
-  it("desconecta el cliente de Supabase y no conserva credenciales incrustadas", () => {
-    expect(supabaseClient).not.toContain("createClient<Database>");
-    expect(supabaseClient).not.toContain("supabase.co");
-    expect(supabaseClient).toContain("servicios de Manus");
+  it("usa un adaptador de Manus sin cliente ni credenciales externas", () => {
+    expect(manusDataClient).not.toContain("createClient<Database>");
+    expect(manusDataClient).not.toContain("supabase.co");
+    expect(manusDataClient).toContain("Manus");
   });
 
   it("expone el acceso dentro de Log in sin crear una segunda sesión", () => {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Settings, Layers, Copy, X, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Trash2, Merge, Plus, Upload, Home, FolderOpen, MousePointer2, Boxes, Square, Flower2, CircleDollarSign, Triangle, Target, PersonStanding, Eraser, SlidersHorizontal, PanelsTopLeft, Image as ImageIcon, Layers3, Play, LibraryBig } from "lucide-react";
 import { schedulePushToCloud, scheduleAssetLibraryPush, pullAssetLibraryFromCloud, activateCloudProjectIfBlank } from "@/lib/engine/cloud-sync";
-import { supabase } from "@/integrations/supabase/client";
+import { getManusSessionUser } from "@/lib/auth/manus";
 import { Link } from "@tanstack/react-router";
 import { PublishGameDialog } from "./PublishGameDialog";
 import type { AudioAsset, EntityKind, Project, SpriteAsset, Entity, Scene, Hitbox, SceneLayer, VariableType } from "@/lib/engine/core";
@@ -107,8 +107,7 @@ export function AsternalEditor({ startInManager = false }: { startInManager?: bo
     let cancelled = false;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || cancelled) return;
+        if (!await getManusSessionUser().catch(() => null) || cancelled) return;
         await initializeStorageOwner();
         if (cancelled) return;
         const cloud = await pullAssetLibraryFromCloud();
