@@ -1743,4 +1743,4 @@ Alcance confirmado por el usuario: no rediseñar ni modificar código fuera de l
 - [x] Trasladar roles, moderación y verificaciones administrativas a controles protegidos por Manus
 - [x] Trasladar eventos, participaciones y entregas a permisos y registros administrados por Manus
 - [x] Sustituir las últimas operaciones RPC de notificaciones, galería y foro por servicios protegidos de Manus
-- [ ] Transferir el estado íntegro del proyecto a un repositorio privado sin alterar el contenido funcional
+- [x] Transferir el estado íntegro del proyecto a un repositorio privado sin alterar el contenido funcional
