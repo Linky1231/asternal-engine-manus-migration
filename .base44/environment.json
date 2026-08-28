@@ -1,0 +1,42 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "VITE_APP_ID",
+      "description": "Manus OAuth app ID — needed for sign-in. Obtain from Manus dashboard.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "VITE_OAUTH_PORTAL_URL",
+      "description": "Manus OAuth portal base URL (e.g. https://oauth.manus.space). Needed for sign-in.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "OAUTH_SERVER_URL",
+      "description": "Manus OAuth server URL for backend token exchange. Only needed if running the Express backend.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "BUILT_IN_FORGE_API_URL",
+      "description": "Manus Forge API base URL — for storage, LLM, heartbeat. Only needed if running the Express backend.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "BUILT_IN_FORGE_API_KEY",
+      "description": "Manus Forge API key — for storage, LLM, heartbeat. Only needed if running the Express backend.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "JWT_SECRET",
+      "description": "Secret for signing session JWTs. Only needed if running the Express backend.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "DATABASE_URL",
+      "description": "MySQL connection string for the Drizzle ORM. Only needed if running the Express backend.",
+      "requiredAtBoot": false
+    }
+  ]
+}

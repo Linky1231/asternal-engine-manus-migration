@@ -81,7 +81,7 @@ export default defineConfig({
     // Las vistas previas se exponen mediante subdominios temporales seguros.
     // Aceptar exclusivamente los dominios de Manus evita el bloqueo de Host
     // sin abrir el dev server a hosts arbitrarios.
-    allowedHosts: [".manus.computer", ".manus.space"],
+    allowedHosts: true,
     hmr: {
       overlay: false,
     },
