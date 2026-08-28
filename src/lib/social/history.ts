@@ -1,5 +1,5 @@
 // Play history and likes tracking (localStorage-based)
-import { manusData as supabase } from "@/integrations/manus/data-client";
+import { manusData } from "@/integrations/manus/data-client";
 import type { PostWithMeta, PostRow, Profile } from "./api";
 import { signMediaUrls } from "./api";
 import { refreshPlayedGameCoverSessions, type PlayedGameMedia } from "./history-cover";
@@ -280,9 +280,9 @@ export function getTopGame(period: "total" | "today" | "week" | "month" | "year"
  * mensajes que no sean publicaciones reales del feed.
  */
 export async function getMyLikedPosts(): Promise<PostWithMeta[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await manusData.auth.getUser();
   if (!user) return [];
-  const { data: reactions, error: reactErr } = await supabase
+  const { data: reactions, error: reactErr } = await manusData
     .from("reactions")
     .select("post_id")
     .eq("user_id", user.id)
@@ -294,7 +294,7 @@ export async function getMyLikedPosts(): Promise<PostWithMeta[]> {
   const ids = [...new Set<string>(reactions.map((r: { post_id: string }) => r.post_id))].filter(Boolean);
   if (!ids.length) return [];
 
-  const { data: posts, error } = await supabase
+  const { data: posts, error } = await manusData
     .from("posts")
     .select("*")
     .in("id", ids)
@@ -304,7 +304,7 @@ export async function getMyLikedPosts(): Promise<PostWithMeta[]> {
   if (!posts?.length) return [];
 
   const authorIds = Array.from(new Set(posts.map((p: { author_id: string }) => p.author_id)));
-  const { data: profiles } = await supabase
+  const { data: profiles } = await manusData
     .from("profiles")
     .select("*")
     .in("id", authorIds);

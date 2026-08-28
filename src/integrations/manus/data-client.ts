@@ -33,7 +33,7 @@ function saveTableData(table: string, data: unknown[]): void {
 
 const MANUS_COLLECTIONS = new Set([
   "profiles", "posts", "comments", "reactions", "reposts", "follows", "notifications", "reports", "blocks",
-  "tags", "post_tags", "post_polls", "post_poll_votes", "game_purchases", "game_plays", "orbe_transactions",
+  "tags", "post_tags", "post_polls", "post_poll_votes", "game_purchases", "user_projects", "game_plays", "orbe_transactions",
   "forum_categories", "forum_threads", "forum_posts", "forum_thread_votes", "forum_votes", "chats", "chat_members",
   "chat_messages", "stickers", "events", "event_submissions", "event_participants", "trust_points_history", "community_settings",
 ]);

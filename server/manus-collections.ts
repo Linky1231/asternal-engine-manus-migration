@@ -21,6 +21,7 @@ const COLLECTION_CONFIG = {
   post_polls: { visibility: "public", ownerFields: ["author_id"] },
   post_poll_votes: { visibility: "public", ownerFields: ["user_id"] },
   game_purchases: { visibility: "private", ownerFields: ["user_id"] },
+  user_projects: { visibility: "private", ownerFields: ["user_id"] },
   game_plays: { visibility: "public", ownerFields: ["user_id"] },
   orbe_transactions: { visibility: "private", ownerFields: ["user_id"] },
   forum_categories: { visibility: "public", ownerFields: ["created_by"] },

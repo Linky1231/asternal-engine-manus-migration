@@ -14,7 +14,7 @@ import { getManusCollection, isPublicManusCollection, normalizeManusRecordPayloa
 import { storagePut } from "../storage";
 import { addGroupMemberForUser, claimOrbGiftForUser, closeChatPollForUser, createAnnouncementForUser, createChatPollForUser, createGroupChatForUser, createOrbGiftForUser, deleteGroupChatForUser, expireOrbGiftsForUser, getChatPollForUser, getChatReadAtForUser, getCommunityChatForUser, getOrCreateDmForUser, getOrbGiftForUser, leaveGroupChatForUser, listChatMessagesForUser, listDmChatsForUser, listGroupChatsForUser, listGroupMembersForUser, listMutualFollowProfilesForUser, markChatReadForUser, removeGroupMemberForUser, sendChatMessageForUser, setGroupRoleForUser, updateGroupChatForUser, voteChatPollForUser } from "../manus-chat";
 import { claimPlusOrbesForUser, donateOrbsForUser, purchasePostForUser, resellArtworkForUser } from "../manus-marketplace";
-import { isAdminForUser, listManagedUsersForAdmin, setModeratorForAdmin, setVerifiedForAdmin } from "../manus-admin";
+import { isAdminForUser, isModeratorForUser, listManagedUsersForAdmin, setModeratorForAdmin, setVerifiedForAdmin } from "../manus-admin";
 import { createEventForUser, deleteEventForUser, joinEventForUser, leaveEventForUser, listEventParticipantsForUser, listEventsForUser, submitToEventForUser, updateEventStatusForUser } from "../manus-events";
 import { incrementForumThreadView, touchForumThreadForUser, voteForumPostForUser, voteForumThreadForUser } from "../manus-forum";
 
@@ -246,7 +246,7 @@ app.post("/api/manus/forum/threads/:threadId/touch", async (req, res) => {
 app.get("/api/manus/admin/status", async (req, res) => {
   try {
     const user = await sdk.authenticateRequest(req);
-    res.json({ is_admin: await isAdminForUser(user.openId) });
+    res.json({ is_admin: await isAdminForUser(user.openId), is_moderator: await isModeratorForUser(user.openId) });
   } catch (error) {
     res.status(401).json({ error: error instanceof Error ? error.message : "No se pudo verificar la sesión." });
   }

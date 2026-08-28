@@ -4,9 +4,10 @@ import { getManusCollection, isPublicManusCollection, normalizeManusRecordPayloa
 describe("contratos de colecciones de Manus", () => {
   it("solo habilita colecciones declaradas y reconoce su visibilidad", () => {
     expect(getManusCollection("posts")?.name).toBe("posts");
-    expect(getManusCollection("user_projects")).toBeNull();
+    expect(getManusCollection("user_projects")?.name).toBe("user_projects");
     expect(isPublicManusCollection("posts")).toBe(true);
     expect(isPublicManusCollection("notifications")).toBe(false);
+    expect(isPublicManusCollection("user_projects")).toBe(false);
   });
 
   it("atribuye siempre las publicaciones a la cuenta Manus autenticada", () => {

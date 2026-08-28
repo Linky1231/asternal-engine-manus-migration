@@ -3,7 +3,7 @@ import { Avatar } from "@/components/social/Avatar";
 import { Component, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gamepad2, Newspaper, Search, LogOut, Wrench, Plus, ShieldCheck, User, Sparkles, Star, Menu, MessageCircle, X, Home, Users, Flame, MessageSquare, Compass, Palette, Trophy, BarChart3, ChevronRight, Megaphone, Bot, FileText, TrendingUp, Info } from "lucide-react";
-import { hydrateManusCollections, manusData as supabase } from "@/integrations/manus/data-client";
+import { hydrateManusCollections } from "@/integrations/manus/data-client";
 import { toast } from "sonner";
 import { fetchFeed, fetchGames, fetchFollowing, getMyProfile, isMod, isAdmin, type PostWithMeta, type Profile } from "@/lib/social/api";
 import { orderFeedPosts } from "@/lib/social/feed-order";
@@ -187,13 +187,13 @@ function HomePage() {
         void fetchFollowing(uid)
           .then(profiles => setFollowingIds(profiles.map(profile => profile.id)))
           .catch(() => setFollowingIds([]));
-        // Estado de la nube: conectada (claves reales + cuenta real), cuenta
-        // local con Supabase conectado, o modo local puro (todo en el navegador).
+        // Estado de la nube: una sesión oficial de Manus y una caché local de
+        // resiliencia, sin claves de terceros en el navegador.
         // Sincroniza los proyectos con la nube (sube los locales sin respaldo y
         // descarga los de la cuenta) para que los juegos aparezcan en cualquier
         // dispositivo con la misma cuenta. Silencioso: no bloquea la carga.
-        // La sincronización de proyectos se conectará a Manus en la siguiente
-        // fase de migración. No se llama a proveedores externos desde aquí.
+        // Los proyectos se sincronizan con Manus. No se llama a proveedores
+        // externos desde aquí.
         let prof: Profile | null = null;
         try { prof = await getMyProfile(); } catch { /* noop */ }
         if (prof) setMe(prof);
@@ -202,8 +202,7 @@ function HomePage() {
         // Las listas se cargan desde el efecto dependiente de `myId`, después de
         // que React haya confirmado el identificador de sesión.
       } catch (e) {
-        // No romper la preview si el esquema aún no está creado en Supabase.
-        console.warn("[home] error de carga inicial (¿esquema sin crear?):", e);
+        console.warn("[home] error de carga inicial:", e);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

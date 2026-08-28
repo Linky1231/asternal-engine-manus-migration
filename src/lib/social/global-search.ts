@@ -1,7 +1,7 @@
 // ───── Búsqueda global ─────
 // Busca mensajes (de todos los chats), usuarios, proyectos del motor y
 // archivos de los chats de trabajo, con filtros por persona, canal y fecha.
-// Funciona igual en modo local y con Supabase conectado.
+// Funciona con la caché de resiliencia y los datos administrados por Manus.
 
 import type { Profile } from "./api";
 import {
@@ -17,7 +17,7 @@ import {
   listAllThreadMessages,
   type WorkFile,
 } from "./work";
-import { manusData as supabase } from "@/integrations/manus/data-client";
+import { manusData } from "@/integrations/manus/data-client";
 
 export type SearchScope = "all" | "community" | "work";
 
@@ -135,9 +135,9 @@ export async function searchMessages(
   if (!query) return [];
   const out: SearchMessage[] = [];
 
-  // Mensajes del chat (modo local y Supabase a través del mismo cliente).
+  // Mensajes del chat mediante la caché de resiliencia y Manus.
   try {
-    const { data } = await supabase
+    const { data } = await manusData
       .from("chat_messages")
       .select("*")
       .ilike("content", `%${query}%`)

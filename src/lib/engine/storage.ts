@@ -1,4 +1,4 @@
-import { manusData as supabase } from "@/integrations/manus/data-client";
+import { manusData } from "@/integrations/manus/data-client";
 import type { Entity, Project, VariableType } from "./core";
 import { DEFAULT_SETTINGS, newProject, uid } from "./core";
 
@@ -22,7 +22,7 @@ export interface ProjectMeta {
 
 /**
  * Identificador estable y seguro para construir claves locales por cuenta.
- * No contiene correo ni datos personales: Supabase user.id es el namespace.
+ * No contiene correo ni datos personales: la identidad oficial de Manus es el namespace.
  */
 export function storageNamespaceFor(ownerId: string | null | undefined): string {
   const value = ownerId?.trim();
@@ -215,7 +215,7 @@ export function setStorageOwner(ownerId: string | null | undefined): void {
 export async function initializeStorageOwner(): Promise<string | null> {
   if (typeof window === "undefined") return null;
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await manusData.auth.getUser();
     setStorageOwner(user?.id ?? null);
     return user?.id ?? null;
   } catch {

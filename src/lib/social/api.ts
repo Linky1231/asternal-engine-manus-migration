@@ -465,9 +465,8 @@ export async function deletePost(id: string) {
   // Verify ownership or moderator status before deleting
   const { data: post } = await supabase.from("posts").select("author_id").eq("id", id).single();
   if (!post) throw new Error("Publicación no encontrada");
-  const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
-  const isMod = role && (role.role === "moderator" || role.role === "admin");
-  if (post.author_id !== user.id && !isMod) throw new Error("No tienes permiso para borrar esta publicación");
+  const isModerator = await isMod();
+  if (post.author_id !== user.id && !isModerator) throw new Error("No tienes permiso para borrar esta publicación");
   const { error } = await supabase.from("posts").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }
@@ -700,10 +699,12 @@ export async function getMyProfile(): Promise<Profile | null> {
 }
 
 export async function isMod(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-  return (data ?? []).some(r => r.role === "moderator" || r.role === "admin");
+  try {
+    const status = await manusJsonRequest<{ is_moderator?: boolean }>("/api/manus/admin/status");
+    return status.is_moderator === true;
+  } catch {
+    return false;
+  }
 }
 
 // ---------- Published games ----------
